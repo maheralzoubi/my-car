@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/constants/app_routes.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -89,77 +90,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildProfileSection() {
-    return Container(
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.accentCyan.withValues(alpha: 0.1),
-            AppColors.accentOrange.withValues(alpha: 0.05),
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.profile);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.accentCyan.withValues(alpha: 0.1),
+              AppColors.accentOrange.withValues(alpha: 0.05),
+            ],
+          ),
+          border: Border.all(
+            color: AppColors.accentCyan.withValues(alpha: 0.3),
+          ),
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accentCyan, AppColors.accentOrange],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accentCyan.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text(
+                  'JD',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'John Doe',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'john.doe@email.com',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textLight.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit, color: AppColors.accentCyan),
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.profile);
+              },
+            ),
           ],
         ),
-        border: Border.all(
-          color: AppColors.accentCyan.withValues(alpha: 0.3),
-        ),
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.accentCyan, AppColors.accentOrange],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentCyan.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text(
-                'JD',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'John Doe',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textLight,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  'john.doe@email.com',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textLight.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit, color: AppColors.accentCyan),
-            onPressed: () {},
-          ),
-        ],
       ),
     );
   }

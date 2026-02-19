@@ -10,6 +10,7 @@ import 'presentation/pages/historyScreen/history_screen.dart';
 import 'presentation/pages/diagnosticCodesScreen/diagnostic_codes_screen.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/parentModeScreen/parent_mode_screen.dart';
+import 'presentation/pages/profileScreen/profile_screen.dart';
 import 'presentation/pages/settingsScreen/settings_screen.dart';
 import 'presentation/pages/smartKeyScreen/smart_key_screen.dart';
 import 'presentation/pages/spalchScreen/spalch_screen.dart';
@@ -56,6 +57,9 @@ abstract final class HomeModule {
 
   /// Video tutorials screen.
   static Widget get videoTutorialsPage => const VideoTutorialsScreen();
+
+  /// Profile screen.
+  static Widget get profilePage => const ProfileScreen();
 
   /// Route names for app navigation.
   static const String splashRoute = AppRoutes.splash;

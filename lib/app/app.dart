@@ -7,6 +7,7 @@ import '../core/theme/app_theme.dart';
 import '../modules/home/home_module.dart';
 import '../modules/home/presentation/pages/diagnosticCodesScreen/code_detail_screen.dart';
 import '../modules/home/presentation/pages/diagnosticCodesScreen/solution_screen.dart';
+import '../modules/home/presentation/pages/profileScreen/edit_profile_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/upload_video_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/video_player_screen.dart';
 
@@ -40,6 +41,8 @@ class App extends StatelessWidget {
           AppRoutes.videoPlayer: (context) =>
               VideoPlayerScreen.fromContext(context),
           AppRoutes.uploadVideo: (_) => const UploadVideoScreen(),
+          AppRoutes.profile: (_) => HomeModule.profilePage,
+          AppRoutes.editProfile: (_) => const EditProfileScreen(),
           AppRoutes.codeDetail: (context) {
             final args = ModalRoute.of(context)?.settings.arguments
                 as Map<String, dynamic>?;
