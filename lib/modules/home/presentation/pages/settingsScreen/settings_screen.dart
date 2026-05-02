@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../dtc_lookup_page.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool autoScan = false;
   bool darkMode = true;
   bool soundEffects = true;
+  bool dashCam = true;
   String language = 'English';
   String units = 'Metric';
 
@@ -205,6 +207,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           soundEffects,
           (value) => setState(() => soundEffects = value),
         ),
+        _buildSettingToggle(
+          '📹',
+          'Dash Cam',
+          'Record video while driving',
+          dashCam,
+          (value) => setState(() => dashCam = value),
+        ),
       ],
     );
   }
@@ -227,6 +236,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           units,
           ['Metric', 'Imperial'],
           (value) => setState(() => units = value),
+        ),
+        _buildSettingItem(
+          '🧾',
+          'DTC Code Lookup',
+          'Enter a diagnostic code to see details',
+          () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const DtcLookupPage(),
+              ),
+            );
+          },
         ),
         _buildSettingItem(
           '🚗',
