@@ -19,4 +19,5 @@ abstract final class AppRoutes {
   static const String uploadVideo = '/upload-video';
   static const String profile = '/profile';
   static const String editProfile = '/edit-profile';
+  static const String dtcLookup = '/dtc-lookup';
 }

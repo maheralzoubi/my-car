@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -13,14 +15,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
   final List<Map<String, dynamic>> warningLights = [
-    {'icon': '⚠️', 'label': 'Check Engine', 'active': true},
-    {'icon': '🔋', 'label': 'Battery', 'active': false},
-    {'icon': '🛢️', 'label': 'Oil', 'active': false},
-    {'icon': '🛞', 'label': 'ABS', 'active': true},
-    {'icon': '🛡️', 'label': 'Airbag', 'active': false},
-    {'icon': '🌡️', 'label': 'Temp', 'active': false},
-    {'icon': '⛽', 'label': 'Fuel', 'active': false},
-    {'icon': '💨', 'label': 'Exhaust', 'active': false},
+    {'icon': '⚠️', 'label': 'check_engine', 'active': true},
+    {'icon': '🔋', 'label': 'battery', 'active': false},
+    {'icon': '🛢️', 'label': 'oil', 'active': false},
+    {'icon': '🛞', 'label': 'abs', 'active': true},
+    {'icon': '🛡️', 'label': 'airbag', 'active': false},
+    {'icon': '🌡️', 'label': 'temp', 'active': false},
+    {'icon': '⛽', 'label': 'fuel', 'active': false},
+    {'icon': '💨', 'label': 'exhaust', 'active': false},
   ];
 
   final List<Map<String, dynamic>> recentScans = [
@@ -61,20 +63,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHealthCard(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildWarningLightsSection(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildQuickScanButton(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
                       _buildVideoTutorialsCard(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildRecentScansSection(),
-                      const SizedBox(height: 80),
+                      SizedBox(height: 80.h),
                     ],
                   ),
                 ),
@@ -89,7 +91,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           // Vehicle info
@@ -97,35 +99,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 40.w,
+                  height: 40.h,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
                     ),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.directions_car,
                     color: Colors.white,
-                    size: 24,
+                    size: 24.r,
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Column(
+                SizedBox(width: 12.w),
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Toyota Camry 2020',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFFE8EAED),
                       ),
                     ),
                     Text(
                       'VIN: 4T1B11HK...8901',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF00D9FF)),
+                      style: TextStyle(fontSize: 12.sp, color: Color(0xFF00D9FF)),
                     ),
                   ],
                 ),
@@ -134,28 +136,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           // Connection status
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: const Color(0xFF00E676).withOpacity(0.1),
+              color: const Color(0xFF00E676).withValues(alpha: 0.1),
               border: Border.all(color: const Color(0xFF00E676)),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 8.w,
+                  height: 8.h,
                   decoration: const BoxDecoration(
                     color: Color(0xFF00E676),
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Connected',
+                SizedBox(width: 6.w),
+                Text(
+                  context.tr('connected'),
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.sp,
                     color: Color(0xFF00E676),
                     fontWeight: FontWeight.w600,
                   ),
@@ -170,28 +172,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildHealthCard() {
     return Container(
-      padding: const EdgeInsets.all(25),
+      padding: EdgeInsets.all(25.r),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.05),
-            Colors.white.withOpacity(0.02),
+            Colors.white.withValues(alpha: 0.05),
+            Colors.white.withValues(alpha: 0.02),
           ],
         ),
-        border: Border.all(color: const Color(0xFF00D9FF).withOpacity(0.2)),
-        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Vehicle Health',
+              Text(
+                context.tr('vehicle_health'),
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 20.sp,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFFE8EAED),
                 ),
@@ -200,10 +202,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 shaderCallback: (bounds) => const LinearGradient(
                   colors: [Color(0xFF00E676), Color(0xFF00D9FF)],
                 ).createShader(bounds),
-                child: const Text(
+                child: Text(
                   '78',
                   style: TextStyle(
-                    fontSize: 36,
+                    fontSize: 36.sp,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
@@ -211,12 +213,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           Row(
             children: [
-              _buildIndicator('Engine', '98%', const Color(0xFF00E676)),
-              _buildIndicator('Battery', '85%', const Color(0xFF00D9FF)),
-              _buildIndicator('Brakes', '72%', const Color(0xFFFFD600)),
+              _buildIndicator(context.tr('engine'), '98%', const Color(0xFF00E676)),
+              _buildIndicator(context.tr('battery'), '85%', const Color(0xFF00D9FF)),
+              _buildIndicator(context.tr('brakes'), '72%', const Color(0xFFFFD600)),
             ],
           ),
         ],
@@ -227,36 +229,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildIndicator(String label, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(15),
-        margin: const EdgeInsets.only(right: 8),
+        padding: EdgeInsets.all(15.r),
+        margin: EdgeInsets.only(right: 8.w),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Column(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 40.w,
+              height: 40.h,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.check_circle, color: color, size: 20),
+              child: Icon(Icons.check_circle, color: color, size: 20.r),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
-                color: const Color(0xFFE8EAED).withOpacity(0.7),
+                fontSize: 11.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
             Text(
               value,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -273,19 +275,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Row(
           children: [
-            const Icon(Icons.warning_amber, color: Color(0xFFFF6B35), size: 20),
-            const SizedBox(width: 10),
-            const Text(
-              'Warning Lights',
+            Icon(Icons.warning_amber, color: Color(0xFFFF6B35), size: 20.r),
+            SizedBox(width: 10.w),
+            Text(
+              context.tr('warning_lights'),
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFFE8EAED),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -317,14 +319,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: active
-              ? const Color(0xFFFF6B35).withOpacity(0.1)
-              : Colors.white.withOpacity(0.03),
+              ? const Color(0xFFFF6B35).withValues(alpha: 0.1)
+              : Colors.white.withValues(alpha: 0.03),
           border: Border.all(
             color: active
                 ? const Color(0xFFFF6B35)
-                : Colors.white.withOpacity(0.1),
+                : Colors.white.withValues(alpha: 0.1),
           ),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -332,19 +334,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(
               icon,
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 28.sp,
                 color: active ? null : Colors.grey,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
-              label,
+              context.tr(label),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 9.sp,
                 color: active
                     ? const Color(0xFFFF6B35)
-                    : const Color(0xFFE8EAED).withOpacity(0.5),
+                    : const Color(0xFFE8EAED).withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -359,15 +361,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.pushNamed(context, AppRoutes.diagnosticCodes);
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.r),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF00D9FF).withOpacity(0.3),
+              color: const Color(0xFF00D9FF).withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -379,36 +381,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Quick Diagnostic Scan',
+                  Text(
+                    context.tr('quick_scan'),
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5.h),
                   Text(
-                    'Scan your vehicle for issues',
+                    context.tr('run_diagnostics'),
                     style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 13.sp,
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
               ),
             ),
             Container(
-              width: 50,
-              height: 50,
+              width: 50.w,
+              height: 50.h,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.play_arrow,
                 color: Colors.white,
-                size: 30,
+                size: 30.r,
               ),
             ),
           ],
@@ -423,55 +425,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.pushNamed(context, AppRoutes.videoTutorials);
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.r),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          border: Border.all(color: const Color(0xFF00D9FF).withOpacity(0.3)),
-          borderRadius: BorderRadius.circular(20),
+          color: Colors.white.withValues(alpha: 0.05),
+          border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         child: Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 50.w,
+              height: 50.h,
               decoration: BoxDecoration(
-                color: const Color(0xFF00D9FF).withOpacity(0.2),
+                color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.video_library,
                 color: Color(0xFF00D9FF),
-                size: 28,
+                size: 28.r,
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Video Tutorials',
+                  Text(
+                    context.tr('video_tutorials'),
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFFE8EAED),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Text(
-                    'Watch repair guides by code',
+                    context.tr('learn_to_fix'),
                     style: TextStyle(
-                      fontSize: 13,
-                      color: const Color(0xFFE8EAED).withOpacity(0.7),
+                      fontSize: 13.sp,
+                      color: const Color(0xFFE8EAED).withValues(alpha: 0.7),
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
               color: Color(0xFF00D9FF),
-              size: 16,
+              size: 16.r,
             ),
           ],
         ),
@@ -488,12 +490,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.history, color: Color(0xFF00D9FF), size: 20),
-                const SizedBox(width: 10),
-                const Text(
-                  'Recent Scans',
+                Icon(Icons.history, color: Color(0xFF00D9FF), size: 20.r),
+                SizedBox(width: 10.w),
+                Text(
+                  context.tr('recent_scans'),
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFFE8EAED),
                   ),
@@ -504,15 +506,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () {
                 Navigator.pushNamed(context, '/history');
               },
-              child: const Text(
-                'View All',
-                style: TextStyle(color: Color(0xFF00D9FF), fontSize: 14),
+              child: Text(
+                context.tr('history'),
+                style: TextStyle(color: Color(0xFF00D9FF), fontSize: 14.sp),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
-        ...recentScans.map((scan) => _buildScanItem(scan)).toList(),
+        SizedBox(height: 15.h),
+        ...recentScans.map((scan) => _buildScanItem(scan)),
       ],
     );
   }
@@ -524,12 +526,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : const Color(0xFF00E676);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(15),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(15.r),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(15),
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
@@ -539,16 +541,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   scan['date'],
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontSize: 12.sp,
                     color: Color(0xFF00D9FF),
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5.h),
                 Text(
                   scan['result'],
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: TextStyle(
+                    fontSize: 14.sp,
                     color: Color(0xFFE8EAED),
                   ),
                 ),
@@ -556,16 +558,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               border: Border.all(color: statusColor),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Text(
               isWarning ? '${scan['codes']} Codes' : 'OK',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 11.sp,
                 fontWeight: FontWeight.w600,
                 color: statusColor,
               ),
@@ -579,22 +581,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildBottomNavBar() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0D0D0D).withOpacity(0.95),
+        color: const Color(0xFF0D0D0D).withValues(alpha: 0.95),
         border: Border(
-          top: BorderSide(color: const Color(0xFF00D9FF).withOpacity(0.2)),
+          top: BorderSide(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
         ),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: 10.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home, 'Home', 0),
-              _buildNavItem(Icons.search, 'Scan', 1),
-              _buildNavItem(Icons.vpn_key, 'Smart Key', 2),
-              _buildNavItem(Icons.history, 'History', 3),
-              _buildNavItem(Icons.settings, 'Settings', 4),
+              _buildNavItem(Icons.home, context.tr('home'), 0),
+              _buildNavItem(Icons.search, context.tr('scan'), 1),
+              _buildNavItem(Icons.vpn_key, context.tr('smart_key'), 2),
+              _buildNavItem(Icons.history, context.tr('history'), 3),
+              _buildNavItem(Icons.settings, context.tr('settings'), 4),
             ],
           ),
         ),
@@ -631,12 +633,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF00D9FF).withOpacity(0.1)
+              ? const Color(0xFF00D9FF).withValues(alpha: 0.1)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -645,17 +647,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon,
               color: isSelected
                   ? const Color(0xFF00D9FF)
-                  : const Color(0xFFE8EAED).withOpacity(0.5),
-              size: 24,
+                  : const Color(0xFFE8EAED).withValues(alpha: 0.5),
+              size: 24.r,
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 11.sp,
                 color: isSelected
                     ? const Color(0xFF00D9FF)
-                    : const Color(0xFFE8EAED).withOpacity(0.5),
+                    : const Color(0xFFE8EAED).withValues(alpha: 0.5),
               ),
             ),
           ],

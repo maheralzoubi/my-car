@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 
@@ -63,14 +64,14 @@ class _ParentModeScreenState extends State<ParentModeScreen>
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildMapCard(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildStatsGrid(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildSettingsSection(),
                     ],
                   ),
@@ -85,17 +86,17 @@ class _ParentModeScreenState extends State<ParentModeScreen>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan, size: 24.r),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
+          Text(
             'Parent Mode',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
@@ -107,7 +108,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
 
   Widget _buildMapCard() {
     return Container(
-      height: 350,
+      height: 350.h,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -120,7 +121,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.15),
         ),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(30.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -130,7 +131,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(30.r),
         child: Stack(
           children: [
             Container(
@@ -170,8 +171,8 @@ class _ParentModeScreenState extends State<ParentModeScreen>
               Transform.scale(
                 scale: 1 + (_pulseController.value * 1.0),
                 child: Container(
-                  width: 120,
-                  height: 120,
+                  width: 120.w,
+                  height: 120.h,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -183,8 +184,8 @@ class _ParentModeScreenState extends State<ParentModeScreen>
                 ),
               ),
               Container(
-                width: 60,
-                height: 60,
+                width: 60.w,
+                height: 60.h,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF00D9FF), Color(0xFF0066FF)],
@@ -198,10 +199,10 @@ class _ParentModeScreenState extends State<ParentModeScreen>
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.directions_car,
                   color: AppColors.white,
-                  size: 30,
+                  size: 30.r,
                 ),
               ),
             ],
@@ -216,8 +217,8 @@ class _ParentModeScreenState extends State<ParentModeScreen>
       top: 20,
       right: 20,
       child: Container(
-        width: 80,
-        height: 80,
+        width: 80.w,
+        height: 80.h,
         decoration: BoxDecoration(
           color: AppColors.white,
           shape: BoxShape.circle,
@@ -237,17 +238,17 @@ class _ParentModeScreenState extends State<ParentModeScreen>
           children: [
             Text(
               currentSpeed.toString(),
-              style: const TextStyle(
-                fontSize: 28,
+              style: TextStyle(
+                fontSize: 28.sp,
                 fontWeight: FontWeight.w900,
                 color: _speedAlertRed,
               ),
             ),
-            const Text(
+            Text(
               'KM/H',
               style: TextStyle(
-                fontSize: 11,
-                color: Color(0xFF666666),
+                fontSize: 11.sp,
+                color: const Color(0xFF666666),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -262,10 +263,10 @@ class _ParentModeScreenState extends State<ParentModeScreen>
       bottom: 20,
       left: 20,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         decoration: BoxDecoration(
           color: _speedAlertRed,
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(25.r),
           boxShadow: [
             BoxShadow(
               color: _speedAlertRed.withValues(alpha: 0.4),
@@ -273,17 +274,17 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             ),
           ],
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning, color: AppColors.white, size: 20),
-            SizedBox(width: 8),
+            Icon(Icons.warning, color: AppColors.white, size: 20.r),
+            SizedBox(width: 8.w),
             Text(
               'Speed Alert!',
               style: TextStyle(
                 color: AppColors.white,
                 fontWeight: FontWeight.w700,
-                fontSize: 14,
+                fontSize: 14.sp,
               ),
             ),
           ],
@@ -311,32 +312,32 @@ class _ParentModeScreenState extends State<ParentModeScreen>
 
   Widget _buildStatCard(String icon, String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 32)),
-          const SizedBox(height: 10),
+          Text(icon, style: TextStyle(fontSize: 32.sp)),
+          SizedBox(height: 10.h),
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 13.sp,
               color: AppColors.textLight.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: 18.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.accentCyan,
             ),
@@ -354,29 +355,29 @@ class _ParentModeScreenState extends State<ParentModeScreen>
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Tracking Settings',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         _buildSettingCard(
           'Location Tracking',
           'Real-time GPS monitoring',
@@ -407,14 +408,14 @@ class _ParentModeScreenState extends State<ParentModeScreen>
     void Function(bool) onChanged,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.only(bottom: 15.h),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Row(
         children: [
@@ -424,17 +425,17 @@ class _ParentModeScreenState extends State<ParentModeScreen>
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textLight,
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5.h),
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
@@ -449,14 +450,14 @@ class _ParentModeScreenState extends State<ParentModeScreen>
 
   Widget _buildSpeedLimitCard() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.only(bottom: 15.h),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Row(
         children: [
@@ -464,19 +465,19 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Speed Limit',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textLight,
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5.h),
                 Text(
                   'Alert when exceeded',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
@@ -484,21 +485,21 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             ),
           ),
           Container(
-            width: 80,
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            width: 80.w,
+            padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 10.h),
             decoration: BoxDecoration(
               color: AppColors.white.withValues(alpha: 0.05),
               border: Border.all(
                 color: AppColors.accentCyan.withValues(alpha: 0.3),
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
             ),
             child: TextField(
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.accentCyan,
-                fontSize: 16,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
               ),
               decoration: const InputDecoration(
@@ -522,8 +523,8 @@ class _ParentModeScreenState extends State<ParentModeScreen>
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: Container(
-        width: 60,
-        height: 32,
+        width: 60.w,
+        height: 32.h,
         decoration: BoxDecoration(
           gradient: value
               ? const LinearGradient(
@@ -531,16 +532,16 @@ class _ParentModeScreenState extends State<ParentModeScreen>
                 )
               : null,
           color: value ? null : AppColors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            width: 28,
-            height: 28,
-            margin: const EdgeInsets.all(2),
+            width: 28.w,
+            height: 28.h,
+            margin: EdgeInsets.all(2.r),
             decoration: const BoxDecoration(
               color: AppColors.white,
               shape: BoxShape.circle,

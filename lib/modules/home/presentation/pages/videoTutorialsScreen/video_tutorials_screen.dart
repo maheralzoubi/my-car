@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
@@ -139,24 +140,24 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan, size: 24.r),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
+          Text(
             'Video Tutorials',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.bookmarks, color: AppColors.accentCyan),
+            icon: Icon(Icons.bookmarks, color: AppColors.accentCyan, size: 24.r),
             onPressed: () {},
           ),
         ],
@@ -166,14 +167,14 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.accentCyan.withValues(alpha: 0.3),
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: TextField(
         style: const TextStyle(color: AppColors.textLight),
@@ -193,10 +194,10 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 50,
+          height: 50.h,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
             children: [
               _buildFilterChip('All', selectedFilter == 'All', () {
                 setState(() => selectedFilter = 'All');
@@ -214,10 +215,10 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
           ),
         ),
         SizedBox(
-          height: 50,
+          height: 50.h,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
             children: [
               _buildFilterChip('All Levels', selectedDifficulty == 'All', () {
                 setState(() => selectedDifficulty = 'All');
@@ -244,8 +245,8 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        margin: EdgeInsets.only(right: 10.w),
+        padding: EdgeInsets.symmetric(horizontal: 20.w),
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
@@ -258,13 +259,13 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                 ? AppColors.transparent
                 : AppColors.accentCyan.withValues(alpha: 0.2),
           ),
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(25.r),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: isSelected ? AppColors.white : AppColors.textLight,
             ),
@@ -284,14 +285,14 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
           children: [
             Icon(
               Icons.video_library_outlined,
-              size: 80,
+              size: 80.r,
               color: AppColors.accentCyan.withValues(alpha: 0.3),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: 20.h),
+            Text(
               'No tutorials found',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 color: AppColors.textLight,
               ),
             ),
@@ -301,7 +302,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.r),
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         return _buildTutorialCard(filtered[index], index);
@@ -333,13 +334,13 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
           );
         },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 15),
+          margin: EdgeInsets.only(bottom: 15.h),
           decoration: BoxDecoration(
             color: AppColors.white.withValues(alpha: 0.03),
             border: Border.all(
               color: AppColors.accentCyan.withValues(alpha: 0.2),
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20.r),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +348,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
               Stack(
                 children: [
                   Container(
-                    height: 180,
+                    height: 180.h,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -356,15 +357,15 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                           AppColors.accentOrange.withValues(alpha: 0.1),
                         ],
                       ),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20.r),
+                        topRight: Radius.circular(20.r),
                       ),
                     ),
                     child: Center(
                       child: Text(
                         tutorial['thumbnail'] as String? ?? '🎬',
-                        style: const TextStyle(fontSize: 60),
+                        style: TextStyle(fontSize: 60.sp),
                       ),
                     ),
                   ),
@@ -372,18 +373,18 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                     bottom: 10,
                     right: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 5.h,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
                         tutorial['duration'] as String? ?? '—',
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: TextStyle(
+                          fontSize: 12.sp,
                           color: AppColors.white,
                           fontWeight: FontWeight.w600,
                         ),
@@ -401,7 +402,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: EdgeInsets.all(8.r),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.7),
                           shape: BoxShape.circle,
@@ -413,7 +414,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                           color: (tutorial['bookmarked'] as bool? ?? false)
                               ? _ratingYellow
                               : AppColors.white,
-                          size: 20,
+                          size: 20.r,
                         ),
                       ),
                     ),
@@ -421,45 +422,45 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.all(15),
+                padding: EdgeInsets.all(15.r),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.accentCyan.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
                             tutorial['code'] as String? ?? '—',
-                            style: const TextStyle(
-                              fontSize: 11,
+                            style: TextStyle(
+                              fontSize: 11.sp,
                               fontWeight: FontWeight.w700,
                               color: AppColors.accentCyan,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8.w),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
                           ),
                           decoration: BoxDecoration(
                             color: _getDifficultyColor(difficulty)
                                 .withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
                             difficulty,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 11.sp,
                               fontWeight: FontWeight.w600,
                               color: _getDifficultyColor(difficulty),
                             ),
@@ -467,61 +468,61 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     Text(
                       tutorial['title'] as String? ?? '—',
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textLight,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       'By ${tutorial['instructor'] ?? '—'}',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 13.sp,
                         color: AppColors.textLight.withValues(alpha: 0.7),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.star,
                           color: _ratingYellow,
-                          size: 16,
+                          size: 16.r,
                         ),
-                        const SizedBox(width: 5),
+                        SizedBox(width: 5.w),
                         Text(
                           (tutorial['rating'] ?? '—').toString(),
-                          style: const TextStyle(
-                            fontSize: 13,
+                          style: TextStyle(
+                            fontSize: 13.sp,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textLight,
                           ),
                         ),
-                        const SizedBox(width: 15),
-                        const Icon(
+                        SizedBox(width: 15.w),
+                        Icon(
                           Icons.visibility,
                           color: AppColors.accentCyan,
-                          size: 16,
+                          size: 16.r,
                         ),
-                        const SizedBox(width: 5),
+                        SizedBox(width: 5.w),
                         Text(
                           tutorial['views'] as String? ?? '—',
-                          style: const TextStyle(
-                            fontSize: 13,
+                          style: TextStyle(
+                            fontSize: 13.sp,
                             color: AppColors.textLight,
                           ),
                         ),
                         const Spacer(),
                         Text(
                           tutorial['cost'] as String? ?? '—',
-                          style: const TextStyle(
-                            fontSize: 12,
+                          style: TextStyle(
+                            fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: _successGreen,
                           ),

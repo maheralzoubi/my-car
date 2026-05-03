@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' show cos, sin;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
@@ -156,11 +157,11 @@ class _SplashScreenState extends State<SplashScreen>
                 children: [
                   // Car animation
                   _buildCarAnimation(),
-                  const SizedBox(height: 40),
+                  SizedBox(height: 40.h),
 
                   // Title
                   _buildTitleAnimation(),
-                  const SizedBox(height: 60),
+                  SizedBox(height: 60.h),
 
                   // Loading indicator
                   _buildLoadingIndicator(),
@@ -188,8 +189,8 @@ class _SplashScreenState extends State<SplashScreen>
           child: Transform.scale(
             scale: scale,
             child: Container(
-              width: 400,
-              height: 400,
+              width: 400.w,
+              height: 400.h,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -224,12 +225,12 @@ class _SplashScreenState extends State<SplashScreen>
               child: Opacity(
                 opacity: _carOpacity.value,
                 child: SizedBox(
-                  width: 300,
-                  height: 200,
+                  width: 300.w,
+                  height: 200.h,
                   child: Stack(
                     children: [
                       CustomPaint(
-                        size: const Size(300, 200),
+                        size: Size(300.w, 200.h),
                         painter: CarPainter(),
                       ),
                       _buildScanLine(),
@@ -253,13 +254,13 @@ class _SplashScreenState extends State<SplashScreen>
             : 0.7;
 
         return Positioned(
-          top: _scanPosition.value * 200,
+          top: _scanPosition.value * 200.h,
           left: 0,
           right: 0,
           child: Opacity(
             opacity: opacity,
             child: Container(
-              height: 2,
+              height: 2.h,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [
@@ -293,25 +294,25 @@ class _SplashScreenState extends State<SplashScreen>
               shaderCallback: (bounds) => const LinearGradient(
                 colors: [AppColors.accentCyan, AppColors.textLight],
               ).createShader(bounds),
-              child: const Text(
+              child: Text(
                 'CARDIAG',
                 style: TextStyle(
-                  fontSize: 56,
+                  fontSize: 56.sp,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 8,
                   color: AppColors.white,
-                  shadows: [
+                  shadows: const [
                     Shadow(color: AppColors.accentCyan, blurRadius: 20),
                     Shadow(color: AppColors.accentCyan, blurRadius: 40),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10.h),
+            Text(
               'PROFESSIONAL DIAGNOSTICS',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w300,
                 letterSpacing: 4,
                 color: AppColors.accentCyan,
@@ -329,14 +330,14 @@ class _SplashScreenState extends State<SplashScreen>
       child: Column(
         children: [
           SizedBox(
-            width: 300,
-            height: 4,
+            width: 300.w,
+            height: 4.h,
             child: Stack(
               children: [
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                 ),
                 AnimatedBuilder(
@@ -348,8 +349,8 @@ class _SplashScreenState extends State<SplashScreen>
                         0,
                       ),
                       child: Container(
-                        width: 100,
-                        height: 4,
+                        width: 100.w,
+                        height: 4.h,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
@@ -358,7 +359,7 @@ class _SplashScreenState extends State<SplashScreen>
                               AppColors.accentOrange,
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10.r),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.accentCyan.withValues(
@@ -375,11 +376,11 @@ class _SplashScreenState extends State<SplashScreen>
               ],
             ),
           ),
-          const SizedBox(height: 15),
-          const Text(
+          SizedBox(height: 15.h),
+          Text(
             'INITIALIZING SYSTEM...',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.sp,
               letterSpacing: 2,
               color: AppColors.textLight,
               fontWeight: FontWeight.w300,
@@ -422,10 +423,10 @@ class CarPainter extends CustomPainter {
     final scaleY = size.height / 200;
 
     final bodyPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [AppColors.accentCyan, AppColors.backgroundDarkBlue],
+        colors: const [AppColors.accentCyan, AppColors.backgroundDarkBlue],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
 

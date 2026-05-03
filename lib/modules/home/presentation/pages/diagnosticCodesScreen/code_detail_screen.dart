@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
@@ -54,18 +55,18 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildCodeCard(severityColor),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildDetailsSection(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildImageGallery(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildRelatedCodes(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildActionButton(),
                     ],
                   ),
@@ -80,24 +81,24 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
+          Text(
             'Code Details',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.accentCyan),
+            icon: Icon(Icons.share, color: AppColors.accentCyan),
             onPressed: () {
               // Share functionality
             },
@@ -108,8 +109,18 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
   }
 
   Widget _buildCodeCard(Color severityColor) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final title = isArabic
+        ? (widget.code['title_ar'] ?? widget.code['title']) as String? ?? '—'
+        : widget.code['title'] as String? ?? '—';
+    final description = isArabic
+        ? (widget.code['description_ar'] ?? widget.code['description']) as String? ?? '—'
+        : widget.code['description'] as String? ?? '—';
+    final system = isArabic
+        ? (widget.code['system_ar'] ?? widget.code['system']) as String? ?? '—'
+        : widget.code['system'] as String? ?? '—';
     return Container(
-      padding: const EdgeInsets.all(25),
+      padding: EdgeInsets.all(25.r),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -122,7 +133,7 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
         border: Border.all(
           color: severityColor.withValues(alpha: 0.3),
         ),
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(25.r),
         boxShadow: [
           BoxShadow(
             color: severityColor.withValues(alpha: 0.2),
@@ -137,39 +148,39 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 10.h,
                 ),
                 decoration: BoxDecoration(
                   color: severityColor.withValues(alpha: 0.2),
                   border: Border.all(color: severityColor, width: 2),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Text(
                   widget.code['code'] as String? ?? '—',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.w900,
                     color: severityColor,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.accentCyan.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Text(
-                    widget.code['system'] as String? ?? '—',
-                    style: const TextStyle(
-                      fontSize: 13,
+                    system,
+                    style: TextStyle(
+                      fontSize: 13.sp,
                       color: AppColors.accentCyan,
                       fontWeight: FontWeight.w600,
                     ),
@@ -178,21 +189,21 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           Text(
-            widget.code['title'] as String? ?? '—',
-            style: const TextStyle(
-              fontSize: 20,
+            title,
+            style: TextStyle(
+              fontSize: 20.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
               height: 1.3,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Text(
-            widget.code['description'] as String? ?? '—',
+            description,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 15.sp,
               color: AppColors.textLight.withValues(alpha: 0.7),
               height: 1.5,
             ),
@@ -209,8 +220,8 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
+              width: 4.w,
+              height: 20.h,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
@@ -218,18 +229,18 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                 borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'What This Means',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         _buildDetailCard(
           '⚠️',
           'Severity',
@@ -265,29 +276,29 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
     Color color,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
           Container(
-            width: 45,
-            height: 45,
+            width: 45.w,
+            height: 45.h,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
             ),
             child: Center(
-              child: Text(icon, style: const TextStyle(fontSize: 22)),
+              child: Text(icon, style: TextStyle(fontSize: 22.sp)),
             ),
           ),
-          const SizedBox(width: 15),
+          SizedBox(width: 15.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,15 +306,15 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),
@@ -323,8 +334,8 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
+              width: 4.w,
+              height: 20.h,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
@@ -332,27 +343,27 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                 borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Related Images',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         SizedBox(
-          height: 120,
+          height: 120.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: images.length,
             itemBuilder: (context, index) {
               return Container(
-                width: 120,
-                margin: const EdgeInsets.only(right: 15),
+                width: 120.w,
+                margin: EdgeInsets.only(right: 15.w),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -363,12 +374,12 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                   border: Border.all(
                     color: AppColors.accentCyan.withValues(alpha: 0.3),
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(15.r),
                 ),
                 child: Center(
                   child: Text(
                     images[index],
-                    style: const TextStyle(fontSize: 48),
+                    style: TextStyle(fontSize: 48.sp),
                   ),
                 ),
               );
@@ -388,8 +399,8 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
+              width: 4.w,
+              height: 20.h,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
@@ -397,38 +408,38 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                 borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Related Codes',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Wrap(
           spacing: 10,
           runSpacing: 10,
           children: relatedCodes.map((code) {
             return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
+              padding: EdgeInsets.symmetric(
+                horizontal: 16.w,
+                vertical: 10.h,
               ),
               decoration: BoxDecoration(
                 color: AppColors.white.withValues(alpha: 0.05),
                 border: Border.all(
                   color: AppColors.accentCyan.withValues(alpha: 0.3),
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(20.r),
               ),
               child: Text(
                 code,
-                style: const TextStyle(
-                  fontSize: 13,
+                style: TextStyle(
+                  fontSize: 13.sp,
                   fontWeight: FontWeight.w700,
                   color: AppColors.accentCyan,
                 ),
@@ -443,12 +454,12 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
   Widget _buildActionButton() {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 56.h,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.accentCyan, AppColors.accentOrange],
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
         boxShadow: [
           BoxShadow(
             color: AppColors.accentCyan.withValues(alpha: 0.3),
@@ -469,13 +480,13 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
           backgroundColor: AppColors.transparent,
           shadowColor: AppColors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15.r),
           ),
         ),
-        child: const Text(
+        child: Text(
           'VIEW SOLUTION',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 16.sp,
             fontWeight: FontWeight.w700,
             letterSpacing: 2,
             color: AppColors.white,

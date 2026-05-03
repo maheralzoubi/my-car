@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class DiagnosticCodesScreen extends StatefulWidget {
   const DiagnosticCodesScreen({super.key});
@@ -17,40 +19,52 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     {
       'code': 'P0420',
       'title': 'Catalyst System Efficiency Below Threshold',
+      'title_ar': 'كفاءة نظام المحفز أدنى من الحد المقبول',
       'severity': 'critical',
       'system': 'Engine',
-      'description':
-          'Bank 1 catalytic converter is not working efficiently',
+      'system_ar': 'المحرك',
+      'description': 'Bank 1 catalytic converter is not working efficiently',
+      'description_ar': 'المحول الحفاز في البنك 1 لا يعمل بكفاءة كافية',
     },
     {
       'code': 'P0171',
       'title': 'System Too Lean (Bank 1)',
+      'title_ar': 'النظام هزيل للغاية (البنك 1)',
       'severity': 'warning',
       'system': 'Engine',
-      'description':
-          'Engine is running with too much air or not enough fuel',
+      'system_ar': 'المحرك',
+      'description': 'Engine is running with too much air or not enough fuel',
+      'description_ar': 'يعمل المحرك بنسبة هواء زائدة أو كمية وقود ناقصة',
     },
     {
       'code': 'C1201',
       'title': 'ABS Control Module Malfunction',
+      'title_ar': 'عطل في وحدة التحكم بنظام ABS',
       'severity': 'critical',
       'system': 'ABS',
-      'description':
-          'Anti-lock brake system control module has detected a fault',
+      'system_ar': 'ABS',
+      'description': 'Anti-lock brake system control module has detected a fault',
+      'description_ar': 'وحدة التحكم في نظام منع الانزلاق اكتشفت خللاً في النظام',
     },
     {
       'code': 'U0100',
       'title': 'Lost Communication with ECM/PCM',
+      'title_ar': 'انقطاع الاتصال مع وحدة التحكم ECM/PCM',
       'severity': 'warning',
       'system': 'Transmission',
+      'system_ar': 'ناقل الحركة',
       'description': 'Communication lost with engine control module',
+      'description_ar': 'انقطع الاتصال مع وحدة التحكم الإلكترونية في المحرك',
     },
     {
       'code': 'P0301',
       'title': 'Cylinder 1 Misfire Detected',
+      'title_ar': 'اكتشاف خلل في اشتعال الأسطوانة 1',
       'severity': 'info',
       'system': 'Engine',
+      'system_ar': 'المحرك',
       'description': 'Engine cylinder 1 is not firing properly',
+      'description_ar': 'الأسطوانة رقم 1 في المحرك لا تشتعل بشكل صحيح',
     },
   ];
 
@@ -127,24 +141,24 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
-            'Diagnostic Codes',
+          Text(
+            context.tr('diagnostic_codes'),
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.clear_all, color: AppColors.accentCyan),
+            icon: Icon(Icons.clear_all, color: AppColors.accentCyan),
             onPressed: _showClearCodesDialog,
           ),
         ],
@@ -160,8 +174,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     final info = diagnosticCodes.where((c) => c['severity'] == 'info').length;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -174,14 +188,14 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
         border: Border.all(
           color: AppColors.accentCyan.withValues(alpha: 0.2),
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Critical', critical, _severityCritical),
-          _buildSummaryItem('Warning', warning, _severityWarning),
-          _buildSummaryItem('Info', info, _severityInfo),
+          _buildSummaryItem(context.tr('severity_critical'), critical, _severityCritical),
+          _buildSummaryItem(context.tr('severity_warning'), warning, _severityWarning),
+          _buildSummaryItem(context.tr('severity_info'), info, _severityInfo),
         ],
       ),
     );
@@ -193,16 +207,16 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
         Text(
           count.toString(),
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 32.sp,
             fontWeight: FontWeight.w900,
             color: color,
           ),
         ),
-        const SizedBox(height: 5),
+        SizedBox(height: 5.h),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 12.sp,
             color: AppColors.textLight.withValues(alpha: 0.7),
           ),
         ),
@@ -212,8 +226,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
   Widget _buildFilters() {
     return Container(
-      height: 50,
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      height: 50.h,
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: filters.length,
@@ -228,8 +242,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               });
             },
             child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              margin: EdgeInsets.only(right: 10.w),
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
               decoration: BoxDecoration(
                 gradient: isSelected
                     ? const LinearGradient(
@@ -245,13 +259,13 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                       ? AppColors.transparent
                       : AppColors.accentCyan.withValues(alpha: 0.2),
                 ),
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(25.r),
               ),
               child: Center(
                 child: Text(
                   filter,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? AppColors.white
@@ -276,14 +290,14 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           children: [
             Icon(
               Icons.check_circle_outline,
-              size: 80,
+              size: 80.r,
               color: const Color(0xFF00E676).withValues(alpha: 0.5),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: 20.h),
+            Text(
               'No codes found',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 color: AppColors.textLight,
               ),
             ),
@@ -293,7 +307,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.r),
       itemCount: codes.length,
       itemBuilder: (context, index) {
         final code = codes[index];
@@ -303,6 +317,16 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   }
 
   Widget _buildCodeItem(Map<String, dynamic> code, int index) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final title = isArabic
+        ? (code['title_ar'] ?? code['title']) as String
+        : code['title'] as String;
+    final description = isArabic
+        ? (code['description_ar'] ?? code['description']) as String
+        : code['description'] as String;
+    final system = isArabic
+        ? (code['system_ar'] ?? code['system']) as String
+        : code['system'] as String;
     final severityColor = getSeverityColor(code['severity'] as String);
 
     return TweenAnimationBuilder<double>(
@@ -326,14 +350,14 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           );
         },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 15),
-          padding: const EdgeInsets.all(20),
+          margin: EdgeInsets.only(bottom: 15.h),
+          padding: EdgeInsets.all(20.r),
           decoration: BoxDecoration(
             color: AppColors.white.withValues(alpha: 0.03),
             border: Border.all(
               color: severityColor.withValues(alpha: 0.3),
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20.r),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,38 +365,38 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
                     ),
                     decoration: BoxDecoration(
                       color: severityColor.withValues(alpha: 0.2),
                       border: Border.all(color: severityColor),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
                       code['code'] as String,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w700,
                         color: severityColor,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10.w),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 6.h,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.accentCyan.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
-                      code['system'] as String,
-                      style: const TextStyle(
-                        fontSize: 11,
+                      system,
+                      style: TextStyle(
+                        fontSize: 11.sp,
                         color: AppColors.accentCyan,
                         fontWeight: FontWeight.w600,
                       ),
@@ -382,45 +406,45 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                   Icon(
                     getSeverityIcon(code['severity'] as String),
                     color: severityColor,
-                    size: 24,
+                    size: 24.r,
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               Text(
-                code['title'] as String,
-                style: const TextStyle(
-                  fontSize: 16,
+                title,
+                style: TextStyle(
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textLight,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8.h),
               Text(
-                code['description'] as String,
+                description,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 13.sp,
                   color: AppColors.textLight.withValues(alpha: 0.7),
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               Row(
                 children: [
                   const Spacer(),
-                  const Text(
+                  Text(
                     'View Details',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.sp,
                       color: AppColors.accentCyan,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 5),
-                  const Icon(
+                  SizedBox(width: 5.w),
+                  Icon(
                     Icons.arrow_forward,
                     color: AppColors.accentCyan,
-                    size: 16,
+                    size: 16.r,
                   ),
                 ],
               ),
@@ -437,7 +461,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         title: const Text(
           'Clear Codes?',
@@ -463,7 +487,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentOrange,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
               ),
             ),
             child: const Text('Clear'),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -61,9 +63,9 @@ class _AuthScreenState extends State<AuthScreen>
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid email or password'),
-          backgroundColor: Color(0xFFB3261E),
+        SnackBar(
+          content: Text(context.tr('invalid_credentials')),
+          backgroundColor: const Color(0xFFB3261E),
         ),
       );
     }
@@ -94,13 +96,13 @@ class _AuthScreenState extends State<AuthScreen>
               Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.all(20.0),
+                    padding: EdgeInsets.all(20.r),
                     child: Column(
                       children: [
                         _buildLogo(),
-                        const SizedBox(height: 40),
+                        SizedBox(height: 40.h),
                         _buildTabBar(),
-                        const SizedBox(height: 30),
+                        SizedBox(height: 30.h),
                         _buildTabContent(),
                       ],
                     ),
@@ -122,8 +124,8 @@ class _AuthScreenState extends State<AuthScreen>
     return Column(
       children: [
         Container(
-          width: 80,
-          height: 80,
+          width: 80.w,
+          height: 80.h,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
@@ -131,39 +133,39 @@ class _AuthScreenState extends State<AuthScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF00D9FF).withOpacity(0.3),
+                color: const Color(0xFF00D9FF).withValues(alpha: 0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.directions_car,
-            size: 40,
+            size: 40.r,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20.h),
         ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
             colors: [Color(0xFF00D9FF), Color(0xFFE8EAED)],
           ).createShader(bounds),
-          child: const Text(
+          child: Text(
             'CARDIAG',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: 32.sp,
               fontWeight: FontWeight.w900,
               color: Colors.white,
               letterSpacing: 4,
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        const Text(
+        SizedBox(height: 8.h),
+        Text(
           'Professional Vehicle Diagnostics',
           style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF00D9FF),
+            fontSize: 14.sp,
+            color: const Color(0xFF00D9FF),
             fontWeight: FontWeight.w300,
             letterSpacing: 1,
           ),
@@ -174,11 +176,11 @@ class _AuthScreenState extends State<AuthScreen>
 
   Widget _buildTabBar() {
     return Container(
-      height: 50,
+      height: 50.h,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFF00D9FF).withOpacity(0.2)),
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(15.r),
+        border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
       ),
       child: TabBar(
         controller: _tabController,
@@ -188,18 +190,18 @@ class _AuthScreenState extends State<AuthScreen>
           gradient: const LinearGradient(
             colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
           ),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
         ),
         labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFFE8EAED).withOpacity(0.6),
-        labelStyle: const TextStyle(
-          fontSize: 16,
+        unselectedLabelColor: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+        labelStyle: TextStyle(
+          fontSize: 16.sp,
           fontWeight: FontWeight.w700,
           letterSpacing: 1,
         ),
-        tabs: const [
-          Tab(text: 'LOGIN'),
-          Tab(text: 'SIGN UP'),
+        tabs: [
+          Tab(text: context.tr('login_tab')),
+          Tab(text: context.tr('signup_tab')),
         ],
       ),
     );
@@ -207,7 +209,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   Widget _buildTabContent() {
     return SizedBox(
-      height: 500,
+      height: 500.h,
       child: TabBarView(
         controller: _tabController,
         children: [_buildLoginForm(), _buildSignupForm()],
@@ -222,53 +224,43 @@ class _AuthScreenState extends State<AuthScreen>
         children: [
           _buildTextField(
             controller: _loginEmailController,
-            label: 'Email',
+            label: context.tr('email'),
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!value.contains('@')) {
-                return 'Please enter a valid email';
-              }
+              if (value == null || value.isEmpty) return context.tr('enter_email');
+              if (!value.contains('@')) return context.tr('enter_email');
               return null;
             },
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           _buildTextField(
             controller: _loginPasswordController,
-            label: 'Password',
+            label: context.tr('password'),
             icon: Icons.lock_outline,
             isPassword: true,
             isPasswordVisible: _isLoginPasswordVisible,
             onTogglePassword: () {
-              setState(() {
-                _isLoginPasswordVisible = !_isLoginPasswordVisible;
-              });
+              setState(() => _isLoginPasswordVisible = !_isLoginPasswordVisible);
             },
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your password';
-              }
+              if (value == null || value.isEmpty) return context.tr('enter_password');
               return null;
             },
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: 15.h),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {
-                // Handle forgot password
-              },
-              child: const Text(
-                'Forgot Password?',
-                style: TextStyle(color: Color(0xFF00D9FF), fontSize: 14),
+              onPressed: () {},
+              child: Text(
+                context.tr('forgot_password'),
+                style: TextStyle(color: const Color(0xFF00D9FF), fontSize: 14.sp),
               ),
             ),
           ),
-          const SizedBox(height: 30),
-          _buildGradientButton(text: 'LOGIN', onPressed: _handleLogin),
+          SizedBox(height: 30.h),
+          _buildGradientButton(text: context.tr('login_tab'), onPressed: _handleLogin),
         ],
       ),
     );
@@ -282,78 +274,59 @@ class _AuthScreenState extends State<AuthScreen>
           children: [
             _buildTextField(
               controller: _signupNameController,
-              label: 'Full Name',
+              label: context.tr('full_name'),
               icon: Icons.person_outline,
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your name';
-                }
+                if (value == null || value.isEmpty) return context.tr('enter_full_name');
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             _buildTextField(
               controller: _signupEmailController,
-              label: 'Email',
+              label: context.tr('email'),
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
+                if (value == null || value.isEmpty) return context.tr('enter_email');
+                if (!value.contains('@')) return context.tr('enter_email');
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             _buildTextField(
               controller: _signupPasswordController,
-              label: 'Password',
+              label: context.tr('password'),
               icon: Icons.lock_outline,
               isPassword: true,
               isPasswordVisible: _isSignupPasswordVisible,
               onTogglePassword: () {
-                setState(() {
-                  _isSignupPasswordVisible = !_isSignupPasswordVisible;
-                });
+                setState(() => _isSignupPasswordVisible = !_isSignupPasswordVisible);
               },
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
+                if (value == null || value.isEmpty) return context.tr('enter_password');
+                if (value.length < 6) return context.tr('enter_password');
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             _buildTextField(
               controller: _signupConfirmPasswordController,
-              label: 'Confirm Password',
+              label: context.tr('confirm_password'),
               icon: Icons.lock_outline,
               isPassword: true,
               isPasswordVisible: _isSignupConfirmPasswordVisible,
               onTogglePassword: () {
-                setState(() {
-                  _isSignupConfirmPasswordVisible =
-                      !_isSignupConfirmPasswordVisible;
-                });
+                setState(() => _isSignupConfirmPasswordVisible = !_isSignupConfirmPasswordVisible);
               },
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please confirm your password';
-                }
-                if (value != _signupPasswordController.text) {
-                  return 'Passwords do not match';
-                }
+                if (value == null || value.isEmpty) return context.tr('confirm_your_password');
+                if (value != _signupPasswordController.text) return context.tr('confirm_your_password');
                 return null;
               },
             ),
-            const SizedBox(height: 30),
-            _buildGradientButton(text: 'SIGN UP', onPressed: _handleSignup),
+            SizedBox(height: 30.h),
+            _buildGradientButton(text: context.tr('signup_tab'), onPressed: _handleSignup),
           ],
         ),
       ),
@@ -378,41 +351,41 @@ class _AuthScreenState extends State<AuthScreen>
       style: const TextStyle(color: Color(0xFFE8EAED)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: const Color(0xFF00D9FF).withOpacity(0.7)),
+        labelStyle: TextStyle(color: const Color(0xFF00D9FF).withValues(alpha: 0.7)),
         prefixIcon: Icon(icon, color: const Color(0xFF00D9FF)),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                  color: const Color(0xFF00D9FF).withOpacity(0.7),
+                  color: const Color(0xFF00D9FF).withValues(alpha: 0.7),
                 ),
                 onPressed: onTogglePassword,
               )
             : null,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.white.withValues(alpha: 0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
           borderSide: BorderSide(
-            color: const Color(0xFF00D9FF).withOpacity(0.2),
+            color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
           borderSide: BorderSide(
-            color: const Color(0xFF00D9FF).withOpacity(0.2),
+            color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
           borderSide: const BorderSide(color: Color(0xFF00D9FF), width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
           borderSide: const BorderSide(color: Color(0xFFFF1744)),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
           borderSide: const BorderSide(color: Color(0xFFFF1744), width: 2),
         ),
       ),
@@ -425,15 +398,15 @@ class _AuthScreenState extends State<AuthScreen>
   }) {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 56.h,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9FF).withOpacity(0.3),
+            color: const Color(0xFF00D9FF).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -445,13 +418,13 @@ class _AuthScreenState extends State<AuthScreen>
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15.r),
           ),
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: 16.sp,
             fontWeight: FontWeight.w700,
             letterSpacing: 2,
             color: Colors.white,

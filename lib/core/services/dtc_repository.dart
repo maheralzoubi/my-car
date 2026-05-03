@@ -14,6 +14,9 @@ class DtcRepository {
 
   Map<String, String>? _localCodes;
 
+  // Cache to avoid re-translating the same text
+  final Map<String, String> _arabicCache = {};
+
   Future<Map<String, String>> _loadLocalCodes() async {
     if (_localCodes != null) return _localCodes!;
 
@@ -33,20 +36,30 @@ class DtcRepository {
         result.contains(ConnectivityResult.ethernet);
   }
 
-  /// Returns description for a given OBD code, or null if not found.
+  /// Returns a description for [code].
   ///
-  /// Logic:
-  /// - If offline: only check local JSON.
-  /// - If online: check local JSON first, if not found then call API.
-  Future<String?> getDtcDescription(String code) async {
+  /// Pass [languageCode] = 'ar' to get an Arabic description.
+  /// Arabic descriptions are translated from English via the MyMemory API
+  /// and cached for the lifetime of this instance.
+  Future<String?> getDtcDescription(
+    String code, {
+    String languageCode = 'en',
+  }) async {
+    final englishDesc = await _getEnglishDescription(code);
+    if (englishDesc == null) return null;
+    if (languageCode != 'ar') return englishDesc;
+    return _translateToArabic(englishDesc);
+  }
+
+  // ─── Internal ────────────────────────────────────────────────────────────
+
+  Future<String?> _getEnglishDescription(String code) async {
     final normalized = code.trim().toUpperCase();
     final local = await _loadLocalCodes();
 
     final online = await _hasNetwork().catchError((_) => false);
 
-    if (!online) {
-      return local[normalized];
-    }
+    if (!online) return local[normalized];
 
     final localHit = local[normalized];
     if (localHit != null && localHit.isNotEmpty) return localHit;
@@ -76,18 +89,43 @@ class DtcRepository {
     final body = jsonDecode(response.body);
 
     if (body is Map<String, dynamic>) {
-      if (body['description'] is String) {
-        return body['description'] as String;
-      }
-      if (body['meaning'] is String) {
-        return body['meaning'] as String;
-      }
-      if (body['message'] is String) {
-        return body['message'] as String;
-      }
+      if (body['description'] is String) return body['description'] as String;
+      if (body['meaning'] is String) return body['meaning'] as String;
+      if (body['message'] is String) return body['message'] as String;
     }
 
     return null;
   }
-}
 
+  /// Translates [text] from English to Arabic using the free MyMemory API.
+  /// Falls back to the original English text if translation fails.
+  Future<String> _translateToArabic(String text) async {
+    if (_arabicCache.containsKey(text)) return _arabicCache[text]!;
+
+    try {
+      final uri = Uri.parse(
+        'https://api.mymemory.translated.net/get'
+        '?q=${Uri.encodeComponent(text)}&langpair=en|ar',
+      );
+
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final translated =
+            (body['responseData'] as Map?)?['translatedText'] as String?;
+
+        if (translated != null &&
+            translated.isNotEmpty &&
+            translated != text) {
+          _arabicCache[text] = translated;
+          return translated;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: return original English text
+    return text;
+  }
+}

@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # BLoC - Business Logic Component pattern
   flutter_bloc: ^8.1.6
@@ -38,6 +40,13 @@ dependencies:
   # HTTP & connectivity for OBD logic
   http: ^1.2.0
   connectivity_plus: ^6.0.0
+
+  # Bluetooth
+  flutter_blue_plus: ^1.35.3
+  permission_handler: ^11.3.1
+
+  # Responsive UI
+  flutter_screenutil: ^5.9.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

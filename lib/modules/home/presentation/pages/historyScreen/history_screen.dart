@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -117,24 +119,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
-            'Scan History',
+          Text(
+            context.tr('history_title'),
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.accentOrange),
+            icon: Icon(Icons.delete_outline, color: AppColors.accentOrange),
             onPressed: _showClearHistoryDialog,
           ),
         ],
@@ -150,8 +152,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final success = _scanHistory.where((s) => s['status'] == 'success').length;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -162,17 +164,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
         border: Border.all(
           color: AppColors.accentCyan.withValues(alpha: 0.2),
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('Total', total, AppColors.accentCyan),
-              _buildStatItem('Critical', critical, _criticalRed),
-              _buildStatItem('Warning', warning, AppColors.accentOrange),
-              _buildStatItem('Clean', success, _successGreen),
+              _buildStatItem(context.tr('all'), total, AppColors.accentCyan),
+              _buildStatItem(context.tr('severity_critical'), critical, _criticalRed),
+              _buildStatItem(context.tr('severity_warning'), warning, AppColors.accentOrange),
+              _buildStatItem(context.tr('connected'), success, _successGreen),
             ],
           ),
         ],
@@ -186,16 +188,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
         Text(
           count.toString(),
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 28.sp,
             fontWeight: FontWeight.w900,
             color: color,
           ),
         ),
-        const SizedBox(height: 5),
+        SizedBox(height: 5.h),
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 11.sp,
             color: AppColors.textLight.withValues(alpha: 0.7),
           ),
         ),
@@ -205,8 +207,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildFilters() {
     return Container(
-      height: 50,
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      height: 50.h,
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: filters.length,
@@ -219,8 +221,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
               setState(() => selectedFilter = filter);
             },
             child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              margin: EdgeInsets.only(right: 10.w),
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
               decoration: BoxDecoration(
                 gradient: isSelected
                     ? const LinearGradient(
@@ -233,13 +235,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ? AppColors.transparent
                       : AppColors.accentCyan.withValues(alpha: 0.2),
                 ),
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(25.r),
               ),
               child: Center(
                 child: Text(
                   filter,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? AppColors.white
@@ -264,14 +266,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             Icon(
               Icons.history,
-              size: 80,
+              size: 80.r,
               color: AppColors.accentCyan.withValues(alpha: 0.3),
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'No scans found',
+            SizedBox(height: 20.h),
+            Text(
+              context.tr('no_history'),
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 color: AppColors.textLight,
               ),
             ),
@@ -281,7 +283,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.r),
       itemCount: history.length,
       itemBuilder: (context, index) {
         return _buildHistoryItem(history[index], index);
@@ -306,14 +308,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 15),
-        padding: const EdgeInsets.all(20),
+        margin: EdgeInsets.only(bottom: 15.h),
+        padding: EdgeInsets.all(20.r),
         decoration: BoxDecoration(
           color: AppColors.white.withValues(alpha: 0.03),
           border: Border.all(
             color: statusColor.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,17 +328,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       Text(
                         scan['date'] as String? ?? '—',
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 13.sp,
                           color: AppColors.accentCyan,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      SizedBox(height: 5.h),
                       Text(
                         scan['vehicle'] as String? ?? '—',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           color: AppColors.textLight.withValues(alpha: 0.5),
                         ),
                       ),
@@ -344,21 +346,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
                   ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     border: Border.all(color: statusColor),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
                     scan['status'] == 'success'
                         ? 'Clean'
                         : '${codes.length} Code${codes.length > 1 ? 's' : ''}',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 11.sp,
                       fontWeight: FontWeight.w700,
                       color: statusColor,
                     ),
@@ -366,37 +368,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 15),
+            SizedBox(height: 15.h),
             Text(
               scan['result'] as String? ?? '—',
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textLight,
               ),
             ),
             if (codes.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: codes.map<Widget>((code) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 5.h,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.white.withValues(alpha: 0.05),
                       border: Border.all(
                         color: AppColors.accentCyan.withValues(alpha: 0.3),
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text(
                       code.toString(),
-                      style: const TextStyle(
-                        fontSize: 11,
+                      style: TextStyle(
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.w700,
                         color: AppColors.accentCyan,
                       ),
@@ -405,7 +407,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 }).toList(),
               ),
             ],
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -413,7 +415,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   onPressed: () {
                     // View details
                   },
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
@@ -421,14 +423,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         style: TextStyle(
                           color: AppColors.accentCyan,
                           fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                          fontSize: 13.sp,
                         ),
                       ),
-                      SizedBox(width: 5),
+                      SizedBox(width: 5.w),
                       Icon(
                         Icons.arrow_forward,
                         color: AppColors.accentCyan,
-                        size: 16,
+                        size: 16.r,
                       ),
                     ],
                   ),
@@ -447,7 +449,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         title: const Text(
           'Clear History?',
@@ -473,7 +475,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentOrange,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
               ),
             ),
             child: const Text('Clear All'),

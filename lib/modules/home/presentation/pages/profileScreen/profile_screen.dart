@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
@@ -70,20 +71,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildProfileCard(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildStatsSection(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildPersonalInfoSection(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildVehiclesSection(),
-                      const SizedBox(height: 25),
+                      SizedBox(height: 25.h),
                       _buildAchievementsSection(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
                     ],
                   ),
                 ),
@@ -97,24 +98,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan, size: 24.r),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
+          Text(
             'My Profile',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.accentCyan),
+            icon: Icon(Icons.share, color: AppColors.accentCyan, size: 24.r),
             onPressed: () {},
           ),
         ],
@@ -124,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildProfileCard() {
     return Container(
-      padding: const EdgeInsets.all(25),
+      padding: EdgeInsets.all(25.r),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -135,7 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: Border.all(
           color: AppColors.accentCyan.withValues(alpha: 0.3),
         ),
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(25.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -149,8 +150,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Stack(
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 100.w,
+                height: 100.h,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [AppColors.accentCyan, AppColors.accentOrange],
@@ -167,8 +168,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Center(
                   child: Text(
                     _initials,
-                    style: const TextStyle(
-                      fontSize: 36,
+                    style: TextStyle(
+                      fontSize: 36.sp,
                       fontWeight: FontWeight.w900,
                       color: AppColors.white,
                     ),
@@ -179,8 +180,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 bottom: 0,
                 right: 0,
                 child: Container(
-                  width: 32,
-                  height: 32,
+                  width: 32.w,
+                  height: 32.h,
                   decoration: BoxDecoration(
                     color: _successGreen,
                     shape: BoxShape.circle,
@@ -189,33 +190,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: 3,
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.verified,
                     color: AppColors.white,
-                    size: 18,
+                    size: 18.r,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           Text(
             userProfile['name'] as String? ?? '',
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Text(
             userProfile['email'] as String? ?? '',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 15.sp,
               color: AppColors.textLight.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -223,16 +224,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.pushNamed(context, AppRoutes.editProfile);
               },
               icon: const Icon(Icons.edit),
-              label: const Text(
+              label: Text(
                 'Edit Profile',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentCyan,
                 foregroundColor: AppColors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                padding: EdgeInsets.symmetric(vertical: 15.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
               ),
             ),
@@ -244,13 +245,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildStatsSection() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,27 +259,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             children: [
               Container(
-                width: 4,
-                height: 20,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
+                width: 4.w,
+                height: 20.h,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
                     colors: [AppColors.accentCyan, AppColors.accentOrange],
                   ),
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  borderRadius: BorderRadius.all(Radius.circular(10.r)),
                 ),
               ),
-              const SizedBox(width: 10),
-              const Text(
+              SizedBox(width: 10.w),
+              Text(
                 'Activity Stats',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 18.sp,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textLight,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           Row(
             children: [
               _buildStatItem(
@@ -307,22 +308,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Expanded(
       child: Column(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 32)),
-          const SizedBox(height: 8),
+          Text(icon, style: TextStyle(fontSize: 32.sp)),
+          SizedBox(height: 8.h),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(
+              fontSize: 24.sp,
               fontWeight: FontWeight.w900,
               color: AppColors.accentCyan,
             ),
           ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5.h),
           Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.sp,
               color: AppColors.textLight.withValues(alpha: 0.7),
             ),
           ),
@@ -338,27 +339,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Personal Information',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         _buildInfoCard('📧', 'Email', userProfile['email'] as String? ?? ''),
         _buildInfoCard('📱', 'Phone', userProfile['phone'] as String? ?? ''),
         _buildInfoCard(
@@ -377,19 +378,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildInfoCard(String icon, String label, String value) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 15),
+          Text(icon, style: TextStyle(fontSize: 24.sp)),
+          SizedBox(width: 15.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,15 +398,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textLight,
                   ),
@@ -428,20 +429,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Row(
               children: [
                 Container(
-                  width: 4,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
+                  width: 4.w,
+                  height: 20.h,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
                       colors: [AppColors.accentCyan, AppColors.accentOrange],
                     ),
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                    borderRadius: BorderRadius.all(Radius.circular(10.r)),
                   ),
                 ),
-                const SizedBox(width: 10),
-                const Text(
+                SizedBox(width: 10.w),
+                Text(
                   'My Vehicles',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textLight,
                   ),
@@ -450,16 +451,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton.icon(
               onPressed: () {},
-              icon: const Icon(Icons.add, color: AppColors.accentCyan),
-              label: const Text(
+              icon: Icon(Icons.add, color: AppColors.accentCyan, size: 24.r),
+              label: Text(
                 'Add',
                 style: TextStyle(color: AppColors.accentCyan),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
-        ...vehicles.map((vehicle) => _buildVehicleCard(vehicle)).toList(),
+        SizedBox(height: 15.h),
+        ...vehicles.map((vehicle) => _buildVehicleCard(vehicle)),
       ],
     );
   }
@@ -472,8 +473,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final health = vehicle['health'] ?? 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
@@ -482,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : AppColors.white.withValues(alpha: 0.1),
           width: isPrimary ? 2 : 1,
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,21 +491,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 50.w,
+                height: 50.h,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [AppColors.accentCyan, AppColors.accentOrange],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.directions_car,
                   color: AppColors.white,
-                  size: 28,
+                  size: 28.r,
                 ),
               ),
-              const SizedBox(width: 15),
+              SizedBox(width: 15.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,8 +515,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: Text(
                             name,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: TextStyle(
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textLight,
                             ),
@@ -523,18 +524,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         if (isPrimary)
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.accentCyan.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(8.r),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Primary',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 10.sp,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.accentCyan,
                               ),
@@ -542,11 +543,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Text(
                       vin,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 12.sp,
                         color: AppColors.textLight.withValues(alpha: 0.6),
                       ),
                     ),
@@ -555,7 +556,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: 15.h),
           Row(
             children: [
               Expanded(
@@ -565,15 +566,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Text(
                       'Mileage',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 11.sp,
                         color: AppColors.textLight.withValues(alpha: 0.6),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Text(
                       mileage,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textLight,
                       ),
@@ -588,15 +589,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Text(
                       'Health Score',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 11.sp,
                         color: AppColors.textLight.withValues(alpha: 0.6),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Text(
                       '$health%',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: _successGreen,
                       ),
@@ -618,29 +619,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Achievements',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         SizedBox(
-          height: 100,
+          height: 100.h,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
@@ -658,9 +659,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAchievementBadge(String icon, String label, bool unlocked) {
     return Container(
-      width: 80,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
+      width: 80.w,
+      margin: EdgeInsets.only(right: 12.w),
+      padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
         color: unlocked
             ? _ratingYellow.withValues(alpha: 0.1)
@@ -670,21 +671,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? _ratingYellow
               : AppColors.white.withValues(alpha: 0.1),
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Opacity(
             opacity: unlocked ? 1.0 : 0.3,
-            child: Text(icon, style: const TextStyle(fontSize: 32)),
+            child: Text(icon, style: TextStyle(fontSize: 32.sp)),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 10.sp,
               fontWeight: FontWeight.w600,
               color: unlocked
                   ? _ratingYellow

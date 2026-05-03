@@ -1,10 +1,25 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
+
+enum _BtState {
+  checkingPermission,
+  permissionDenied,
+  btOff,
+  scanning,
+  connecting,
+  connected,
+}
 
 class ConnectionScreen extends StatefulWidget {
-  const ConnectionScreen({Key? key}) : super(key: key);
+  const ConnectionScreen({super.key});
 
   @override
   State<ConnectionScreen> createState() => _ConnectionScreenState();
@@ -13,25 +28,14 @@ class ConnectionScreen extends StatefulWidget {
 class _ConnectionScreenState extends State<ConnectionScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
-  bool isScanning = true;
-  String? selectedDevice;
 
-  final List<Map<String, dynamic>> devices = [
-    {
-      'name': 'OBD-II ELM327',
-      'type': 'Bluetooth',
-      'status': 'Nearby',
-      'signal': 3,
-      'icon': Icons.bluetooth,
-    },
-    {
-      'name': 'VGATE iCar Pro',
-      'type': 'WiFi',
-      'status': 'Available',
-      'signal': 2,
-      'icon': Icons.wifi,
-    },
-  ];
+  _BtState _btState = _BtState.checkingPermission;
+  List<ScanResult> _scanResults = [];
+  BluetoothDevice? _connectingDevice;
+  BluetoothDevice? _connectedDevice;
+
+  StreamSubscription<List<ScanResult>>? _scanSub;
+  StreamSubscription<BluetoothAdapterState>? _adapterSub;
 
   @override
   void initState() {
@@ -40,13 +44,164 @@ class _ConnectionScreenState extends State<ConnectionScreen>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    _adapterSub?.cancel();
+    _adapterSub = FlutterBluePlus.adapterState.listen((adapterState) {
+      if (!mounted) return;
+      if (adapterState == BluetoothAdapterState.on) {
+        if (_btState != _BtState.scanning &&
+            _btState != _BtState.connecting &&
+            _btState != _BtState.connected) {
+          _startScan();
+        }
+      } else if (adapterState == BluetoothAdapterState.off) {
+        setState(() {
+          _btState = _BtState.btOff;
+          _scanResults.clear();
+        });
+      }
+    });
+
+    final granted = await _requestPermissions();
+    if (!mounted) return;
+
+    if (!granted) {
+      setState(() => _btState = _BtState.permissionDenied);
+      return;
+    }
+
+    final adapterState = await FlutterBluePlus.adapterState.first;
+    if (!mounted) return;
+
+    if (adapterState != BluetoothAdapterState.on) {
+      setState(() => _btState = _BtState.btOff);
+      return;
+    }
+
+    _startScan();
+  }
+
+  Future<bool> _requestPermissions() async {
+    if (Platform.isAndroid) {
+      final statuses = await [
+        Permission.bluetoothScan,
+        Permission.bluetoothConnect,
+        Permission.location,
+      ].request();
+      return statuses.values.every((s) => s.isGranted || s.isLimited);
+    }
+    return true;
+  }
+
+  Future<void> _startScan() async {
+    if (!mounted) return;
+    await FlutterBluePlus.stopScan();
+    _scanSub?.cancel();
+
+    setState(() {
+      _btState = _BtState.scanning;
+      _scanResults.clear();
+      _connectingDevice = null;
+    });
+
+    _scanSub = FlutterBluePlus.scanResults.listen((results) {
+      if (!mounted) return;
+      setState(() => _scanResults = results);
+    }, onError: (_) {});
+
+    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
+  }
+
+  Future<void> _connectToDevice(BluetoothDevice device) async {
+    await FlutterBluePlus.stopScan();
+
+    setState(() {
+      _btState = _BtState.connecting;
+      _connectingDevice = device;
+    });
+
+    try {
+      await device.connect(timeout: const Duration(seconds: 15));
+      if (!mounted) return;
+      setState(() {
+        _btState = _BtState.connected;
+        _connectedDevice = device;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _btState = _BtState.scanning;
+        _connectingDevice = null;
+      });
+      _startScan();
+    }
+  }
+
+  Future<void> _disconnect() async {
+    await _connectedDevice?.disconnect();
+    if (!mounted) return;
+    setState(() {
+      _connectedDevice = null;
+      _connectingDevice = null;
+    });
+    _startScan();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _scanSub?.cancel();
+    _adapterSub?.cancel();
+    FlutterBluePlus.stopScan();
     super.dispose();
   }
+
+  // ─── Computed status strings (use context.tr in build phase) ─────────────
+
+  String _statusMessage(BuildContext ctx) {
+    switch (_btState) {
+      case _BtState.checkingPermission:
+        return ctx.tr('checking_permissions');
+      case _BtState.permissionDenied:
+        return ctx.tr('bt_permission_required');
+      case _BtState.btOff:
+        return ctx.tr('please_turn_on_bt');
+      case _BtState.scanning:
+        return ctx.tr('searching_devices');
+      case _BtState.connecting:
+        final n = _connectingDevice?.platformName;
+        final name =
+            (n != null && n.isNotEmpty) ? n : ctx.tr('unknown_device');
+        return '${ctx.tr('connecting_to')} $name...';
+      case _BtState.connected:
+        final n = _connectedDevice?.platformName;
+        final name = (n != null && n.isNotEmpty)
+            ? n
+            : _connectedDevice?.remoteId.str ?? ctx.tr('unknown_device');
+        return '${ctx.tr('connected_to')} $name';
+    }
+  }
+
+  String _statusSubtitle(BuildContext ctx) {
+    switch (_btState) {
+      case _BtState.checkingPermission:
+      case _BtState.connecting:
+        return ctx.tr('please_wait');
+      case _BtState.permissionDenied:
+        return ctx.tr('go_to_settings_bt');
+      case _BtState.btOff:
+        return ctx.tr('enable_bluetooth');
+      case _BtState.scanning:
+        return '${_scanResults.length} ${ctx.tr('devices_found_nearby')}';
+      case _BtState.connected:
+        return ctx.tr('tap_scan_vehicle');
+    }
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -61,30 +216,32 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: EdgeInsets.all(20.r),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(),
-                const SizedBox(height: 40),
+                _buildHeader(context),
+                SizedBox(height: 40.h),
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        _buildTitle(),
-                        const SizedBox(height: 30),
-                        _buildStatusCard(),
-                        const SizedBox(height: 30),
-                        _buildDeviceList(),
-                        const SizedBox(height: 24),
+                        _buildTitle(context),
+                        SizedBox(height: 30.h),
+                        _buildStatusCard(context),
+                        SizedBox(height: 30.h),
+                        if (_btState == _BtState.scanning ||
+                            _btState == _BtState.connecting ||
+                            _btState == _BtState.connected)
+                          _buildDeviceList(context),
+                        SizedBox(height: 24.h),
                       ],
                     ),
                   ),
                 ),
-                // Fixed bottom: Scan vehicle button + help text
-                _buildScanButton(),
-                const SizedBox(height: 12),
-                _buildHelpText(),
+                _buildActionButton(context),
+                SizedBox(height: 12.h),
+                _buildBottomText(context),
               ],
             ),
           ),
@@ -93,58 +250,60 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     );
   }
 
-  Widget _buildHeader() {
+  // ─── Header ───────────────────────────────────────────────────────────────
+
+  Widget _buildHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'CARDIAG',
+        Text(
+          context.tr('app_name'),
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 24.sp,
             fontWeight: FontWeight.w900,
             color: AppColors.accentCyan,
-            shadows: [Shadow(color: AppColors.accentCyan, blurRadius: 20)],
+            shadows: const [Shadow(color: AppColors.accentCyan, blurRadius: 20)],
           ),
         ),
         Container(
-          width: 40,
-          height: 40,
+          width: 40.w,
+          height: 40.h,
           decoration: BoxDecoration(
             color: AppColors.white.withValues(alpha: 0.05),
             border: Border.all(color: AppColors.accentCyan),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(10.r),
           ),
           child: IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.settings,
               color: AppColors.accentCyan,
-              size: 20,
+              size: 20.r,
             ),
-            onPressed: () {
-              // Navigate to settings
-            },
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTitle() {
+  // ─── Title ────────────────────────────────────────────────────────────────
+
+  Widget _buildTitle(BuildContext context) {
     return Column(
       children: [
-        const Text(
-          'Connect to Vehicle',
+        Text(
+          context.tr('connect_to_vehicle'),
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 28.sp,
             fontWeight: FontWeight.w700,
             color: AppColors.textLight,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10.h),
         Text(
-          'SELECT OBD-II ADAPTER',
+          context.tr('select_obd_adapter'),
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 14.sp,
             color: AppColors.accentCyan,
             fontWeight: FontWeight.w300,
             letterSpacing: 2,
@@ -154,9 +313,11 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     );
   }
 
-  Widget _buildStatusCard() {
+  // ─── Status card ──────────────────────────────────────────────────────────
+
+  Widget _buildStatusCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(30),
+      padding: EdgeInsets.all(30.r),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -166,73 +327,28 @@ class _ConnectionScreenState extends State<ConnectionScreen>
             AppColors.white.withValues(alpha: 0.02),
           ],
         ),
-        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.2)),
-        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _accentColor.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
         children: [
-          SizedBox(
-            width: 120,
-            height: 120,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Pulse rings
-                ...List.generate(3, (index) {
-                  return AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      final delay = index * 0.33;
-                      final progress = (_pulseController.value + delay) % 1.0;
-                      return Opacity(
-                        opacity: 1.0 - progress,
-                        child: Transform.scale(
-                          scale: 0.5 + (progress * 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.accentCyan,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                }),
-                // Bluetooth icon
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.accentCyan.withValues(alpha: 0.1),
-                  ),
-                  child: const Icon(
-                    Icons.bluetooth_searching,
-                    size: 40,
-                    color: AppColors.accentCyan,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Searching for devices...',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.accentCyan,
-            ),
-          ),
-          const SizedBox(height: 10),
+          _buildStatusIcon(),
+          SizedBox(height: 20.h),
           Text(
-            'Make sure Bluetooth is enabled',
+            _statusMessage(context),
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: _accentColor,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            _statusSubtitle(context),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14.sp,
               color: AppColors.textLight.withValues(alpha: 0.7),
             ),
           ),
@@ -241,154 +357,343 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     );
   }
 
-  Widget _buildDeviceList() {
-    return Column(
-      children: devices.asMap().entries.map((entry) {
-        final index = entry.key;
-        final device = entry.value;
+  Color get _accentColor {
+    switch (_btState) {
+      case _BtState.connected:
+        return AppColors.accentOrange;
+      case _BtState.permissionDenied:
+      case _BtState.btOff:
+        return Colors.redAccent;
+      default:
+        return AppColors.accentCyan;
+    }
+  }
 
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: Duration(milliseconds: 500 + (index * 100)),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(50 * (1 - value), 0),
-                child: child,
-              ),
+  Widget _buildStatusIcon() {
+    if (_btState == _BtState.connected) {
+      return Container(
+        width: 80.w,
+        height: 80.h,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.accentOrange.withValues(alpha: 0.1),
+          border: Border.all(color: AppColors.accentOrange, width: 2),
+        ),
+        child: Icon(
+          Icons.bluetooth_connected,
+          size: 40.r,
+          color: AppColors.accentOrange,
+        ),
+      );
+    }
+
+    if (_btState == _BtState.permissionDenied || _btState == _BtState.btOff) {
+      return Container(
+        width: 80.w,
+        height: 80.h,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.redAccent.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.redAccent, width: 2),
+        ),
+        child: Icon(
+          _btState == _BtState.btOff
+              ? Icons.bluetooth_disabled
+              : Icons.no_encryption,
+          size: 40.r,
+          color: Colors.redAccent,
+        ),
+      );
+    }
+
+    if (_btState == _BtState.connecting) {
+      return SizedBox(
+        width: 80.w,
+        height: 80.h,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: AppColors.accentCyan,
+              strokeWidth: 2,
+            ),
+            Icon(Icons.bluetooth, size: 35.r, color: AppColors.accentCyan),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: 120.w,
+      height: 120.h,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ...List.generate(3, (index) {
+            return AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                final delay = index * 0.33;
+                final progress = (_pulseController.value + delay) % 1.0;
+                return Opacity(
+                  opacity: 1.0 - progress,
+                  child: Transform.scale(
+                    scale: 0.5 + (progress * 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accentCyan,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
-          },
-          child: _buildDeviceItem(device),
-        );
-      }).toList(),
+          }),
+          Container(
+            width: 60.w,
+            height: 60.h,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.accentCyan.withValues(alpha: 0.1),
+            ),
+            child: Icon(
+              Icons.bluetooth_searching,
+              size: 40.r,
+              color: AppColors.accentCyan,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildDeviceItem(Map<String, dynamic> device) {
-    final isSelected = selectedDevice == device['name'];
+  // ─── Device list ──────────────────────────────────────────────────────────
+
+  Widget _buildDeviceList(BuildContext context) {
+    if (_scanResults.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        child: Text(
+          context.tr('no_devices_found'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: AppColors.textLight.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.tr('available_devices'),
+          style: TextStyle(
+            fontSize: 12.sp,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w600,
+            color: AppColors.accentCyan.withValues(alpha: 0.8),
+          ),
+        ),
+        SizedBox(height: 12.h),
+        ..._scanResults.map((r) => _buildDeviceItem(context, r)),
+      ],
+    );
+  }
+
+  Widget _buildDeviceItem(BuildContext context, ScanResult result) {
+    final device = result.device;
+    final name = device.platformName.isNotEmpty
+        ? device.platformName
+        : context.tr('unknown_device');
+    final isConnecting = _connectingDevice?.remoteId == device.remoteId;
+    final isConnected = _connectedDevice?.remoteId == device.remoteId;
+    final isActive = isConnecting || isConnected;
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedDevice = device['name'];
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 15),
-        padding: const EdgeInsets.all(20),
+      onTap:
+          (_btState == _BtState.connecting || _btState == _BtState.connected)
+              ? (isConnected ? _disconnect : null)
+              : () => _connectToDevice(device),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(16.r),
         decoration: BoxDecoration(
-          color: isSelected
+          color: isConnected
+              ? AppColors.accentOrange.withValues(alpha: 0.1)
+              : isConnecting
               ? AppColors.accentCyan.withValues(alpha: 0.1)
               : AppColors.white.withValues(alpha: 0.03),
           border: Border.all(
-            color: isSelected
+            color: isConnected
+                ? AppColors.accentOrange
+                : isConnecting
                 ? AppColors.accentCyan
                 : AppColors.accentCyan.withValues(alpha: 0.2),
-            width: isSelected ? 2 : 1,
+            width: isActive ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
         ),
         child: Row(
           children: [
-            // Device icon
             Container(
-              width: 50,
-              height: 50,
+              width: 46.w,
+              height: 46.h,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.backgroundDarkBlue],
+                gradient: LinearGradient(
+                  colors: isConnected
+                      ? [AppColors.accentOrange, AppColors.backgroundDarkBlue]
+                      : [AppColors.accentCyan, AppColors.backgroundDarkBlue],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(device['icon'], color: AppColors.white, size: 24),
+              child: Icon(
+                isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
+                color: AppColors.white,
+                size: 22.r,
+              ),
             ),
-            const SizedBox(width: 15),
-            // Device info
+            SizedBox(width: 14.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    device['name'],
-                    style: const TextStyle(
-                      fontSize: 16,
+                    name,
+                    style: TextStyle(
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textLight,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: 4.h),
                   Text(
-                    '${device['type']} • ${device['status']}',
+                    device.remoteId.str,
                     style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.accentCyan.withValues(alpha: 0.8),
+                      fontSize: 11.sp,
+                      color: AppColors.accentCyan.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
               ),
             ),
-            // Signal strength
-            _buildSignalStrength(device['signal']),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildSignalBars(result.rssi),
+                SizedBox(height: 4.h),
+                Text(
+                  '${result.rssi} dBm',
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    color: AppColors.textLight.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSignalStrength(int strength) {
+  Widget _buildSignalBars(int rssi) {
+    final strength = rssi >= -60 ? 3 : rssi >= -75 ? 2 : 1;
     return Row(
       children: List.generate(3, (index) {
         final isActive = index < strength;
         final heights = [8.0, 12.0, 16.0];
-
         return Container(
-          width: 4,
-          height: heights[index],
-          margin: const EdgeInsets.only(left: 3),
+          width: 4.w,
+          height: heights[index].h,
+          margin: EdgeInsets.only(left: 3.w),
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.accentCyan
-                : AppColors.accentCyan.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(2),
+                : AppColors.accentCyan.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(2.r),
           ),
         );
       }),
     );
   }
 
-  Widget _buildScanButton() {
+  // ─── Action button ────────────────────────────────────────────────────────
+
+  Widget _buildActionButton(BuildContext context) {
+    final String label;
+    final VoidCallback? onPressed;
+
+    switch (_btState) {
+      case _BtState.connected:
+        label = context.tr('scan_vehicle');
+        onPressed = () => Navigator.pushNamed(context, AppRoutes.dashboard);
+        break;
+      case _BtState.permissionDenied:
+        label = context.tr('open_settings_btn');
+        onPressed = openAppSettings;
+        break;
+      case _BtState.btOff:
+        label = context.tr('btn_retry');
+        onPressed = _initialize;
+        break;
+      case _BtState.scanning:
+        label = context.tr('btn_scanning');
+        onPressed = null;
+        break;
+      case _BtState.connecting:
+        label = context.tr('btn_connecting');
+        onPressed = null;
+        break;
+      case _BtState.checkingPermission:
+        label = context.tr('btn_please_wait');
+        onPressed = null;
+        break;
+    }
+
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 56.h,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.accentCyan, AppColors.accentOrange],
-        ),
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentCyan.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        gradient: onPressed != null
+            ? const LinearGradient(
+                colors: [AppColors.accentCyan, AppColors.accentOrange],
+              )
+            : null,
+        color: onPressed == null
+            ? AppColors.white.withValues(alpha: 0.1)
+            : null,
+        borderRadius: BorderRadius.circular(15.r),
+        boxShadow: onPressed != null
+            ? [
+                BoxShadow(
+                  color: AppColors.accentCyan.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : null,
       ),
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.dashboard);
-        },
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.transparent,
           shadowColor: AppColors.transparent,
+          disabledBackgroundColor: AppColors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15.r),
           ),
         ),
-        child: const Text(
-          'SCAN VEHICLE',
+        child: Text(
+          label,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 16.sp,
             fontWeight: FontWeight.w700,
             letterSpacing: 2,
             color: AppColors.white,
@@ -398,12 +703,29 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     );
   }
 
-  Widget _buildHelpText() {
+  // ─── Bottom hint text ─────────────────────────────────────────────────────
+
+  Widget _buildBottomText(BuildContext context) {
+    if (_btState == _BtState.scanning) {
+      return GestureDetector(
+        onTap: _startScan,
+        child: Text(
+          context.tr('tap_to_rescan'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13.sp,
+            color: AppColors.accentCyan.withValues(alpha: 0.7),
+            decoration: TextDecoration.underline,
+            decorationColor: AppColors.accentCyan.withValues(alpha: 0.7),
+          ),
+        ),
+      );
+    }
     return Text(
-      'Having trouble connecting? Check our troubleshooting guide',
+      context.tr('trouble_connecting'),
       textAlign: TextAlign.center,
       style: TextStyle(
-        fontSize: 13,
+        fontSize: 13.sp,
         color: AppColors.textLight.withValues(alpha: 0.5),
       ),
     );

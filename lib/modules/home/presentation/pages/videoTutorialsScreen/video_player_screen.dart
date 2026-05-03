@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 
@@ -59,7 +60,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ? constraints.maxWidth
                         : MediaQuery.of(context).size.width;
                     return SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(20.r),
                       child: SizedBox(
                         width: width,
                         child: Column(
@@ -67,13 +68,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _buildVideoInfo(),
-                            const SizedBox(height: 20),
+                            SizedBox(height: 20.h),
                             _buildInstructorInfo(),
-                            const SizedBox(height: 25),
+                            SizedBox(height: 25.h),
                             _buildDescription(),
-                            const SizedBox(height: 25),
+                            SizedBox(height: 25.h),
                             _buildToolsAndParts(),
-                            const SizedBox(height: 25),
+                            SizedBox(height: 25.h),
                             _buildRelatedVideos(),
                           ],
                         ),
@@ -91,23 +92,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan, size: 24.r),
             onPressed: () => Navigator.pop(context),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.picture_in_picture_alt,
               color: AppColors.accentCyan,
+              size: 24.r,
             ),
             onPressed: _showPIPDialog,
           ),
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.accentCyan),
+            icon: Icon(Icons.share, color: AppColors.accentCyan, size: 24.r),
             onPressed: () {},
           ),
         ],
@@ -120,11 +122,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final thumbnail = widget.tutorial['thumbnail'] as String? ?? '🎬';
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      height: 220,
+      margin: EdgeInsets.symmetric(horizontal: 20.w),
+      height: 220.h,
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.5),
@@ -142,12 +144,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   AppColors.accentOrange.withValues(alpha: 0.2),
                 ],
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Center(
               child: Text(
                 thumbnail,
-                style: const TextStyle(fontSize: 80),
+                style: TextStyle(fontSize: 80.sp),
               ),
             ),
           ),
@@ -159,8 +161,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 });
               },
               child: Container(
-                width: 70,
-                height: 70,
+                width: 70.w,
+                height: 70.h,
                 decoration: BoxDecoration(
                   color: AppColors.accentCyan.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
@@ -174,7 +176,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 child: Icon(
                   isPlaying ? Icons.pause : Icons.play_arrow,
                   color: AppColors.white,
-                  size: 40,
+                  size: 40.r,
                 ),
               ),
             ),
@@ -184,7 +186,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.all(15),
+              padding: EdgeInsets.all(15.r),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -194,9 +196,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     Colors.black.withValues(alpha: 0.7),
                   ],
                 ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20.r),
+                  bottomRight: Radius.circular(20.r),
                 ),
               ),
               child: Column(
@@ -217,16 +219,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     children: [
                       Text(
                         '${(currentPosition / 60).floor()}:${(currentPosition % 60).floor().toString().padLeft(2, '0')}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.white,
-                          fontSize: 12,
+                          fontSize: 12.sp,
                         ),
                       ),
                       Text(
                         duration,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.white,
-                          fontSize: 12,
+                          fontSize: 12.sp,
                         ),
                       ),
                     ],
@@ -252,18 +254,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
+              padding: EdgeInsets.symmetric(
+                horizontal: 10.w,
+                vertical: 6.h,
               ),
               decoration: BoxDecoration(
                 color: AppColors.accentCyan.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(8.r),
               ),
               child: Text(
                 code,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: TextStyle(
+                  fontSize: 12.sp,
                   fontWeight: FontWeight.w700,
                   color: AppColors.accentCyan,
                 ),
@@ -271,41 +273,41 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 22,
+          style: TextStyle(
+            fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: AppColors.textLight,
             height: 1.3,
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Row(
           children: [
-            const Icon(Icons.visibility, color: AppColors.accentCyan, size: 18),
-            const SizedBox(width: 8),
+            Icon(Icons.visibility, color: AppColors.accentCyan, size: 18.r),
+            SizedBox(width: 8.w),
             Text(
               '$views views',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 14.sp,
                 color: AppColors.textLight.withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(width: 20),
-            const Icon(Icons.star, color: _ratingYellow, size: 18),
-            const SizedBox(width: 8),
+            SizedBox(width: 20.w),
+            Icon(Icons.star, color: _ratingYellow, size: 18.r),
+            SizedBox(width: 8.w),
             Text(
               '$rating rating',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 14.sp,
                 color: AppColors.textLight.withValues(alpha: 0.7),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Row(
           children: [
             Expanded(
@@ -316,14 +318,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.white.withValues(alpha: 0.1),
                   foregroundColor: AppColors.accentCyan,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10.w),
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {},
@@ -332,9 +334,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.white.withValues(alpha: 0.1),
                   foregroundColor: _ratingYellow,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
               ),
@@ -349,17 +351,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final uploadedBy = widget.tutorial['uploadedBy'] as String? ?? '—';
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            width: 50.w,
+            height: 50.h,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.accentCyan, AppColors.accentOrange],
@@ -369,15 +371,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             child: Center(
               child: Text(
                 _instructorLetter,
-                style: const TextStyle(
-                  fontSize: 24,
+                style: TextStyle(
+                  fontSize: 24.sp,
                   fontWeight: FontWeight.w900,
                   color: AppColors.white,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 15),
+          SizedBox(width: 15.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,17 +387,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               children: [
                 Text(
                   _instructor,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textLight,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   uploadedBy,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
@@ -410,7 +412,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 backgroundColor: AppColors.accentCyan,
                 foregroundColor: AppColors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
               ),
               child: const Text(
@@ -433,31 +435,31 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Description',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Text(
           'Learn how to properly diagnose and fix the $code error code. This comprehensive tutorial covers everything you need to know, from identifying the problem to completing the repair.',
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 15.sp,
             color: AppColors.textLight.withValues(alpha: 0.8),
             height: 1.6,
           ),
@@ -473,27 +475,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Tools & Parts Needed',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -510,16 +512,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _buildToolChip(String tool) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppColors.accentCyan.withValues(alpha: 0.1),
         border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
       ),
       child: Text(
         tool,
-        style: const TextStyle(
-          fontSize: 13,
+        style: TextStyle(
+          fontSize: 13.sp,
           color: AppColors.accentCyan,
           fontWeight: FontWeight.w600,
         ),
@@ -534,48 +536,48 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         Row(
           children: [
             Container(
-              width: 4,
-              height: 20,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10.w),
+            Text(
               'Related Videos',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textLight,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         SizedBox(
-          height: 160,
+          height: 160.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: 3,
             itemBuilder: (context, index) {
               return Container(
-                width: 200,
-                margin: const EdgeInsets.only(right: 15),
+                width: 200.w,
+                margin: EdgeInsets.only(right: 15.w),
                 decoration: BoxDecoration(
                   color: AppColors.white.withValues(alpha: 0.05),
                   border: Border.all(
                     color: AppColors.accentCyan.withValues(alpha: 0.2),
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(15.r),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      height: 82,
+                      height: 82.h,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -583,20 +585,20 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             AppColors.accentOrange.withValues(alpha: 0.1),
                           ],
                         ),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(15),
-                          topRight: Radius.circular(15),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(15.r),
+                          topRight: Radius.circular(15.r),
                         ),
                       ),
-                      child: const Center(
-                        child: Text('🔧', style: TextStyle(fontSize: 40)),
+                      child: Center(
+                        child: Text('🔧', style: TextStyle(fontSize: 40.sp)),
                       ),
                     ),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 6.h,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -605,19 +607,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                           children: [
                             Text(
                               'Related Tutorial ${index + 1}',
-                              style: const TextStyle(
-                                fontSize: 13,
+                              style: TextStyle(
+                                fontSize: 13.sp,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textLight,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4.h),
                             Text(
                               '12 min',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 11.sp,
                                 color: AppColors.textLight.withValues(alpha: 0.6),
                               ),
                             ),
@@ -641,7 +643,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         title: const Text(
           'Picture-in-Picture Mode',
@@ -666,7 +668,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCyan,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
               ),
             ),
             child: const Text('Enable PIP'),

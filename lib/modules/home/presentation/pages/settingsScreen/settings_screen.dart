@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/bloc/locale/locale_bloc.dart';
+import '../../../../../core/bloc/locale/locale_event.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
-import '../dtc_lookup_page.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,6 +28,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const Color _successGreen = Color(0xFF00E676);
   static const Color _successGreenDark = Color(0xFF00C853);
 
+  void _onLanguageChanged(String value) {
+    setState(() => language = value);
+    final locale =
+        value == 'العربية' ? const Locale('ar') : const Locale('en');
+    context.read<LocaleBloc>().add(ChangeLocale(locale));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,10 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
+            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
           ),
         ),
         child: SafeArea(
@@ -44,20 +52,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildProfileSection(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildGeneralSettings(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildPreferencesSettings(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildAboutSection(),
-                      const SizedBox(height: 30),
+                      SizedBox(height: 30.h),
                       _buildDangerZone(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
                     ],
                   ),
                 ),
@@ -71,17 +79,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
-            'Settings',
+          Text(
+            context.tr('settings_title'),
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
@@ -93,11 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildProfileSection() {
     return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, AppRoutes.profile);
-      },
+      onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
       child: Container(
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(25.r),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -108,13 +114,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           border: Border.all(
             color: AppColors.accentCyan.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(25.r),
         ),
         child: Row(
           children: [
             Container(
-              width: 70,
-              height: 70,
+              width: 70.w,
+              height: 70.h,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [AppColors.accentCyan, AppColors.accentOrange],
@@ -127,35 +133,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   'JD',
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 24.sp,
                     fontWeight: FontWeight.w900,
                     color: AppColors.white,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 20),
+            SizedBox(width: 20.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'John Doe',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 20.sp,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textLight,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5.h),
                   Text(
                     'john.doe@email.com',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 14.sp,
                       color: AppColors.textLight.withValues(alpha: 0.7),
                     ),
                   ),
@@ -164,9 +170,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.edit, color: AppColors.accentCyan),
-              onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.profile);
-              },
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.profile),
             ),
           ],
         ),
@@ -178,41 +183,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('General'),
+        _buildSectionTitle(context.tr('general')),
         _buildSettingToggle(
           '🔔',
-          'Notifications',
-          'Receive alerts for diagnostic issues',
+          context.tr('notifications'),
+          context.tr('notifications_sub'),
           notifications,
-          (value) => setState(() => notifications = value),
+          (v) => setState(() => notifications = v),
         ),
         _buildSettingToggle(
           '🔄',
-          'Auto-Scan',
-          'Automatically scan on connection',
+          context.tr('auto_scan'),
+          context.tr('auto_scan_sub'),
           autoScan,
-          (value) => setState(() => autoScan = value),
+          (v) => setState(() => autoScan = v),
         ),
         _buildSettingToggle(
           '🌙',
-          'Dark Mode',
-          'Use dark theme',
+          context.tr('dark_mode'),
+          context.tr('dark_mode_sub'),
           darkMode,
-          (value) => setState(() => darkMode = value),
+          (v) => setState(() => darkMode = v),
         ),
         _buildSettingToggle(
           '🔊',
-          'Sound Effects',
-          'Play sounds for actions',
+          context.tr('sound_effects'),
+          context.tr('sound_effects_sub'),
           soundEffects,
-          (value) => setState(() => soundEffects = value),
+          (v) => setState(() => soundEffects = v),
         ),
         _buildSettingToggle(
           '📹',
-          'Dash Cam',
-          'Record video while driving',
+          context.tr('dash_cam'),
+          context.tr('dash_cam_sub'),
           dashCam,
-          (value) => setState(() => dashCam = value),
+          (v) => setState(() => dashCam = v),
+        ),
+        _buildSettingItem(
+          '🔎',
+          context.tr('dtc_lookup'),
+          context.tr('dtc_lookup_sub'),
+          () => Navigator.pushNamed(context, AppRoutes.dtcLookup),
         ),
       ],
     );
@@ -222,43 +233,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Preferences'),
+        _buildSectionTitle(context.tr('preferences')),
         _buildSettingSelector(
           '🌐',
-          'Language',
+          context.tr('language'),
           language,
-          ['English', 'العربية', 'Español', 'Français'],
-          (value) => setState(() => language = value),
+          ['English', 'العربية'],
+          _onLanguageChanged,
         ),
         _buildSettingSelector(
           '📏',
-          'Units',
+          context.tr('units'),
           units,
           ['Metric', 'Imperial'],
-          (value) => setState(() => units = value),
-        ),
-        _buildSettingItem(
-          '🧾',
-          'DTC Code Lookup',
-          'Enter a diagnostic code to see details',
-          () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const DtcLookupPage(),
-              ),
-            );
-          },
+          (v) => setState(() => units = v),
         ),
         _buildSettingItem(
           '🚗',
-          'Vehicle Profile',
-          'Manage your vehicles',
+          context.tr('vehicle_profile'),
+          context.tr('vehicle_profile_sub'),
           () {},
         ),
         _buildSettingItem(
           '📊',
-          'Data & Privacy',
-          'Manage your data preferences',
+          context.tr('data_privacy'),
+          context.tr('data_privacy_sub'),
           () {},
         ),
       ],
@@ -269,29 +268,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('About'),
-        _buildSettingItem(
-          'ℹ️',
-          'App Version',
-          'v1.0.0',
-          () {},
-        ),
+        _buildSectionTitle(context.tr('about')),
+        _buildSettingItem('ℹ️', context.tr('app_version'), 'v1.0.0', () {}),
         _buildSettingItem(
           '📄',
-          'Terms of Service',
-          'View terms and conditions',
+          context.tr('terms_of_service'),
+          context.tr('terms_sub'),
           () {},
         ),
         _buildSettingItem(
           '🔒',
-          'Privacy Policy',
-          'How we protect your data',
+          context.tr('privacy_policy'),
+          context.tr('privacy_sub'),
           () {},
         ),
         _buildSettingItem(
           '💬',
-          'Support',
-          'Get help and contact us',
+          context.tr('support'),
+          context.tr('support_sub'),
           () {},
         ),
       ],
@@ -302,33 +296,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Danger Zone'),
+        _buildSectionTitle(context.tr('danger_zone')),
         GestureDetector(
           onTap: _showLogoutDialog,
           child: Container(
-            padding: const EdgeInsets.all(18),
+            padding: EdgeInsets.all(18.r),
             decoration: BoxDecoration(
               color: _dangerRed.withValues(alpha: 0.1),
-              border: Border.all(
-                color: _dangerRed.withValues(alpha: 0.3),
-              ),
-              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: _dangerRed.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(15.r),
             ),
             child: Row(
               children: [
-                const Icon(Icons.logout, color: _dangerRed, size: 24),
-                const SizedBox(width: 15),
-                const Expanded(
+                Icon(Icons.logout, color: _dangerRed, size: 24.r),
+                SizedBox(width: 15.w),
+                Expanded(
                   child: Text(
-                    'Logout',
+                    context.tr('logout'),
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: _dangerRed,
                     ),
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios, color: _dangerRed, size: 16),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: _dangerRed,
+                  size: 16.r,
+                ),
               ],
             ),
           ),
@@ -339,24 +335,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: EdgeInsets.only(bottom: 15.h),
       child: Row(
         children: [
           Container(
-            width: 4,
-            height: 20,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
+            width: 4.w,
+            height: 20.h,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
                 colors: [AppColors.accentCyan, AppColors.accentOrange],
               ),
-              borderRadius: BorderRadius.all(Radius.circular(10)),
+              borderRadius: BorderRadius.all(Radius.circular(10.r)),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10.w),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: 18.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
@@ -374,36 +370,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     void Function(bool) onChanged,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 15),
+          Text(icon, style: TextStyle(fontSize: 24.sp)),
+          SizedBox(width: 15.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textLight,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
@@ -424,58 +418,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
     void Function(String) onChanged,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 15),
+          Text(icon, style: TextStyle(fontSize: 24.sp)),
+          SizedBox(width: 15.w),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textLight,
               ),
             ),
           ),
           GestureDetector(
-            onTap: () {
-              _showSelectorDialog(title, currentValue, options, onChanged);
-            },
+            onTap: () =>
+                _showSelectorDialog(title, currentValue, options, onChanged),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               decoration: BoxDecoration(
                 color: AppColors.accentCyan.withValues(alpha: 0.1),
                 border: Border.all(
                   color: AppColors.accentCyan.withValues(alpha: 0.3),
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     currentValue,
-                    style: const TextStyle(
-                      fontSize: 14,
+                    style: TextStyle(
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
                       color: AppColors.accentCyan,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(
+                  SizedBox(width: 8.w),
+                  Icon(
                     Icons.arrow_drop_down,
                     color: AppColors.accentCyan,
-                    size: 20,
+                    size: 20.r,
                   ),
                 ],
               ),
@@ -495,46 +486,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(18.r),
         decoration: BoxDecoration(
           color: AppColors.white.withValues(alpha: 0.05),
-          border: Border.all(
-            color: AppColors.white.withValues(alpha: 0.1),
-          ),
-          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(15.r),
         ),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 15),
+            Text(icon, style: TextStyle(fontSize: 24.sp)),
+            SizedBox(width: 15.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textLight,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.sp,
                       color: AppColors.textLight.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
               color: AppColors.accentCyan,
-              size: 16,
+              size: 16.r,
             ),
           ],
         ),
@@ -546,8 +535,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: Container(
-        width: 60,
-        height: 32,
+        width: 60.w,
+        height: 32.h,
         decoration: BoxDecoration(
           gradient: value
               ? const LinearGradient(
@@ -555,25 +544,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 )
               : null,
           color: value ? null : AppColors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            width: 28,
-            height: 28,
-            margin: const EdgeInsets.all(2),
+            width: 28.w,
+            height: 28.h,
+            margin: EdgeInsets.all(2.r),
             decoration: const BoxDecoration(
               color: AppColors.white,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 8,
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8)],
             ),
           ),
         ),
@@ -591,11 +575,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Text(
-          'Select $title',
+          '${context.tr('select')} $title',
           style: const TextStyle(color: AppColors.textLight),
         ),
         content: Column(
@@ -623,39 +605,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Text(
+          ctx.tr('logout_confirm'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
-        title: const Text(
-          'Logout?',
-          style: TextStyle(color: AppColors.textLight),
-        ),
-        content: const Text(
-          'Are you sure you want to logout?',
-          style: TextStyle(color: AppColors.textLight),
+        content: Text(
+          ctx.tr('logout_confirm_msg'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.accentCyan),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              ctx.tr('cancel'),
+              style: const TextStyle(color: AppColors.accentCyan),
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Logout logic
-            },
+            onPressed: () => Navigator.pop(ctx),
             style: ElevatedButton.styleFrom(
               backgroundColor: _dangerRed,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
               ),
             ),
-            child: const Text('Logout'),
+            child: Text(ctx.tr('logout')),
           ),
         ],
       ),

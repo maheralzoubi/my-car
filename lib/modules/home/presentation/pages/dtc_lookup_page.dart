@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/services/dtc_repository.dart';
 
@@ -40,7 +41,11 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
     });
 
     try {
-      final description = await _repository.getDtcDescription(code);
+      final languageCode = Localizations.localeOf(context).languageCode;
+      final description = await _repository.getDtcDescription(
+        code,
+        languageCode: languageCode,
+      );
       setState(() {
         if (description == null || description.isEmpty) {
           _result = null;
@@ -71,7 +76,7 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
         title: const Text('DTC Lookup'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -84,16 +89,16 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
               ),
               onSubmitted: (_) => _lookup(),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h),
             SizedBox(
-              height: 48,
+              height: 48.h,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _lookup,
                 child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
+                    ? SizedBox(
+                        width: 20.w,
+                        height: 20.h,
+                        child: const CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor:
                               AlwaysStoppedAnimation<Color>(Colors.white),
@@ -102,26 +107,26 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
                     : const Text('Get Description'),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
             if (_result != null) ...[
-              const Text(
+              Text(
                 'Description:',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 16.sp,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8.h),
               Text(
                 _result!,
-                style: const TextStyle(fontSize: 15),
+                style: TextStyle(fontSize: 15.sp),
               ),
             ] else if (_error != null) ...[
               Text(
                 _error!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.red,
-                  fontSize: 14,
+                  fontSize: 14.sp,
                 ),
               ),
             ],
@@ -131,4 +136,3 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
     );
   }
 }
-

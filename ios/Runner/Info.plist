@@ -41,6 +41,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>CARDIAG needs Bluetooth to connect to your OBD-II adapter</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>CARDIAG needs Bluetooth to connect to your OBD-II adapter</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access is required for Bluetooth device discovery</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

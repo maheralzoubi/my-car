@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/constants.dart';
 import '../widgets/counter_card.dart';
@@ -16,18 +17,18 @@ class HomePage extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(
-            top: AppSizes.space8,
-            left: AppSizes.space16,
-            right: AppSizes.space16,
-            bottom: AppSizes.space24,
+          padding: EdgeInsets.only(
+            top: AppSizes.space8.h,
+            left: AppSizes.space16.w,
+            right: AppSizes.space16.w,
+            bottom: AppSizes.space24.h,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: const [
-              WelcomeHeader(),
-              SizedBox(height: AppSizes.space24),
-              CounterCard(),
+            children: [
+              const WelcomeHeader(),
+              SizedBox(height: AppSizes.space24.h),
+              const CounterCard(),
             ],
           ),
         ),

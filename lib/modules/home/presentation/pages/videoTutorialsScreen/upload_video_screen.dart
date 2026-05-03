@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 
@@ -68,30 +69,30 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildVideoUploadSection(),
-                        const SizedBox(height: 25),
+                        SizedBox(height: 25.h),
                         _buildThumbnailSection(),
-                        const SizedBox(height: 25),
+                        SizedBox(height: 25.h),
                         _buildTitleField(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20.h),
                         _buildDescriptionField(),
-                        const SizedBox(height: 25),
+                        SizedBox(height: 25.h),
                         _buildCodeSelector(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20.h),
                         _buildDifficultySelector(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20.h),
                         _buildCostSelector(),
-                        const SizedBox(height: 25),
+                        SizedBox(height: 25.h),
                         _buildToolsSection(),
-                        const SizedBox(height: 30),
+                        SizedBox(height: 30.h),
                         _buildUploadButton(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20.h),
                       ],
                     ),
                   ),
@@ -106,17 +107,17 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.close, color: AppColors.accentCyan),
+            icon: Icon(Icons.close, color: AppColors.accentCyan, size: 24.r),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
+          Text(
             'Upload Tutorial',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
@@ -136,7 +137,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
             // Pick video file
           },
           child: Container(
-            height: 180,
+            height: 180.h,
             decoration: BoxDecoration(
               color: AppColors.white.withValues(alpha: 0.05),
               border: Border.all(
@@ -144,30 +145,30 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                 width: 2,
                 style: BorderStyle.solid,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.cloud_upload,
-                  size: 60,
+                  size: 60.r,
                   color: AppColors.accentCyan.withValues(alpha: 0.7),
                 ),
-                const SizedBox(height: 15),
-                const Text(
+                SizedBox(height: 15.h),
+                Text(
                   'Tap to select video',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.accentCyan,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8.h),
                 Text(
                   'Max 500MB • MP4, MOV, AVI',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
@@ -189,27 +190,27 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
             // Pick thumbnail
           },
           child: Container(
-            height: 120,
+            height: 120.h,
             decoration: BoxDecoration(
               color: AppColors.white.withValues(alpha: 0.05),
               border: Border.all(
                 color: AppColors.accentCyan.withValues(alpha: 0.3),
               ),
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.image,
-                  size: 40,
+                  size: 40.r,
                   color: AppColors.accentCyan.withValues(alpha: 0.7),
                 ),
-                const SizedBox(width: 15),
-                const Text(
+                SizedBox(width: 15.w),
+                Text(
                   'Select thumbnail image',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.accentCyan,
                   ),
@@ -238,19 +239,19 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
             filled: true,
             fillColor: AppColors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               borderSide: BorderSide(
                 color: AppColors.accentCyan.withValues(alpha: 0.3),
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               borderSide: BorderSide(
                 color: AppColors.accentCyan.withValues(alpha: 0.3),
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               borderSide: const BorderSide(
                 color: AppColors.accentCyan,
                 width: 2,
@@ -285,19 +286,19 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
             filled: true,
             fillColor: AppColors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               borderSide: BorderSide(
                 color: AppColors.accentCyan.withValues(alpha: 0.3),
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               borderSide: BorderSide(
                 color: AppColors.accentCyan.withValues(alpha: 0.3),
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               borderSide: const BorderSide(
                 color: AppColors.accentCyan,
                 width: 2,
@@ -332,9 +333,9 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 10.h,
                 ),
                 decoration: BoxDecoration(
                   gradient: isSelected
@@ -351,12 +352,12 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                         ? AppColors.transparent
                         : AppColors.accentCyan.withValues(alpha: 0.3),
                   ),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
                   code,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
                     color: isSelected
                         ? AppColors.white
@@ -387,8 +388,8 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                   });
                 },
                 child: Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  margin: EdgeInsets.only(right: 10.w),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? const LinearGradient(
@@ -404,13 +405,13 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                           ? AppColors.transparent
                           : AppColors.accentCyan.withValues(alpha: 0.3),
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Center(
                     child: Text(
                       difficulty,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
                         color: isSelected
                             ? AppColors.white
@@ -441,8 +442,8 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
               });
             },
             child: Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(15),
+              margin: EdgeInsets.only(bottom: 10.h),
+              padding: EdgeInsets.all(15.r),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.accentCyan.withValues(alpha: 0.1)
@@ -452,7 +453,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                       ? AppColors.accentCyan
                       : AppColors.white.withValues(alpha: 0.1),
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
               ),
               child: Row(
                 children: [
@@ -464,11 +465,11 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                         ? AppColors.accentCyan
                         : AppColors.white.withValues(alpha: 0.5),
                   ),
-                  const SizedBox(width: 15),
+                  SizedBox(width: 15.w),
                   Text(
                     cost,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? AppColors.accentCyan
@@ -479,7 +480,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -490,22 +491,22 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
       children: [
         _buildSectionTitle('Tools & Parts (Optional)'),
         Container(
-          padding: const EdgeInsets.all(15),
+          padding: EdgeInsets.all(15.r),
           decoration: BoxDecoration(
             color: AppColors.white.withValues(alpha: 0.05),
             border: Border.all(
               color: AppColors.accentCyan.withValues(alpha: 0.3),
             ),
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15.r),
           ),
           child: Row(
             children: [
               const Icon(Icons.add_circle_outline, color: AppColors.accentCyan),
-              const SizedBox(width: 15),
-              const Text(
+              SizedBox(width: 15.w),
+              Text(
                 'Add tools and parts list',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 15.sp,
                   color: AppColors.accentCyan,
                   fontWeight: FontWeight.w600,
                 ),
@@ -520,12 +521,12 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
   Widget _buildUploadButton() {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 56.h,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.accentCyan, AppColors.accentOrange],
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
         boxShadow: [
           BoxShadow(
             color: AppColors.accentCyan.withValues(alpha: 0.3),
@@ -540,36 +541,36 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
           backgroundColor: AppColors.transparent,
           shadowColor: AppColors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15.r),
           ),
         ),
         child: isUploading
             ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
+                  SizedBox(
+                    width: 20.w,
+                    height: 20.h,
+                    child: const CircularProgressIndicator(
                       color: AppColors.white,
                       strokeWidth: 2,
                     ),
                   ),
-                  const SizedBox(width: 15),
+                  SizedBox(width: 15.w),
                   Text(
                     '${(uploadProgress * 100).toInt()}% Uploading...',
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
                 ],
               )
-            : const Text(
+            : Text(
                 'PUBLISH TUTORIAL',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2,
                   color: AppColors.white,
@@ -581,11 +582,11 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12.h),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
+        style: TextStyle(
+          fontSize: 16.sp,
           fontWeight: FontWeight.w700,
           color: AppColors.textLight,
         ),
@@ -622,7 +623,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
           builder: (context) => AlertDialog(
             backgroundColor: AppColors.surfaceDark,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             title: const Text(
               'Success!',
@@ -641,7 +642,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentCyan,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                 ),
                 child: const Text('Done'),

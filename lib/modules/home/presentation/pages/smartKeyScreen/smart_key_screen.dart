@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class SmartKeyScreen extends StatefulWidget {
   const SmartKeyScreen({super.key});
@@ -55,17 +57,17 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
               _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.r),
                   child: Column(
                     children: [
                       _buildCarImage(),
-                      const SizedBox(height: 40),
+                      SizedBox(height: 40.h),
                       _buildLockButton(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
                       _buildUnlockButton(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
                       _buildEngineButton(),
-                      const SizedBox(height: 40),
+                      SizedBox(height: 40.h),
                       _buildQuickActions(),
                     ],
                   ),
@@ -80,45 +82,45 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20.r),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
-            'Smart Key',
+          Text(
+            context.tr('smart_key_title'),
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
           const Spacer(),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
               color: _successGreen.withValues(alpha: 0.1),
               border: Border.all(color: _successGreen),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 8.w,
+                  height: 8.h,
                   decoration: const BoxDecoration(
                     color: _successGreen,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Connected',
+                SizedBox(width: 6.w),
+                Text(
+                  context.tr('connected'),
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.sp,
                     color: _successGreen,
                     fontWeight: FontWeight.w600,
                   ),
@@ -136,10 +138,10 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
       animation: _pulseController,
       builder: (context, child) {
         return Container(
-          width: 300,
-          height: 200,
+          width: 300.w,
+          height: 200.h,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30.r),
             boxShadow: [
               BoxShadow(
                 color: (isLocked ? AppColors.accentOrange : _successGreen)
@@ -150,13 +152,13 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30.r),
             child: Stack(
               children: [
                 Center(
                   child: Icon(
                     Icons.directions_car,
-                    size: 120,
+                    size: 120.r,
                     color: AppColors.accentCyan.withValues(alpha: 0.5),
                   ),
                 ),
@@ -164,7 +166,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                   Center(
                     child: Icon(
                       Icons.lock,
-                      size: 60,
+                      size: 60.r,
                       color: AppColors.accentOrange,
                     ),
                   ),
@@ -173,7 +175,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                     top: 20,
                     right: 20,
                     child: Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: EdgeInsets.all(10.r),
                       decoration: BoxDecoration(
                         color: _successGreen.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
@@ -182,10 +184,10 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                           width: 2,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.power_settings_new,
                         color: _successGreen,
-                        size: 24,
+                        size: 24.r,
                       ),
                     ),
                   ),
@@ -207,7 +209,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(25.r),
         decoration: BoxDecoration(
           gradient: isLocked
               ? const LinearGradient(
@@ -220,7 +222,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                 ? AppColors.transparent
                 : AppColors.accentCyan.withValues(alpha: 0.2),
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           boxShadow: isLocked
               ? [
                   BoxShadow(
@@ -237,13 +239,13 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
             Icon(
               Icons.lock,
               color: isLocked ? AppColors.white : AppColors.textLight,
-              size: 32,
+              size: 32.r,
             ),
-            const SizedBox(width: 15),
+            SizedBox(width: 15.w),
             Text(
-              'Lock',
+              context.tr('lock'),
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 20.sp,
                 fontWeight: FontWeight.w700,
                 color: isLocked ? AppColors.white : AppColors.textLight,
               ),
@@ -261,7 +263,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(25.r),
         decoration: BoxDecoration(
           gradient: !isLocked
               ? const LinearGradient(
@@ -274,7 +276,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                 ? AppColors.transparent
                 : AppColors.accentCyan.withValues(alpha: 0.2),
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           boxShadow: !isLocked
               ? [
                   BoxShadow(
@@ -291,13 +293,13 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
             Icon(
               Icons.lock_open,
               color: !isLocked ? AppColors.white : AppColors.textLight,
-              size: 32,
+              size: 32.r,
             ),
-            const SizedBox(width: 15),
+            SizedBox(width: 15.w),
             Text(
-              'Unlock',
+              context.tr('unlock'),
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 20.sp,
                 fontWeight: FontWeight.w700,
                 color: !isLocked ? AppColors.white : AppColors.textLight,
               ),
@@ -317,7 +319,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(25.r),
         decoration: BoxDecoration(
           gradient: engineRunning
               ? const LinearGradient(
@@ -330,7 +332,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                 ? AppColors.transparent
                 : AppColors.accentCyan.withValues(alpha: 0.2),
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           boxShadow: engineRunning
               ? [
                   BoxShadow(
@@ -351,13 +353,13 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                   : AppColors.textLight.withValues(
                       alpha: isLocked ? 0.3 : 1,
                     ),
-              size: 32,
+              size: 32.r,
             ),
-            const SizedBox(width: 15),
+            SizedBox(width: 15.w),
             Text(
-              engineRunning ? 'Stop Engine' : 'Start Engine',
+              engineRunning ? context.tr('stop_engine') : context.tr('start_engine'),
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 20.sp,
                 fontWeight: FontWeight.w700,
                 color: engineRunning
                     ? AppColors.white
@@ -376,19 +378,19 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Actions',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 18.sp,
             fontWeight: FontWeight.w700,
             color: AppColors.textLight,
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Row(
           children: [
             _buildQuickAction(Icons.ac_unit, 'Climate', () {}),
-            const SizedBox(width: 15),
+            SizedBox(width: 15.w),
             _buildQuickAction(Icons.local_parking, 'Find Car', () {}),
           ],
         ),
@@ -401,22 +403,22 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20.r),
           decoration: BoxDecoration(
             color: AppColors.white.withValues(alpha: 0.05),
             border: Border.all(
               color: AppColors.accentCyan.withValues(alpha: 0.2),
             ),
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15.r),
           ),
           child: Column(
             children: [
-              Icon(icon, color: AppColors.accentCyan, size: 32),
-              const SizedBox(height: 10),
+              Icon(icon, color: AppColors.accentCyan, size: 32.r),
+              SizedBox(height: 10.h),
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: TextStyle(
+                  fontSize: 14.sp,
                   color: AppColors.textLight,
                   fontWeight: FontWeight.w600,
                 ),
