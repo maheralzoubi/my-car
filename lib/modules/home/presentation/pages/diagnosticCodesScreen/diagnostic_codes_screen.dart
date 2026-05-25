@@ -4,110 +4,177 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/dtc_repository.dart';
+import '../../../../../core/services/obd_service.dart';
+
+// ── DTC view model ─────────────────────────────────────────────────────────────
+
+class _DtcItem {
+  final String code;
+  final String description;
+  final String system;
+  final String severity;
+
+  const _DtcItem({
+    required this.code,
+    required this.description,
+    required this.system,
+    required this.severity,
+  });
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 class DiagnosticCodesScreen extends StatefulWidget {
-  const DiagnosticCodesScreen({super.key});
+  /// Inject a custom [DtcRepository] (useful in tests to avoid real I/O).
+  final DtcRepository? repository;
+
+  const DiagnosticCodesScreen({super.key, this.repository});
 
   @override
   State<DiagnosticCodesScreen> createState() => _DiagnosticCodesScreenState();
 }
 
 class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
-  String selectedFilter = 'All';
+  late final DtcRepository _repo = widget.repository ?? DtcRepository();
 
-  final List<Map<String, dynamic>> diagnosticCodes = [
-    {
-      'code': 'P0420',
-      'title': 'Catalyst System Efficiency Below Threshold',
-      'title_ar': 'كفاءة نظام المحفز أدنى من الحد المقبول',
-      'severity': 'critical',
-      'system': 'Engine',
-      'system_ar': 'المحرك',
-      'description': 'Bank 1 catalytic converter is not working efficiently',
-      'description_ar': 'المحول الحفاز في البنك 1 لا يعمل بكفاءة كافية',
-    },
-    {
-      'code': 'P0171',
-      'title': 'System Too Lean (Bank 1)',
-      'title_ar': 'النظام هزيل للغاية (البنك 1)',
-      'severity': 'warning',
-      'system': 'Engine',
-      'system_ar': 'المحرك',
-      'description': 'Engine is running with too much air or not enough fuel',
-      'description_ar': 'يعمل المحرك بنسبة هواء زائدة أو كمية وقود ناقصة',
-    },
-    {
-      'code': 'C1201',
-      'title': 'ABS Control Module Malfunction',
-      'title_ar': 'عطل في وحدة التحكم بنظام ABS',
-      'severity': 'critical',
-      'system': 'ABS',
-      'system_ar': 'ABS',
-      'description': 'Anti-lock brake system control module has detected a fault',
-      'description_ar': 'وحدة التحكم في نظام منع الانزلاق اكتشفت خللاً في النظام',
-    },
-    {
-      'code': 'U0100',
-      'title': 'Lost Communication with ECM/PCM',
-      'title_ar': 'انقطاع الاتصال مع وحدة التحكم ECM/PCM',
-      'severity': 'warning',
-      'system': 'Transmission',
-      'system_ar': 'ناقل الحركة',
-      'description': 'Communication lost with engine control module',
-      'description_ar': 'انقطع الاتصال مع وحدة التحكم الإلكترونية في المحرك',
-    },
-    {
-      'code': 'P0301',
-      'title': 'Cylinder 1 Misfire Detected',
-      'title_ar': 'اكتشاف خلل في اشتعال الأسطوانة 1',
-      'severity': 'info',
-      'system': 'Engine',
-      'system_ar': 'المحرك',
-      'description': 'Engine cylinder 1 is not firing properly',
-      'description_ar': 'الأسطوانة رقم 1 في المحرك لا تشتعل بشكل صحيح',
-    },
-  ];
+  bool _loading = false;
+  bool _clearing = false;
+  String? _errorMessage;
+  List<_DtcItem> _dtcItems = [];
+  String _selectedFilter = 'All';
 
-  final List<String> filters = ['All', 'Engine', 'ABS', 'Transmission'];
+  static const _filters = ['All', 'Engine', 'Chassis', 'Body', 'Network'];
 
-  List<Map<String, dynamic>> get filteredCodes {
-    if (selectedFilter == 'All') {
-      return diagnosticCodes;
-    }
-    return diagnosticCodes
-        .where((code) => code['system'] == selectedFilter)
-        .toList();
+  static const Color _colCritical = Color(0xFFFF1744);
+  static const Color _colWarning = Color(0xFFFF6B35);
+  static const Color _colInfo = Color(0xFFFFD600);
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDtcs();
   }
 
-  static const Color _severityCritical = Color(0xFFFF1744);
-  static const Color _severityWarning = Color(0xFFFF6B35);
-  static const Color _severityInfo = Color(0xFFFFD600);
+  // ── Data loading ──────────────────────────────────────────────────────────
 
-  Color getSeverityColor(String severity) {
+  Future<void> _fetchDtcs() async {
+    if (!OBDService.instance.isInitialized) {
+      setState(() {
+        _errorMessage = 'not_connected';
+        _dtcItems = [];
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final codes = await OBDService.instance.getDtcs();
+      if (!mounted) return;
+
+      final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+      final lang = isArabic ? 'ar' : 'en';
+
+      final items = await Future.wait(codes.map((code) async {
+        final desc = await _repo.getDtcDescription(code, languageCode: lang);
+        return _DtcItem(
+          code: code,
+          description: desc ?? code,
+          system: _systemFromCode(code),
+          severity: _severityFromCode(code),
+        );
+      }));
+
+      if (!mounted) return;
+      setState(() => _dtcItems = items);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = 'fetch_error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _clearCodes() async {
+    setState(() => _clearing = true);
+    final ok = await OBDService.instance.clearDtcs();
+    if (!mounted) return;
+    setState(() {
+      _clearing = false;
+      if (ok) _dtcItems = [];
+    });
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to clear codes – check adapter connection.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  // ── DTC metadata helpers ──────────────────────────────────────────────────
+
+  String _systemFromCode(String code) {
+    if (code.isEmpty) return 'Unknown';
+    switch (code[0].toUpperCase()) {
+      case 'P':
+        return 'Engine';
+      case 'C':
+        return 'Chassis';
+      case 'B':
+        return 'Body';
+      case 'U':
+        return 'Network';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String _severityFromCode(String code) {
+    if (code.length < 2) return 'warning';
+    // P0xxx/C0xxx/B0xxx/U0xxx = SAE standard = treat as critical
+    // P1xxx/C1xxx etc = manufacturer specific = info
+    final digit = code.length > 1 ? code[1] : '0';
+    if (digit == '0') return 'critical';
+    if (digit == '1') return 'info';
+    return 'warning';
+  }
+
+  Color _severityColor(String severity) {
     switch (severity) {
       case 'critical':
-        return _severityCritical;
-      case 'warning':
-        return _severityWarning;
+        return _colCritical;
       case 'info':
-        return _severityInfo;
+        return _colInfo;
       default:
-        return AppColors.accentCyan;
+        return _colWarning;
     }
   }
 
-  IconData getSeverityIcon(String severity) {
+  IconData _severityIcon(String severity) {
     switch (severity) {
       case 'critical':
         return Icons.error;
-      case 'warning':
-        return Icons.warning;
       case 'info':
         return Icons.info;
       default:
-        return Icons.check_circle;
+        return Icons.warning;
     }
   }
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
+
+  List<_DtcItem> get _filtered {
+    if (_selectedFilter == 'All') return _dtcItems;
+    return _dtcItems.where((d) => d.system == _selectedFilter).toList();
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -117,21 +184,16 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
+            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
               _buildHeader(),
-              _buildSummary(),
+              if (!_loading && _errorMessage == null) _buildSummary(),
               _buildFilters(),
-              Expanded(
-                child: _buildCodesList(),
-              ),
+              Expanded(child: _buildBody()),
             ],
           ),
         ),
@@ -148,30 +210,48 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          Text(
-            context.tr('diagnostic_codes'),
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
+          Flexible(
+            child: Text(
+              context.tr('diagnostic_codes'),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
           ),
           const Spacer(),
+          if (_loading || _clearing)
+            Padding(
+              padding: EdgeInsets.only(right: 8.w),
+              child: SizedBox(
+                width: 20.r,
+                height: 20.r,
+                child: CircularProgressIndicator(
+                  color: AppColors.accentCyan,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
           IconButton(
-            icon: Icon(Icons.clear_all, color: AppColors.accentCyan),
-            onPressed: _showClearCodesDialog,
+            icon: Icon(Icons.refresh, color: AppColors.accentCyan),
+            onPressed: _loading ? null : _fetchDtcs,
           ),
+          if (_dtcItems.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.clear_all, color: AppColors.accentCyan),
+              onPressed: _clearing ? null : _showClearDialog,
+            ),
         ],
       ),
     );
   }
 
   Widget _buildSummary() {
-    final critical =
-        diagnosticCodes.where((c) => c['severity'] == 'critical').length;
-    final warning =
-        diagnosticCodes.where((c) => c['severity'] == 'warning').length;
-    final info = diagnosticCodes.where((c) => c['severity'] == 'info').length;
+    final critical = _dtcItems.where((d) => d.severity == 'critical').length;
+    final warning = _dtcItems.where((d) => d.severity == 'warning').length;
+    final info = _dtcItems.where((d) => d.severity == 'info').length;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
@@ -186,26 +266,25 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           ],
         ),
         border: Border.all(
-          color: AppColors.accentCyan.withValues(alpha: 0.2),
-        ),
+            color: AppColors.accentCyan.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(20.r),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem(context.tr('severity_critical'), critical, _severityCritical),
-          _buildSummaryItem(context.tr('severity_warning'), warning, _severityWarning),
-          _buildSummaryItem(context.tr('severity_info'), info, _severityInfo),
+          _summaryItem(context.tr('severity_critical'), critical, _colCritical),
+          _summaryItem(context.tr('severity_warning'), warning, _colWarning),
+          _summaryItem(context.tr('severity_info'), info, _colInfo),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String label, int count, Color color) {
+  Widget _summaryItem(String label, int count, Color color) {
     return Column(
       children: [
         Text(
-          count.toString(),
+          '$count',
           style: TextStyle(
             fontSize: 32.sp,
             fontWeight: FontWeight.w900,
@@ -225,37 +304,28 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   }
 
   Widget _buildFilters() {
-    return Container(
+    return SizedBox(
       height: 50.h,
-      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final isSelected = selectedFilter == filter;
-
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
+        itemCount: _filters.length,
+        itemBuilder: (_, i) {
+          final f = _filters[i];
+          final sel = f == _selectedFilter;
           return GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedFilter = filter;
-              });
-            },
+            onTap: () => setState(() => _selectedFilter = f),
             child: Container(
               margin: EdgeInsets.only(right: 10.w),
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               decoration: BoxDecoration(
-                gradient: isSelected
+                gradient: sel
                     ? const LinearGradient(
-                        colors: [
-                          AppColors.accentCyan,
-                          AppColors.accentOrange,
-                        ],
-                      )
+                        colors: [AppColors.accentCyan, AppColors.accentOrange])
                     : null,
-                color: isSelected ? null : AppColors.white.withValues(alpha: 0.05),
+                color: sel ? null : AppColors.white.withValues(alpha: 0.05),
                 border: Border.all(
-                  color: isSelected
+                  color: sel
                       ? AppColors.transparent
                       : AppColors.accentCyan.withValues(alpha: 0.2),
                 ),
@@ -263,13 +333,11 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               ),
               child: Center(
                 child: Text(
-                  filter,
+                  f,
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.textLight,
+                    color: sel ? AppColors.white : AppColors.textLight,
                   ),
                 ),
               ),
@@ -280,83 +348,156 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     );
   }
 
-  Widget _buildCodesList() {
-    final codes = filteredCodes;
+  Widget _buildBody() {
+    if (_loading) return _buildLoading();
+    if (_errorMessage == 'not_connected') return _buildNotConnected();
+    if (_errorMessage != null) return _buildError();
+    if (_filtered.isEmpty) return _buildEmpty();
+    return _buildList();
+  }
 
-    if (codes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 80.r,
-              color: const Color(0xFF00E676).withValues(alpha: 0.5),
-            ),
-            SizedBox(height: 20.h),
-            Text(
-              'No codes found',
-              style: TextStyle(
-                fontSize: 18.sp,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.all(20.r),
-      itemCount: codes.length,
-      itemBuilder: (context, index) {
-        final code = codes[index];
-        return _buildCodeItem(code, index);
-      },
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: AppColors.accentCyan),
+          SizedBox(height: 20.h),
+          Text(
+            'Reading diagnostic codes...',
+            style: TextStyle(fontSize: 14.sp, color: AppColors.textLight),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildCodeItem(Map<String, dynamic> code, int index) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final title = isArabic
-        ? (code['title_ar'] ?? code['title']) as String
-        : code['title'] as String;
-    final description = isArabic
-        ? (code['description_ar'] ?? code['description']) as String
-        : code['description'] as String;
-    final system = isArabic
-        ? (code['system_ar'] ?? code['system']) as String
-        : code['system'] as String;
-    final severityColor = getSeverityColor(code['severity'] as String);
+  Widget _buildNotConnected() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bluetooth_disabled,
+              size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
+          SizedBox(height: 20.h),
+          Text(
+            'No OBD device connected',
+            style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            'Connect your ELM327 adapter first',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.textLight.withValues(alpha: 0.5),
+            ),
+          ),
+          SizedBox(height: 24.h),
+          ElevatedButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.connectionscreen),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: const Text('Go to Connection'),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline,
+              size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
+          SizedBox(height: 20.h),
+          Text(
+            'Failed to read codes',
+            style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
+          ),
+          SizedBox(height: 24.h),
+          ElevatedButton(
+            onPressed: _fetchDtcs,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_outline,
+              size: 80.r,
+              color: const Color(0xFF00E676).withValues(alpha: 0.5)),
+          SizedBox(height: 20.h),
+          Text(
+            context.tr('no_codes_found'),
+            style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Your vehicle has no stored fault codes.',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.textLight.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildList() {
+    return ListView.builder(
+      padding: EdgeInsets.all(20.r),
+      itemCount: _filtered.length,
+      itemBuilder: (_, i) => _buildCodeItem(_filtered[i], i),
+    );
+  }
+
+  Widget _buildCodeItem(_DtcItem item, int index) {
+    final color = _severityColor(item.severity);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 100)),
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(50 * (1 - value), 0),
-            child: child,
-          ),
-        );
-      },
+      duration: Duration(milliseconds: 300 + index * 80),
+      builder: (_, v, child) => Opacity(
+        opacity: v,
+        child: Transform.translate(offset: Offset(40 * (1 - v), 0), child: child),
+      ),
       child: GestureDetector(
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.codeDetail,
-            arguments: code,
-          );
-        },
+        onTap: () => Navigator.pushNamed(
+          context,
+          AppRoutes.codeDetail,
+          arguments: {
+            'code': item.code,
+            'title': item.description,
+            'title_ar': item.description,
+            'severity': item.severity,
+            'system': item.system,
+            'system_ar': item.system,
+            'description': item.description,
+            'description_ar': item.description,
+          },
+        ),
         child: Container(
           margin: EdgeInsets.only(bottom: 15.h),
           padding: EdgeInsets.all(20.r),
           decoration: BoxDecoration(
             color: AppColors.white.withValues(alpha: 0.03),
-            border: Border.all(
-              color: severityColor.withValues(alpha: 0.3),
-            ),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(20.r),
           ),
           child: Column(
@@ -364,74 +505,26 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: severityColor.withValues(alpha: 0.2),
-                      border: Border.all(color: severityColor),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Text(
-                      code['code'] as String,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: severityColor,
-                      ),
-                    ),
-                  ),
+                  _codeChip(item.code, color),
                   SizedBox(width: 10.w),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentCyan.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Text(
-                      system,
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: AppColors.accentCyan,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  _systemChip(item.system),
                   const Spacer(),
-                  Icon(
-                    getSeverityIcon(code['severity'] as String),
-                    color: severityColor,
-                    size: 24.r,
-                  ),
+                  Icon(_severityIcon(item.severity), color: color, size: 24.r),
                 ],
               ),
               SizedBox(height: 12.h),
               Text(
-                title,
+                item.description,
                 style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textLight,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  color: AppColors.textLight.withValues(alpha: 0.7),
+                  fontSize: 14.sp,
+                  color: AppColors.textLight.withValues(alpha: 0.85),
                   height: 1.4,
                 ),
               ),
               SizedBox(height: 12.h),
               Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Spacer(),
                   Text(
                     'View Details',
                     style: TextStyle(
@@ -441,11 +534,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                     ),
                   ),
                   SizedBox(width: 5.w),
-                  Icon(
-                    Icons.arrow_forward,
-                    color: AppColors.accentCyan,
-                    size: 16.r,
-                  ),
+                  Icon(Icons.arrow_forward,
+                      color: AppColors.accentCyan, size: 16.r),
                 ],
               ),
             ],
@@ -455,40 +545,73 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     );
   }
 
-  void _showClearCodesDialog() {
+  Widget _codeChip(String code, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        code,
+        style: TextStyle(
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _systemChip(String system) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: AppColors.accentCyan.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        system,
+        style: TextStyle(
+          fontSize: 11.sp,
+          color: AppColors.accentCyan,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  // ── Clear codes dialog ────────────────────────────────────────────────────
+
+  void _showClearDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        title: const Text(
-          'Clear Codes?',
-          style: TextStyle(color: AppColors.textLight),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: const Text('Clear Codes?',
+            style: TextStyle(color: AppColors.textLight)),
         content: const Text(
-          'Are you sure you want to clear all diagnostic codes? This action cannot be undone.',
+          'This will erase all fault codes and reset the MIL lamp. '
+          'Emissions readiness monitors will also reset.',
           style: TextStyle(color: AppColors.textLight),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.accentCyan),
-            ),
+            child: Text(context.tr('cancel'),
+                style: const TextStyle(color: AppColors.accentCyan)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // Clear codes logic
+              _clearCodes();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentOrange,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
+                  borderRadius: BorderRadius.circular(10.r)),
             ),
             child: const Text('Clear'),
           ),

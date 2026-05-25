@@ -89,6 +89,10 @@ class AppLocalizations {
       'tap_to_rescan': 'Tap to rescan',
       'trouble_connecting':
           'Having trouble connecting? Check our troubleshooting guide',
+      'initializing_obd': 'Initializing ELM327...',
+      'obd_init_failed': 'OBD Initialization Failed',
+      'obd_init_failed_sub': 'Device may not be ELM327 compatible. Tap RETRY to scan again.',
+      'btn_initializing': 'INITIALIZING...',
 
       // Dashboard
       'vehicle_health': 'Vehicle Health',
@@ -253,6 +257,10 @@ class AppLocalizations {
       'tap_to_rescan': 'اضغط لإعادة المسح',
       'trouble_connecting':
           'تواجه مشكلة في الاتصال؟ راجع دليل استكشاف الأخطاء',
+      'initializing_obd': 'جارٍ تهيئة ELM327...',
+      'obd_init_failed': 'فشل تهيئة OBD',
+      'obd_init_failed_sub': 'قد لا يكون الجهاز متوافقاً مع ELM327. اضغط إعادة المحاولة للمسح مجدداً.',
+      'btn_initializing': 'جارٍ التهيئة...',
 
       // Dashboard
       'vehicle_health': 'صحة المركبة',

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/obd_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,6 +14,20 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (OBDService.instance.isInitialized) {
+      OBDService.instance.startPolling();
+    }
+  }
+
+  @override
+  void dispose() {
+    OBDService.instance.stopPolling();
+    super.dispose();
+  }
 
   final List<Map<String, dynamic>> warningLights = [
     {'icon': '⚠️', 'label': 'check_engine', 'active': true},
@@ -68,6 +83,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHealthCard(),
+                      SizedBox(height: 20.h),
+                      _buildLiveDataSection(),
                       SizedBox(height: 30.h),
                       _buildWarningLightsSection(),
                       SizedBox(height: 30.h),
@@ -114,22 +131,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 SizedBox(width: 12.w),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Toyota Camry 2020',
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFE8EAED),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Toyota Camry 2020',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFE8EAED),
+                        ),
                       ),
-                    ),
-                    Text(
-                      'VIN: 4T1B11HK...8901',
-                      style: TextStyle(fontSize: 12.sp, color: Color(0xFF00D9FF)),
-                    ),
-                  ],
+                      Text(
+                        'VIN: 4T1B11HK...8901',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12.sp, color: Color(0xFF00D9FF)),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -261,6 +283,156 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
                 color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiveDataSection() {
+    return StreamBuilder<OBDLiveData>(
+      stream: OBDService.instance.liveDataStream,
+      initialData: OBDService.instance.currentData,
+      builder: (context, snapshot) {
+        final d = snapshot.data ?? const OBDLiveData();
+        return Container(
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.03),
+            border: Border.all(
+              color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+            ),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.speed, color: Color(0xFF00D9FF), size: 20.r),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Live Data',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFE8EAED),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (OBDService.instance.isInitialized)
+                    Container(
+                      width: 8.w,
+                      height: 8.h,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF00E676),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: 16.h),
+              Row(
+                children: [
+                  _buildLiveTile(
+                    'RPM',
+                    d.rpm != null ? d.rpm!.toStringAsFixed(0) : '--',
+                    'rpm',
+                    Icons.rotate_right,
+                    const Color(0xFF00D9FF),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    'Speed',
+                    d.speedKmh != null ? '${d.speedKmh}' : '--',
+                    'km/h',
+                    Icons.speed,
+                    const Color(0xFF00E676),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    'Coolant',
+                    d.coolantTempC != null ? '${d.coolantTempC}' : '--',
+                    '°C',
+                    Icons.thermostat,
+                    const Color(0xFFFFD600),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              Row(
+                children: [
+                  _buildLiveTile(
+                    'Throttle',
+                    d.throttlePct != null
+                        ? d.throttlePct!.toStringAsFixed(1)
+                        : '--',
+                    '%',
+                    Icons.tune,
+                    const Color(0xFFFF6B35),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    'Fuel',
+                    d.fuelLevelPct != null
+                        ? d.fuelLevelPct!.toStringAsFixed(1)
+                        : '--',
+                    '%',
+                    Icons.local_gas_station,
+                    const Color(0xFFFF6B35),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(child: SizedBox()),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiveTile(
+    String label,
+    String value,
+    String unit,
+    IconData icon,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            Text(
+              unit,
+              style: TextStyle(
+                fontSize: 9.sp,
+                color: color.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -590,13 +762,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 10.h),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home, context.tr('home'), 0),
-              _buildNavItem(Icons.search, context.tr('scan'), 1),
-              _buildNavItem(Icons.vpn_key, context.tr('smart_key'), 2),
-              _buildNavItem(Icons.history, context.tr('history'), 3),
-              _buildNavItem(Icons.settings, context.tr('settings'), 4),
+              Expanded(child: _buildNavItem(Icons.home, context.tr('home'), 0)),
+              Expanded(child: _buildNavItem(Icons.search, context.tr('scan'), 1)),
+              Expanded(child: _buildNavItem(Icons.vpn_key, context.tr('smart_key'), 2)),
+              Expanded(child: _buildNavItem(Icons.history, context.tr('history'), 3)),
+              Expanded(child: _buildNavItem(Icons.settings, context.tr('settings'), 4)),
             ],
           ),
         ),
@@ -633,7 +804,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF00D9FF).withValues(alpha: 0.1)

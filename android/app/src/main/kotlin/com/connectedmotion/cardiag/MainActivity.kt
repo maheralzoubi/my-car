@@ -1,4 +1,4 @@
-package com.example.mycar
+package com.connectedmotion.cardiag
 
 import io.flutter.embedding.android.FlutterActivity
 
