@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_routes.dart';
@@ -14,10 +15,15 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  DateTime? _lastBackPressTime;
 
   @override
   void initState() {
     super.initState();
+    _startPollingIfConnected();
+  }
+
+  void _startPollingIfConnected() {
     if (OBDService.instance.isInitialized) {
       OBDService.instance.startPolling();
     }
@@ -63,8 +69,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final now = DateTime.now();
+        if (_lastBackPressTime != null &&
+            now.difference(_lastBackPressTime!) < const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+        } else {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.tr('press_back_to_exit')),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -102,92 +126,142 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+        bottomNavigationBar: _buildBottomNavBar(),
+      ),
     );
   }
 
   Widget _buildHeader() {
+    final isConnected = OBDService.instance.isInitialized;
     return Padding(
       padding: EdgeInsets.all(20.r),
-      child: Row(
-        children: [
-          // Vehicle info
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 40.w,
-                  height: 40.h,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+      child: isConnected ? _buildConnectedHeader() : _buildDisconnectedBanner(),
+    );
+  }
+
+  Widget _buildConnectedHeader() {
+    return Row(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.h,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+                  ),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(Icons.directions_car, color: Colors.white, size: 24.r),
+              ),
+              SizedBox(width: 12.w),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Toyota Camry 2020',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFE8EAED),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Icon(
-                    Icons.directions_car,
-                    color: Colors.white,
-                    size: 24.r,
-                  ),
+                    Text(
+                      'VIN: 4T1B11HK...8901',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.sp, color: const Color(0xFF00D9FF)),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 12.w),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Toyota Camry 2020',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFE8EAED),
-                        ),
-                      ),
-                      Text(
-                        'VIN: 4T1B11HK...8901',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12.sp, color: Color(0xFF00D9FF)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          // Connection status
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00E676).withValues(alpha: 0.1),
-              border: Border.all(color: const Color(0xFF00E676)),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8.w,
-                  height: 8.h,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF00E676),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: 6.w),
-                Text(
-                  context.tr('connected'),
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Color(0xFF00E676),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+        ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFF00E676).withValues(alpha: 0.1),
+            border: Border.all(color: const Color(0xFF00E676)),
+            borderRadius: BorderRadius.circular(20.r),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8.w,
+                height: 8.h,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF00E676),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: 6.w),
+              Text(
+                context.tr('connected'),
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: const Color(0xFF00E676),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDisconnectedBanner() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.connectionscreen).then((_) {
+          if (mounted) {
+            _startPollingIfConnected();
+            setState(() {});
+          }
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF6B35).withValues(alpha: 0.08),
+          border: Border.all(color: const Color(0xFFFF6B35).withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.bluetooth_disabled, color: const Color(0xFFFF6B35), size: 22.r),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('obd_not_connected'),
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFFF6B35),
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    context.tr('tap_to_connect'),
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: const Color(0xFFFF6B35).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: const Color(0xFFFF6B35), size: 14.r),
+          ],
+        ),
       ),
     );
   }

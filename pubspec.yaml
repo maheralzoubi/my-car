@@ -48,6 +48,14 @@ dependencies:
   # Responsive UI
   flutter_screenutil: ^5.9.3
 
+  # Session persistence
+  shared_preferences: ^2.3.0
+
+  # Roadside assistance – maps, location, media
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.0
+  image_picker: ^1.1.0
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

@@ -7,6 +7,7 @@ import '../../../../../core/bloc/locale/locale_event.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import 'dash_cam_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,7 +21,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool autoScan = false;
   bool darkMode = true;
   bool soundEffects = true;
-  bool dashCam = true;
   String language = 'English';
   String units = 'Metric';
 
@@ -212,12 +212,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           soundEffects,
           (v) => setState(() => soundEffects = v),
         ),
-        _buildSettingToggle(
+        _buildSettingItem(
           '📹',
           context.tr('dash_cam'),
-          context.tr('dash_cam_sub'),
-          dashCam,
-          (v) => setState(() => dashCam = v),
+          context.tr('dash_cam_settings_sub'),
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DashCamSettingsScreen()),
+          ),
         ),
         _buildSettingItem(
           '🔎',

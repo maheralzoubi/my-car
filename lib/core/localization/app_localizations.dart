@@ -190,6 +190,23 @@ class AppLocalizations {
       'select': 'Select',
       'dtc_lookup': 'DTC Code Lookup',
       'dtc_lookup_sub': 'Search any OBD-II fault code',
+
+      // Dashboard - OBD connection banner
+      'obd_not_connected': 'OBD Not Connected',
+      'tap_to_connect': 'Tap to connect Bluetooth OBD adapter',
+      'press_back_to_exit': 'Press back again to exit',
+
+      // Dash cam settings screen
+      'dash_cam_settings': 'Dash Cam Settings',
+      'dash_cam_settings_sub': 'Configure recording options',
+      'video_quality': 'Video Quality',
+      'video_quality_sub': 'Resolution of recorded clips',
+      'loop_recording': 'Loop Recording',
+      'loop_recording_sub': 'Overwrite oldest clips when storage is full',
+      'auto_start_recording': 'Auto-Start Recording',
+      'auto_start_sub': 'Begin recording when app opens',
+      'incident_detection': 'Incident Detection',
+      'incident_detection_sub': 'Save clip automatically on sudden stop',
     },
     'ar': {
       // Common
@@ -358,6 +375,23 @@ class AppLocalizations {
       'select': 'اختر',
       'dtc_lookup': 'بحث عن كود OBD-II',
       'dtc_lookup_sub': 'ابحث عن أي كود عطل OBD-II',
+
+      // Dashboard - OBD connection banner
+      'obd_not_connected': 'OBD غير متصل',
+      'tap_to_connect': 'اضغط لتوصيل محول OBD عبر البلوتوث',
+      'press_back_to_exit': 'اضغط رجوع مرة أخرى للخروج',
+
+      // Dash cam settings screen
+      'dash_cam_settings': 'إعدادات كاميرا اللوحة',
+      'dash_cam_settings_sub': 'ضبط خيارات التسجيل',
+      'video_quality': 'جودة الفيديو',
+      'video_quality_sub': 'دقة المقاطع المسجلة',
+      'loop_recording': 'التسجيل الدائري',
+      'loop_recording_sub': 'استبدال أقدم المقاطع عند امتلاء التخزين',
+      'auto_start_recording': 'البدء التلقائي للتسجيل',
+      'auto_start_sub': 'ابدأ التسجيل عند فتح التطبيق',
+      'incident_detection': 'كشف الحوادث',
+      'incident_detection_sub': 'حفظ المقطع تلقائياً عند التوقف المفاجئ',
     },
   };
 }

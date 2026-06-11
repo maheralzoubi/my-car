@@ -3,6 +3,7 @@ import 'dart:math' show cos, sin;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
@@ -105,11 +106,16 @@ class _SplashScreenState extends State<SplashScreen>
     // Start animations
     _startAnimations();
 
-    // Navigate to home after 5 seconds
-    Timer(const Duration(seconds: 5), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.auth);
-      }
+    // Navigate after 5 seconds, skipping auth if already logged in
+    Timer(const Duration(seconds: 5), () async {
+      if (!mounted) return;
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        isLoggedIn ? AppRoutes.modeSelection : AppRoutes.auth,
+      );
     });
   }
 

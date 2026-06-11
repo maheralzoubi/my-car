@@ -15,6 +15,11 @@ import '../modules/home/presentation/pages/dtc_lookup_page.dart';
 import '../modules/home/presentation/pages/profileScreen/edit_profile_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/upload_video_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/video_player_screen.dart';
+import '../modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
+import '../modules/home/presentation/pages/settingsScreen/dash_cam_settings_screen.dart';
+import '../modules/roadside/data/repositories/mock_roadside_repository.dart';
+import '../modules/roadside/presentation/bloc/roadside_bloc.dart';
+import '../modules/roadside/presentation/pages/roadside_home_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -30,7 +35,12 @@ class App extends StatelessWidget {
         child: BlocBuilder<LocaleBloc, LocaleState>(
           builder: (context, localeState) {
             return MultiBlocProvider(
-              providers: HomeModule.providers,
+              providers: [
+                ...HomeModule.providers,
+                BlocProvider<RoadsideBloc>(
+                  create: (_) => RoadsideBloc(MockRoadsideRepository()),
+                ),
+              ],
               child: MaterialApp(
                 title: AppStrings.appName,
                 debugShowCheckedModeBanner: false,
@@ -61,6 +71,9 @@ class App extends StatelessWidget {
                   AppRoutes.profile: (_) => HomeModule.profilePage,
                   AppRoutes.editProfile: (_) => const EditProfileScreen(),
                   AppRoutes.dtcLookup: (_) => const DtcLookupPage(),
+                  AppRoutes.modeSelection: (_) => const ModeSelectionScreen(),
+                  AppRoutes.roadside: (_) => const RoadsideHomeScreen(),
+                  AppRoutes.dashCamSettings: (_) => const DashCamSettingsScreen(),
                   AppRoutes.codeDetail: (context) {
                     final args = ModalRoute.of(context)?.settings.arguments
                         as Map<String, dynamic>?;

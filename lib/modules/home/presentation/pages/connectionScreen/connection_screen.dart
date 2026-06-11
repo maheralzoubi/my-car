@@ -741,7 +741,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     switch (_btState) {
       case _BtState.connected:
         label = context.tr('scan_vehicle');
-        onPressed = () => Navigator.pushNamed(context, AppRoutes.dashboard);
+        onPressed = () => Navigator.pop(context);
         break;
       case _BtState.permissionDenied:
         label = context.tr('open_settings_btn');

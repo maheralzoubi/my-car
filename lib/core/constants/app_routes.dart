@@ -20,4 +20,13 @@ abstract final class AppRoutes {
   static const String profile = '/profile';
   static const String editProfile = '/edit-profile';
   static const String dtcLookup = '/dtc-lookup';
+
+  // Mode selection hub
+  static const String modeSelection = '/mode-selection';
+
+  // Roadside assistance
+  static const String roadside = '/roadside';
+
+  // Dash cam settings
+  static const String dashCamSettings = '/dash-cam-settings';
 }

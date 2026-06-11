@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -18,9 +19,12 @@ class _AuthScreenState extends State<AuthScreen>
   final _signupFormKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _loginEmailController = TextEditingController();
-  final TextEditingController _loginPasswordController =
-      TextEditingController();
+  final TextEditingController _loginEmailController = TextEditingController(
+    text: 'maher@gmail.com',
+  );
+  final TextEditingController _loginPasswordController = TextEditingController(
+    text: 'maher1997',
+  );
   final TextEditingController _signupNameController = TextEditingController();
   final TextEditingController _signupEmailController = TextEditingController();
   final TextEditingController _signupPasswordController =
@@ -53,28 +57,35 @@ class _AuthScreenState extends State<AuthScreen>
   static const String _validEmail = 'maher@gmail.com';
   static const String _validPassword = 'maher1997';
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (!_loginFormKey.currentState!.validate()) return;
     final email = _loginEmailController.text.trim();
     final password = _loginPasswordController.text;
     if (email == _validEmail && password == _validPassword) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.connectionscreen);
+        Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.tr('invalid_credentials')),
-          backgroundColor: const Color(0xFFB3261E),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('invalid_credentials')),
+            backgroundColor: const Color(0xFFB3261E),
+          ),
+        );
+      }
     }
   }
 
-  void _handleSignup() {
+  Future<void> _handleSignup() async {
     if (_signupFormKey.currentState!.validate()) {
-      // Handle signup logic
-      Navigator.pushReplacementNamed(context, AppRoutes.connectionscreen);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
+      }
     }
   }
 
@@ -139,11 +150,7 @@ class _AuthScreenState extends State<AuthScreen>
               ),
             ],
           ),
-          child: Icon(
-            Icons.directions_car,
-            size: 40.r,
-            color: Colors.white,
-          ),
+          child: Icon(Icons.directions_car, size: 40.r, color: Colors.white),
         ),
         SizedBox(height: 20.h),
         ShaderMask(
@@ -180,7 +187,9 @@ class _AuthScreenState extends State<AuthScreen>
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
+        border: Border.all(
+          color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+        ),
       ),
       child: TabBar(
         controller: _tabController,
@@ -228,7 +237,8 @@ class _AuthScreenState extends State<AuthScreen>
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
-              if (value == null || value.isEmpty) return context.tr('enter_email');
+              if (value == null || value.isEmpty)
+                return context.tr('enter_email');
               if (!value.contains('@')) return context.tr('enter_email');
               return null;
             },
@@ -241,10 +251,13 @@ class _AuthScreenState extends State<AuthScreen>
             isPassword: true,
             isPasswordVisible: _isLoginPasswordVisible,
             onTogglePassword: () {
-              setState(() => _isLoginPasswordVisible = !_isLoginPasswordVisible);
+              setState(
+                () => _isLoginPasswordVisible = !_isLoginPasswordVisible,
+              );
             },
             validator: (value) {
-              if (value == null || value.isEmpty) return context.tr('enter_password');
+              if (value == null || value.isEmpty)
+                return context.tr('enter_password');
               return null;
             },
           ),
@@ -255,12 +268,18 @@ class _AuthScreenState extends State<AuthScreen>
               onPressed: () {},
               child: Text(
                 context.tr('forgot_password'),
-                style: TextStyle(color: const Color(0xFF00D9FF), fontSize: 14.sp),
+                style: TextStyle(
+                  color: const Color(0xFF00D9FF),
+                  fontSize: 14.sp,
+                ),
               ),
             ),
           ),
           SizedBox(height: 30.h),
-          _buildGradientButton(text: context.tr('login_tab'), onPressed: _handleLogin),
+          _buildGradientButton(
+            text: context.tr('login_tab'),
+            onPressed: _handleLogin,
+          ),
         ],
       ),
     );
@@ -277,7 +296,8 @@ class _AuthScreenState extends State<AuthScreen>
               label: context.tr('full_name'),
               icon: Icons.person_outline,
               validator: (value) {
-                if (value == null || value.isEmpty) return context.tr('enter_full_name');
+                if (value == null || value.isEmpty)
+                  return context.tr('enter_full_name');
                 return null;
               },
             ),
@@ -288,7 +308,8 @@ class _AuthScreenState extends State<AuthScreen>
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.isEmpty) return context.tr('enter_email');
+                if (value == null || value.isEmpty)
+                  return context.tr('enter_email');
                 if (!value.contains('@')) return context.tr('enter_email');
                 return null;
               },
@@ -301,10 +322,13 @@ class _AuthScreenState extends State<AuthScreen>
               isPassword: true,
               isPasswordVisible: _isSignupPasswordVisible,
               onTogglePassword: () {
-                setState(() => _isSignupPasswordVisible = !_isSignupPasswordVisible);
+                setState(
+                  () => _isSignupPasswordVisible = !_isSignupPasswordVisible,
+                );
               },
               validator: (value) {
-                if (value == null || value.isEmpty) return context.tr('enter_password');
+                if (value == null || value.isEmpty)
+                  return context.tr('enter_password');
                 if (value.length < 6) return context.tr('enter_password');
                 return null;
               },
@@ -317,16 +341,24 @@ class _AuthScreenState extends State<AuthScreen>
               isPassword: true,
               isPasswordVisible: _isSignupConfirmPasswordVisible,
               onTogglePassword: () {
-                setState(() => _isSignupConfirmPasswordVisible = !_isSignupConfirmPasswordVisible);
+                setState(
+                  () => _isSignupConfirmPasswordVisible =
+                      !_isSignupConfirmPasswordVisible,
+                );
               },
               validator: (value) {
-                if (value == null || value.isEmpty) return context.tr('confirm_your_password');
-                if (value != _signupPasswordController.text) return context.tr('confirm_your_password');
+                if (value == null || value.isEmpty)
+                  return context.tr('confirm_your_password');
+                if (value != _signupPasswordController.text)
+                  return context.tr('confirm_your_password');
                 return null;
               },
             ),
             SizedBox(height: 30.h),
-            _buildGradientButton(text: context.tr('signup_tab'), onPressed: _handleSignup),
+            _buildGradientButton(
+              text: context.tr('signup_tab'),
+              onPressed: _handleSignup,
+            ),
           ],
         ),
       ),
@@ -351,7 +383,9 @@ class _AuthScreenState extends State<AuthScreen>
       style: const TextStyle(color: Color(0xFFE8EAED)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: const Color(0xFF00D9FF).withValues(alpha: 0.7)),
+        labelStyle: TextStyle(
+          color: const Color(0xFF00D9FF).withValues(alpha: 0.7),
+        ),
         prefixIcon: Icon(icon, color: const Color(0xFF00D9FF)),
         suffixIcon: isPassword
             ? IconButton(
