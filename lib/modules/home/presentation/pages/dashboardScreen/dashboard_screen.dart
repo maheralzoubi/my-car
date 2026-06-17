@@ -16,6 +16,18 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   DateTime? _lastBackPressTime;
+  bool _scanningDtcs = false;
+
+  List<Map<String, dynamic>> warningLights = [
+    {'icon': '⚠️', 'label': 'check_engine', 'active': false},
+    {'icon': '🔋', 'label': 'battery', 'active': false},
+    {'icon': '🛢️', 'label': 'oil', 'active': false},
+    {'icon': '🛞', 'label': 'abs', 'active': false},
+    {'icon': '🛡️', 'label': 'airbag', 'active': false},
+    {'icon': '🌡️', 'label': 'temp', 'active': false},
+    {'icon': '⛽', 'label': 'fuel', 'active': false},
+    {'icon': '💨', 'label': 'exhaust', 'active': false},
+  ];
 
   @override
   void initState() {
@@ -26,46 +38,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _startPollingIfConnected() {
     if (OBDService.instance.isInitialized) {
       OBDService.instance.startPolling();
+      _fetchDtcsAndUpdateLights();
     }
   }
+
+  Future<void> _fetchDtcsAndUpdateLights() async {
+    if (!OBDService.instance.isInitialized) return;
+    if (!mounted) return;
+    setState(() => _scanningDtcs = true);
+
+    final codes = await OBDService.instance.getDtcs();
+    if (!mounted) return;
+
+    setState(() {
+      _scanningDtcs = false;
+      warningLights = [
+        {'icon': '⚠️', 'label': 'check_engine', 'active': codes.any((c) => c.startsWith('P'))},
+        {'icon': '🔋', 'label': 'battery',      'active': codes.any((c) => _matchPrefix(c, ['P056', 'P057', 'P115']))},
+        {'icon': '🛢️', 'label': 'oil',          'active': codes.any((c) => _matchPrefix(c, ['P052', 'P053']))},
+        {'icon': '🛞', 'label': 'abs',           'active': codes.any((c) => c.startsWith('C'))},
+        {'icon': '🛡️', 'label': 'airbag',       'active': codes.any((c) => c.startsWith('B'))},
+        {'icon': '🌡️', 'label': 'temp',          'active': codes.any((c) => _matchPrefix(c, ['P011', 'P012', 'P025']))},
+        {'icon': '⛽', 'label': 'fuel',           'active': codes.any((c) => _matchPrefix(c, ['P008', 'P009', 'P046']))},
+        {'icon': '💨', 'label': 'exhaust',        'active': codes.any((c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045']))},
+      ];
+    });
+  }
+
+  bool _matchPrefix(String code, List<String> prefixes) =>
+      prefixes.any((p) => code.startsWith(p));
 
   @override
   void dispose() {
     OBDService.instance.stopPolling();
     super.dispose();
   }
-
-  final List<Map<String, dynamic>> warningLights = [
-    {'icon': '⚠️', 'label': 'check_engine', 'active': true},
-    {'icon': '🔋', 'label': 'battery', 'active': false},
-    {'icon': '🛢️', 'label': 'oil', 'active': false},
-    {'icon': '🛞', 'label': 'abs', 'active': true},
-    {'icon': '🛡️', 'label': 'airbag', 'active': false},
-    {'icon': '🌡️', 'label': 'temp', 'active': false},
-    {'icon': '⛽', 'label': 'fuel', 'active': false},
-    {'icon': '💨', 'label': 'exhaust', 'active': false},
-  ];
-
-  final List<Map<String, dynamic>> recentScans = [
-    {
-      'date': 'Today, 2:30 PM',
-      'result': '2 codes detected',
-      'status': 'warning',
-      'codes': 2,
-    },
-    {
-      'date': 'Yesterday, 10:15 AM',
-      'result': 'No issues found',
-      'status': 'success',
-      'codes': 0,
-    },
-    {
-      'date': 'Jan 28, 4:20 PM',
-      'result': '1 code detected',
-      'status': 'warning',
-      'codes': 1,
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -158,24 +165,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               SizedBox(width: 12.w),
               Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Toyota Camry 2020',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE8EAED),
-                      ),
-                    ),
-                    Text(
-                      'VIN: 4T1B11HK...8901',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.sp, color: const Color(0xFF00D9FF)),
-                    ),
-                  ],
+                child: Text(
+                  OBDService.instance.connectedDeviceName ?? 'OBD-II Adapter',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE8EAED),
+                  ),
                 ),
               ),
             ],
@@ -222,6 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (mounted) {
             _startPollingIfConnected();
             setState(() {});
+            _fetchDtcsAndUpdateLights();
           }
         });
       },
@@ -267,58 +265,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHealthCard() {
-    return Container(
-      padding: EdgeInsets.all(25.r),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.02),
-          ],
-        ),
-        border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return StreamBuilder<OBDLiveData>(
+      stream: OBDService.instance.liveDataStream,
+      initialData: OBDService.instance.currentData,
+      builder: (context, snapshot) {
+        final d = snapshot.data ?? const OBDLiveData();
+        final loadStr = d.engineLoad != null ? '${d.engineLoad!.toStringAsFixed(0)}%' : '--';
+        final rpmStr = d.rpm != null ? d.rpm!.toStringAsFixed(0) : '--';
+        final coolantStr = d.coolantTempC != null ? '${d.coolantTempC!.toStringAsFixed(0)}°C' : '--';
+        return Container(
+          padding: EdgeInsets.all(25.r),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: 0.05),
+                Colors.white.withValues(alpha: 0.02),
+              ],
+            ),
+            border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Column(
             children: [
-              Text(
-                context.tr('vehicle_health'),
-                style: TextStyle(
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFE8EAED),
-                ),
-              ),
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFF00E676), Color(0xFF00D9FF)],
-                ).createShader(bounds),
-                child: Text(
-                  '78',
-                  style: TextStyle(
-                    fontSize: 36.sp,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    context.tr('vehicle_health'),
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE8EAED),
+                    ),
                   ),
-                ),
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF00E676), Color(0xFF00D9FF)],
+                    ).createShader(bounds),
+                    child: Text(
+                      loadStr,
+                      style: TextStyle(
+                        fontSize: 36.sp,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20.h),
+              Row(
+                children: [
+                  _buildIndicator('Engine Load', loadStr, const Color(0xFF00E676)),
+                  _buildIndicator('RPM', rpmStr, const Color(0xFF00D9FF)),
+                  _buildIndicator('Coolant', coolantStr, const Color(0xFFFFD600)),
+                ],
               ),
             ],
           ),
-          SizedBox(height: 20.h),
-          Row(
-            children: [
-              _buildIndicator(context.tr('engine'), '98%', const Color(0xFF00E676)),
-              _buildIndicator(context.tr('battery'), '85%', const Color(0xFF00D9FF)),
-              _buildIndicator(context.tr('brakes'), '72%', const Color(0xFFFFD600)),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -440,9 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   _buildLiveTile(
                     'Throttle',
-                    d.throttlePct != null
-                        ? d.throttlePct!.toStringAsFixed(1)
-                        : '--',
+                    d.throttlePct != null ? d.throttlePct!.toStringAsFixed(1) : '--',
                     '%',
                     Icons.tune,
                     const Color(0xFFFF6B35),
@@ -450,15 +456,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   SizedBox(width: 10.w),
                   _buildLiveTile(
                     'Fuel',
-                    d.fuelLevelPct != null
-                        ? d.fuelLevelPct!.toStringAsFixed(1)
-                        : '--',
+                    d.fuelLevelPct != null ? d.fuelLevelPct!.toStringAsFixed(1) : '--',
                     '%',
                     Icons.local_gas_station,
                     const Color(0xFFFF6B35),
                   ),
                   SizedBox(width: 10.w),
-                  Expanded(child: SizedBox()),
+                  _buildLiveTile(
+                    'Engine Load',
+                    d.engineLoad != null ? d.engineLoad!.toStringAsFixed(1) : '--',
+                    '%',
+                    Icons.settings,
+                    const Color(0xFF9C27B0),
+                  ),
                 ],
               ),
             ],
@@ -531,6 +541,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Color(0xFFE8EAED),
               ),
             ),
+            const Spacer(),
+            if (_scanningDtcs)
+              SizedBox(
+                width: 18.r,
+                height: 18.r,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: const Color(0xFF00D9FF),
+                ),
+              )
+            else if (OBDService.instance.isInitialized)
+              GestureDetector(
+                onTap: _fetchDtcsAndUpdateLights,
+                child: Icon(Icons.refresh, color: const Color(0xFF00D9FF), size: 20.r),
+              ),
           ],
         ),
         SizedBox(height: 15.h),
@@ -760,67 +785,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         SizedBox(height: 15.h),
-        ...recentScans.map((scan) => _buildScanItem(scan)),
-      ],
-    );
-  }
-
-  Widget _buildScanItem(Map<String, dynamic> scan) {
-    final isWarning = scan['status'] == 'warning';
-    final statusColor = isWarning
-        ? const Color(0xFFFF6B35)
-        : const Color(0xFF00E676);
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        borderRadius: BorderRadius.circular(15.r),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  scan['date'],
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Color(0xFF00D9FF),
-                  ),
-                ),
-                SizedBox(height: 5.h),
-                Text(
-                  scan['result'],
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Color(0xFFE8EAED),
-                  ),
-                ),
-              ],
-            ),
+        Container(
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.03),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(15.r),
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              border: Border.all(color: statusColor),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
+          child: Center(
             child: Text(
-              isWarning ? '${scan['codes']} Codes' : 'OK',
+              context.tr('no_scans_yet'),
               style: TextStyle(
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w600,
-                color: statusColor,
+                fontSize: 14.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.4),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

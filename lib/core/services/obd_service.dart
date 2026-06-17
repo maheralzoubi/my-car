@@ -36,6 +36,8 @@ class OBDService {
 
   bool get isInitialized => _initialized;
 
+  String? get connectedDeviceName => _adapter.connectedDeviceName;
+
   /// Most-recent telemetry snapshot (used as StreamBuilder initialData).
   OBDLiveData _currentData = const OBDLiveData();
   OBDLiveData get currentData => _currentData;

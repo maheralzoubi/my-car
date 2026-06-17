@@ -28,6 +28,7 @@ class OBDLiveData {
 
 abstract class OBDAdapter {
   bool get isConnected;
+  String? get connectedDeviceName;
   Stream<OBDLiveData> get liveDataStream;
 
   Future<void> connect(BluetoothDevice device);
@@ -77,6 +78,9 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   @override
   bool get isConnected => _connected;
+
+  @override
+  String? get connectedDeviceName => _device?.platformName;
 
   @override
   Stream<OBDLiveData> get liveDataStream => _dataController.stream;
