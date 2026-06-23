@@ -44,6 +44,7 @@ dependencies:
   # Bluetooth BLE for ELM327 OBD connection
   flutter_blue_plus: ^2.1.0
   permission_handler: ^11.3.1
+  device_info_plus: ^10.1.0
 
   # Responsive UI
   flutter_screenutil: ^5.9.3

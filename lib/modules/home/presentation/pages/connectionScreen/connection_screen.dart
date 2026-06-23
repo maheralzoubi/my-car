@@ -30,8 +30,9 @@ enum _BtState {
   checkingPermission,
   permissionDenied,
   btOff,
+  locationServicesOff, // Android < 12: GPS toggle must be ON for BLE to work
   scanning,
-  connecting, // covers BLE connect + ELM327 init (obd2 does both)
+  connecting,
   initFailed,
   connected,
 }
@@ -71,8 +72,19 @@ class _ConnectionScreenState extends State<ConnectionScreen>
 
   Future<void> _initialize() async {
     try {
+      // Request permissions FIRST — the adapterState stream fires immediately
+      // with the current BT state, so the listener must not call _startScan()
+      // before permissions exist or it will get a SecurityException on Android 12+.
+      final granted = await _requestPermissions();
+      if (!mounted) return;
+
+      if (!granted) {
+        setState(() => _btState = _BtState.permissionDenied);
+        return;
+      }
+
+      // Set up adapter-state watcher only after permissions are confirmed.
       _adapterSub?.cancel();
-      // Suppress BLE platform errors from the background listener (e.g. in tests).
       _adapterSub = FlutterBluePlus.adapterState.listen(
         (state) {
           if (!mounted) return;
@@ -89,28 +101,11 @@ class _ConnectionScreenState extends State<ConnectionScreen>
             });
           }
         },
-        onError: (_) {}, // swallow async platform errors
+        onError: (_) {},
       );
-
-      final granted = await _requestPermissions();
-      if (!mounted) return;
-
-      if (!granted) {
-        setState(() => _btState = _BtState.permissionDenied);
-        return;
-      }
-
-      final adapterState = await FlutterBluePlus.adapterState.first;
-      if (!mounted) return;
-
-      if (adapterState != BluetoothAdapterState.on) {
-        setState(() => _btState = _BtState.btOff);
-        return;
-      }
-
-      _startScan();
+      // The listener fires immediately when BT is ON, which calls _startScan().
+      // If BT is OFF the listener sets btOff; user must enable BT then retry.
     } on UnsupportedError {
-      // BLE not available on this platform (e.g. macOS host in unit tests).
       if (mounted) setState(() => _btState = _BtState.btOff);
     } catch (_) {
       if (mounted) setState(() => _btState = _BtState.btOff);
@@ -119,6 +114,11 @@ class _ConnectionScreenState extends State<ConnectionScreen>
 
   Future<bool> _requestPermissions() async {
     if (Platform.isAndroid) {
+      // Location is required for BLE scanning on ALL Android versions:
+      // - Android < 12: OS enforces it directly.
+      // - Android 12+: required unless neverForLocation is set in the manifest,
+      //   but neverForLocation causes silent empty scans on strict OEMs (Samsung,
+      //   Pixel), so we removed it and always require location for compatibility.
       final statuses = await [
         Permission.bluetoothScan,
         Permission.bluetoothConnect,
@@ -132,6 +132,16 @@ class _ConnectionScreenState extends State<ConnectionScreen>
   Future<void> _startScan() async {
     if (!mounted) return;
     try {
+      // Location Services (GPS toggle) must be ON for BLE scans to return
+      // results on Android — even if the permission is granted.
+      if (Platform.isAndroid) {
+        final svc = await Permission.location.serviceStatus;
+        if (svc == ServiceStatus.disabled) {
+          if (mounted) setState(() => _btState = _BtState.locationServicesOff);
+          return;
+        }
+      }
+
       await FlutterBluePlus.stopScan();
       _scanSub?.cancel();
 
@@ -141,7 +151,6 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         _connectingDevice = null;
       });
 
-      // flutter_blue_plus v2: scan results are on onScanResults
       _scanSub = FlutterBluePlus.onScanResults.listen(
         (results) {
           if (!mounted) return;
@@ -150,7 +159,10 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         onError: (_) {},
       );
 
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 15),
+        androidUsesFineLocation: true,
+      );
     } on UnsupportedError {
       if (mounted) setState(() => _btState = _BtState.btOff);
     } catch (_) {
@@ -212,6 +224,8 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         return ctx.tr('bt_permission_required');
       case _BtState.btOff:
         return ctx.tr('please_turn_on_bt');
+      case _BtState.locationServicesOff:
+        return ctx.tr('location_services_required');
       case _BtState.scanning:
         return ctx.tr('searching_devices');
       case _BtState.connecting:
@@ -239,6 +253,8 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         return ctx.tr('go_to_settings_bt');
       case _BtState.btOff:
         return ctx.tr('enable_bluetooth');
+      case _BtState.locationServicesOff:
+        return ctx.tr('location_services_required_sub');
       case _BtState.scanning:
         return '${_scanResults.length} ${ctx.tr('devices_found_nearby')}';
       case _BtState.initFailed:
@@ -407,6 +423,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         return AppColors.accentOrange;
       case _BtState.permissionDenied:
       case _BtState.btOff:
+      case _BtState.locationServicesOff:
       case _BtState.initFailed:
         return Colors.redAccent;
       default:
@@ -424,6 +441,9 @@ class _ConnectionScreenState extends State<ConnectionScreen>
 
       case _BtState.btOff:
         return _iconCircle(Icons.bluetooth_disabled, Colors.redAccent);
+
+      case _BtState.locationServicesOff:
+        return _iconCircle(Icons.location_off, Colors.redAccent);
 
       case _BtState.initFailed:
         return _iconCircle(Icons.bluetooth_disabled, Colors.redAccent);
@@ -748,6 +768,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         onPressed = openAppSettings;
         break;
       case _BtState.btOff:
+      case _BtState.locationServicesOff:
       case _BtState.initFailed:
         label = context.tr('btn_retry');
         onPressed = _startScan;
