@@ -66,9 +66,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _sensorWarnings['battery']      = d.batteryVoltage != null && d.batteryVoltage! < 11.5;
         // Oil: warn if oil temperature > 130 °C (oil degrading / overheating).
         _sensorWarnings['oil']          = d.oilTempC       != null && d.oilTempC!       > 130;
-        // Check engine: warn on RPM over-rev > 6 500.
+        // Intake air > 60 °C = heat soak / intercooler failure (turbo engines).
         _sensorWarnings['check_engine'] = (_sensorWarnings['check_engine'] ?? false) ||
-            (d.rpm != null && d.rpm! > 6500);
+            (d.rpm != null && d.rpm! > 6500) ||
+            (d.intakeAirTempC != null && d.intakeAirTempC! > 60);
       });
     });
   }
@@ -736,6 +737,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ? const Color(0xFFFF1744)
                         : const Color(0xFF00E676),
                   ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              Row(
+                children: [
+                  _buildLiveTile(
+                    'Air Temp',
+                    d.intakeAirTempC != null ? '${d.intakeAirTempC!.toStringAsFixed(0)}°C' : '--',
+                    '',
+                    Icons.air,
+                    d.intakeAirTempC != null && d.intakeAirTempC! > 60
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFF00D9FF),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(child: SizedBox()),
+                  SizedBox(width: 10.w),
+                  Expanded(child: SizedBox()),
                 ],
               ),
               // ── Fuel trim Bank 2 (V6/V8) ─────────────────────────────────

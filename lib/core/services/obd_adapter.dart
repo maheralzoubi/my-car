@@ -21,7 +21,8 @@ class OBDLiveData {
   final double? fuelTrimLongB2;    // PID 0109 — LTFT bank 2 (%)  — V6/V8 only
   final double? o2B1S1Voltage;     // PID 0114 — O2 sensor bank 1 sensor 1 upstream (V)
   final double? o2B1S2Voltage;     // PID 0115 — O2 sensor bank 1 sensor 2 downstream (V)
-  final double? o2B2S1Voltage;     // PID 0118 — O2 sensor bank 2 sensor 1 (V) — V6/V8
+  final double? o2B2S1Voltage;      // PID 0118 — O2 sensor bank 2 sensor 1 (V) — V6/V8
+  final double? intakeAirTempC;     // PID 010F — intake air temperature (°C)
 
   const OBDLiveData({
     this.rpm,
@@ -39,6 +40,7 @@ class OBDLiveData {
     this.o2B1S1Voltage,
     this.o2B1S2Voltage,
     this.o2B2S1Voltage,
+    this.intakeAirTempC,
   });
 }
 
@@ -359,6 +361,14 @@ class ProductionOBDAdapter implements OBDAdapter {
     return b.isNotEmpty ? b[0] / 200.0 : null;
   }
 
+  Future<double?> _intakeAirTemp() async {
+    // PID 010F = Intake air temperature. Formula: A - 40 (°C).
+    // > 60°C indicates heat soak (common on turbocharged engines) or
+    // a failed intercooler — reduces engine power and efficiency.
+    final b = _bytes(await _query('010F', timeout: 800), '410F');
+    return b.isNotEmpty ? (b[0] - 40).toDouble() : null;
+  }
+
   // ── Live data ──────────────────────────────────────────────────────────────
 
   @override
@@ -402,7 +412,8 @@ class ProductionOBDAdapter implements OBDAdapter {
         fuelTrimLongB2:   (await _fuelTrimLongB2())   ?? _lastData.fuelTrimLongB2,
         o2B1S1Voltage:    (await _o2B1S1())           ?? _lastData.o2B1S1Voltage,
         o2B1S2Voltage:    (await _o2B1S2())           ?? _lastData.o2B1S2Voltage,
-        o2B2S1Voltage:    (await _o2B2S1())           ?? _lastData.o2B2S1Voltage,
+        o2B2S1Voltage:    (await _o2B2S1())            ?? _lastData.o2B2S1Voltage,
+        intakeAirTempC:   (await _intakeAirTemp())     ?? _lastData.intakeAirTempC,
       );
       if (!_dataController.isClosed) _dataController.add(_lastData);
     } finally {
