@@ -3,7 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'obd_adapter.dart';
 
-export 'obd_adapter.dart' show OBDLiveData, ReadinessMonitor;
+export 'obd_adapter.dart' show OBDLiveData, ReadinessMonitor, ReadinessResult, MonitorStatus;
 
 /// Singleton facade over [OBDAdapter].
 ///
@@ -121,14 +121,15 @@ class OBDService {
   }
 
   /// Emission-system readiness monitors.
-  Future<List<ReadinessMonitor>> getReadinessMonitors() async {
-    if (!_initialized) return [];
+  Future<ReadinessResult> getReadinessMonitors() async {
+    const empty = ReadinessResult(milOn: false, dtcCount: 0, monitors: []);
+    if (!_initialized) return empty;
     _adapter.stopLiveData();
     await Future.delayed(const Duration(milliseconds: 300));
     try {
       return await _adapter.getReadinessMonitors();
     } catch (_) {
-      return [];
+      return empty;
     } finally {
       if (_initialized) _adapter.startLiveData();
     }

@@ -96,7 +96,8 @@ class FakeOBDAdapter implements OBDAdapter {
   Future<Map<String, String>> getFreezeFrame() async => {};
 
   @override
-  Future<List<ReadinessMonitor>> getReadinessMonitors() async => [];
+  Future<ReadinessResult> getReadinessMonitors() async =>
+      const ReadinessResult(milOn: false, dtcCount: 0, monitors: []);
 
   // ── Test helpers ──────────────────────────────────────────────────────────
 

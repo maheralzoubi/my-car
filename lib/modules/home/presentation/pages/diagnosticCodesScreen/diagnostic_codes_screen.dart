@@ -48,7 +48,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   String? _errorMessage;
   List<_DtcItem> _dtcItems = [];
   String _selectedFilter = 'All';
-  List<ReadinessMonitor> _monitors = [];
+  ReadinessResult? _readiness;
 
   static const _filters = ['All', 'Engine', 'Chassis', 'Body', 'Network'];
 
@@ -67,7 +67,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     if (!OBDService.instance.isInitialized) return;
     final monitors = await OBDService.instance.getReadinessMonitors();
     if (!mounted) return;
-    setState(() => _monitors = monitors);
+    setState(() => _readiness = monitors);
   }
 
   // ── Export report ─────────────────────────────────────────────────────────
@@ -114,11 +114,16 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     }
 
     // ── Readiness monitors ───────────────────────────────────────────────
-    if (_monitors.isNotEmpty) {
+    if (_readiness != null && _readiness!.monitors.isNotEmpty) {
       buf.writeln();
       buf.writeln('── EMISSIONS READINESS ─────────────────────────');
-      for (final m in _monitors) {
-        final status = m.complete ? '✓ Ready' : '✗ Not ready';
+      buf.writeln('  MIL: ${_readiness!.milOn ? "ON" : "OFF"}   DTCs stored: ${_readiness!.dtcCount}');
+      for (final m in _readiness!.monitors) {
+        final status = switch (m.status) {
+          MonitorStatus.ready          => '✓ Ready',
+          MonitorStatus.notReady       => '✗ Not ready',
+          MonitorStatus.notApplicable  => '⬜ N/A',
+        };
         buf.writeln('  $status  ${m.name}');
       }
     }
@@ -318,7 +323,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             children: [
               _buildHeader(),
               if (!_loading && _errorMessage == null) _buildSummary(),
-              if (_monitors.isNotEmpty) _buildReadinessMonitors(),
+              if (_readiness != null && _readiness!.monitors.isNotEmpty) _buildReadinessMonitors(),
               _buildFilters(),
               Expanded(child: _buildBody()),
             ],
@@ -464,38 +469,116 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             ],
           ),
           SizedBox(height: 10.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 6.h,
-            children: _monitors.map((m) {
-              final color = m.complete
-                  ? const Color(0xFF00E676)
-                  : const Color(0xFFFF6B35);
-              final icon = m.complete ? Icons.check_circle : Icons.cancel;
-              return Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  border: Border.all(color: color.withValues(alpha: 0.5)),
-                  borderRadius: BorderRadius.circular(20.r),
+          // MIL + DTC count row
+          Row(
+            children: [
+              _milBadge(_readiness!.milOn),
+              SizedBox(width: 10.w),
+              Text(
+                '${_readiness!.dtcCount} DTC${_readiness!.dtcCount == 1 ? '' : 's'} stored',
+                style: TextStyle(fontSize: 12.sp, color: AppColors.textLight.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          // Monitor rows — two per line
+          ...(() {
+            final monitors = _readiness!.monitors;
+            final rows = <Widget>[];
+            for (var i = 0; i < monitors.length; i += 2) {
+              rows.add(Row(
+                children: [
+                  Expanded(child: _monitorTile(monitors[i])),
+                  SizedBox(width: 8.w),
+                  if (i + 1 < monitors.length)
+                    Expanded(child: _monitorTile(monitors[i + 1]))
+                  else
+                    const Expanded(child: SizedBox()),
+                ],
+              ));
+              if (i + 2 < monitors.length) rows.add(SizedBox(height: 6.h));
+            }
+            return rows;
+          })(),
+        ],
+      ),
+    );
+  }
+
+  Widget _milBadge(bool on) {
+    final color = on ? const Color(0xFFFF1744) : const Color(0xFF00E676);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(on ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+              color: color, size: 13.r),
+          SizedBox(width: 4.w),
+          Text(
+            'MIL ${on ? "ON" : "OFF"}',
+            style: TextStyle(fontSize: 11.sp, color: color, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _monitorTile(ReadinessMonitor m) {
+    final Color color;
+    final IconData icon;
+    final String label;
+    switch (m.status) {
+      case MonitorStatus.ready:
+        color = const Color(0xFF00E676);
+        icon  = Icons.check_circle;
+        label = 'Ready';
+        break;
+      case MonitorStatus.notReady:
+        color = const Color(0xFFFF6B35);
+        icon  = Icons.cancel;
+        label = 'Not ready';
+        break;
+      case MonitorStatus.notApplicable:
+        color = Colors.white24;
+        icon  = Icons.remove_circle_outline;
+        label = 'N/A';
+        break;
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 14.r),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  m.name,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: AppColors.textLight.withValues(alpha: m.isApplicable ? 0.9 : 0.4),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, color: color, size: 11.r),
-                    SizedBox(width: 4.w),
-                    Text(
-                      m.name,
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 9.sp, color: color),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
         ],
       ),

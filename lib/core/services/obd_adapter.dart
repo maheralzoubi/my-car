@@ -46,11 +46,30 @@ class OBDLiveData {
 
 // ── Readiness monitor result ──────────────────────────────────────────────────
 
+enum MonitorStatus { ready, notReady, notApplicable }
+
 class ReadinessMonitor {
   final String name;
-  final bool complete; // true = test passed/ready, false = not yet complete
+  final MonitorStatus status;
 
-  const ReadinessMonitor({required this.name, required this.complete});
+  const ReadinessMonitor({required this.name, required this.status});
+
+  bool get isReady       => status == MonitorStatus.ready;
+  bool get isNotReady    => status == MonitorStatus.notReady;
+  bool get isApplicable  => status != MonitorStatus.notApplicable;
+}
+
+/// Summary returned by [OBDAdapter.getReadinessMonitors].
+class ReadinessResult {
+  final bool milOn;         // MIL (check engine) lamp status
+  final int  dtcCount;      // number of confirmed DTCs stored
+  final List<ReadinessMonitor> monitors;
+
+  const ReadinessResult({
+    required this.milOn,
+    required this.dtcCount,
+    required this.monitors,
+  });
 }
 
 // ── Abstract contract (testable) ──────────────────────────────────────────────
@@ -73,7 +92,7 @@ abstract class OBDAdapter {
   Future<Map<String, String>> getFreezeFrame();
 
   /// Emission-system readiness monitors from PID 0101.
-  Future<List<ReadinessMonitor>> getReadinessMonitors();
+  Future<ReadinessResult> getReadinessMonitors();
 }
 
 // ── Production implementation ─────────────────────────────────────────────────
@@ -486,45 +505,68 @@ class ProductionOBDAdapter implements OBDAdapter {
   // ── Readiness monitors (PID 0101) ─────────────────────────────────────────
 
   @override
-  Future<List<ReadinessMonitor>> getReadinessMonitors() async {
-    if (!_connected) return [];
+  Future<ReadinessResult> getReadinessMonitors() async {
+    if (!_connected) {
+      return const ReadinessResult(milOn: false, dtcCount: 0, monitors: []);
+    }
     final r = await _sendAT('0101', timeout: 3000);
     final b = _bytes(r, '4101');
-    if (b.length < 3) return [];
+    if (b.length < 3) {
+      return const ReadinessResult(milOn: false, dtcCount: 0, monitors: []);
+    }
 
-    // Byte B: incomplete flags (1=not done). Byte C: supported flags (1=supported).
+    // Byte A: MIL status (bit 7) + DTC count (bits 6-0).
+    final milOn   = (b[0] >> 7) & 1 == 1;
+    final dtcCount = b[0] & 0x7F;
+
+    // Byte B: incomplete flags (1 = not done).
+    // Byte C: supported flags  (1 = this vehicle has this monitor).
     final incomplete = b[1];
     final supported  = b[2];
-    // Byte D (optional): more monitors.
+    // Byte D (optional): additional non-continuous monitors.
     final incD = b.length > 3 ? b[3] : 0;
-    final supD = b.length > 4 ? b[4] : 0xFF;
+    final supD = b.length > 4 ? b[4] : 0;
 
     final monitors = <ReadinessMonitor>[];
 
-    void add(String name, int supByte, int incByte, int bit) {
-      if ((supByte >> bit) & 1 == 1) {
-        monitors.add(ReadinessMonitor(
-          name: name,
-          complete: ((incByte >> bit) & 1) == 0,
-        ));
-      }
+    // Continuous monitors (bits 0-2) — always run; always applicable on any OBD vehicle.
+    void addContinuous(String name, int bit) {
+      final incomplete_ = (incomplete >> bit) & 1 == 1;
+      monitors.add(ReadinessMonitor(
+        name: name,
+        status: incomplete_ ? MonitorStatus.notReady : MonitorStatus.ready,
+      ));
     }
 
-    // Byte B monitors (bits 0-7)
-    add('Misfire',          supported, incomplete, 0);
-    add('Fuel System',      supported, incomplete, 1);
-    add('Components',       supported, incomplete, 2);
-    add('Catalyst',         supported, incomplete, 4);
-    add('Heated Catalyst',  supported, incomplete, 5);
-    add('Evap System',      supported, incomplete, 6);
-    add('Secondary Air',    supported, incomplete, 7);
-    // Byte D monitors
-    add('A/C System',       supD, incD, 0);
-    add('O2 Sensor',        supD, incD, 1);
-    add('O2 Sensor Heater', supD, incD, 2);
-    add('EGR / VVT',        supD, incD, 3);
+    // Non-continuous monitors — only applicable when byte C bit is set.
+    void add(String name, int supByte, int incByte, int bit) {
+      final sup = (supByte >> bit) & 1 == 1;
+      monitors.add(ReadinessMonitor(
+        name: name,
+        status: !sup
+            ? MonitorStatus.notApplicable
+            : (incByte >> bit) & 1 == 1
+                ? MonitorStatus.notReady
+                : MonitorStatus.ready,
+      ));
+    }
 
-    return monitors;
+    // Byte B continuous (bits 0-2)
+    addContinuous('Misfire',     0);
+    addContinuous('Fuel System', 1);
+    addContinuous('Components',  2);
+    // Byte B/C non-continuous (bits 4-7)
+    add('Catalyst',        supported, incomplete, 4);
+    add('Heated Catalyst', supported, incomplete, 5);
+    add('Evap System',     supported, incomplete, 6);
+    add('Secondary Air',   supported, incomplete, 7);
+    // Byte D monitors
+    add('A/C System',      supD, incD, 0);
+    add('O2 Sensor',       supD, incD, 1);
+    add('O2 Sensor Heater',supD, incD, 2);
+    add('EGR / VVT',       supD, incD, 3);
+
+    return ReadinessResult(milOn: milOn, dtcCount: dtcCount, monitors: monitors);
   }
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
