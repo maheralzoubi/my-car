@@ -869,15 +869,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const Spacer(),
-                  if (OBDService.instance.isInitialized)
-                    Container(
-                      width: 8.w,
-                      height: 8.h,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF00E676),
-                        shape: BoxShape.circle,
+                  if (OBDService.instance.isInitialized) ...[
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.liveGraph),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D9FF).withValues(alpha: 0.1),
+                          border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.4)),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.show_chart, color: const Color(0xFF00D9FF), size: 13.r),
+                            SizedBox(width: 4.w),
+                            Text('Graph', style: TextStyle(fontSize: 11.sp, color: const Color(0xFF00D9FF), fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ),
+                    SizedBox(width: 8.w),
+                    Container(
+                      width: 8.w, height: 8.h,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF00E676), shape: BoxShape.circle),
+                    ),
+                  ],
                 ],
               ),
               SizedBox(height: 12.h),
@@ -967,6 +985,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icons.settings,
                     const Color(0xFF9C27B0),
                   ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              SizedBox(height: 10.h),
+              // ── MAP + Timing advance ─────────────────────────────────────
+              Row(
+                children: [
+                  _buildLiveTile(
+                    'MAP',
+                    d.mapKpa != null ? '${d.mapKpa!.toStringAsFixed(0)} kPa' : '--',
+                    '',
+                    Icons.compress,
+                    const Color(0xFF00BCD4),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildTimingTile(d.timingAdvanceDeg),
+                  SizedBox(width: 10.w),
+                  Expanded(child: SizedBox()),
                 ],
               ),
               SizedBox(height: 10.h),
@@ -1165,6 +1201,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimingTile(double? deg) {
+    // Green: normal advance (> 0°). Yellow: light retard (-5 to 0°).
+    // Red: heavy knock retard (< -5°) — ECU protecting engine from damage.
+    Color color;
+    if (deg == null) {
+      color = Colors.white24;
+    } else if (deg >= 0) {
+      color = const Color(0xFF00E676);
+    } else if (deg >= -5) {
+      color = const Color(0xFFFFD600);
+    } else {
+      color = const Color(0xFFFF1744);
+    }
+    final prefix = deg != null && deg > 0 ? '+' : '';
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.flash_on, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text('Timing',
+                style: TextStyle(
+                    fontSize: 10.sp,
+                    color: const Color(0xFFE8EAED).withValues(alpha: 0.6))),
+            SizedBox(height: 4.h),
+            Text(
+              deg != null ? '$prefix${deg.toStringAsFixed(1)}°' : '--',
+              style: TextStyle(
+                  fontSize: 15.sp, fontWeight: FontWeight.w700, color: color),
             ),
           ],
         ),

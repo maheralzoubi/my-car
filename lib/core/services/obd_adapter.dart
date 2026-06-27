@@ -23,6 +23,8 @@ class OBDLiveData {
   final double? o2B1S2Voltage;     // PID 0115 — O2 sensor bank 1 sensor 2 downstream (V)
   final double? o2B2S1Voltage;      // PID 0118 — O2 sensor bank 2 sensor 1 (V) — V6/V8
   final double? intakeAirTempC;     // PID 010F — intake air temperature (°C)
+  final double? mapKpa;             // PID 010B — manifold absolute pressure (kPa)
+  final double? timingAdvanceDeg;   // PID 010E — ignition timing advance (°)
 
   const OBDLiveData({
     this.rpm,
@@ -41,6 +43,8 @@ class OBDLiveData {
     this.o2B1S2Voltage,
     this.o2B2S1Voltage,
     this.intakeAirTempC,
+    this.mapKpa,
+    this.timingAdvanceDeg,
   });
 }
 
@@ -386,10 +390,25 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   Future<double?> _intakeAirTemp() async {
     // PID 010F = Intake air temperature. Formula: A - 40 (°C).
-    // > 60°C indicates heat soak (common on turbocharged engines) or
-    // a failed intercooler — reduces engine power and efficiency.
     final b = _bytes(await _query('010F', timeout: 800), '410F');
     return b.isNotEmpty ? (b[0] - 40).toDouble() : null;
+  }
+
+  Future<double?> _map() async {
+    // PID 010B = Manifold Absolute Pressure. Formula: A (kPa), range 0–255.
+    // At idle on naturally-aspirated engine: ~30–45 kPa (vacuum).
+    // At wide-open throttle: close to barometric (~100 kPa).
+    // On turbocharged engines: can exceed 100 kPa (boost).
+    final b = _bytes(await _query('010B', timeout: 800), '410B');
+    return b.isNotEmpty ? b[0].toDouble() : null;
+  }
+
+  Future<double?> _timingAdvance() async {
+    // PID 010E = Timing advance. Formula: (A - 128) / 2 (degrees BTDC).
+    // Negative = retarded (ECU pulling timing due to knock detection).
+    // Healthy idle: typically +5 to +15°. Knock retard pulls it toward 0 or negative.
+    final b = _bytes(await _query('010E', timeout: 800), '410E');
+    return b.isNotEmpty ? (b[0] - 128) / 2.0 : null;
   }
 
   // ── Live data ──────────────────────────────────────────────────────────────
@@ -437,6 +456,8 @@ class ProductionOBDAdapter implements OBDAdapter {
         o2B1S2Voltage:    (await _o2B1S2())           ?? _lastData.o2B1S2Voltage,
         o2B2S1Voltage:    (await _o2B2S1())            ?? _lastData.o2B2S1Voltage,
         intakeAirTempC:   (await _intakeAirTemp())     ?? _lastData.intakeAirTempC,
+        mapKpa:           (await _map())               ?? _lastData.mapKpa,
+        timingAdvanceDeg: (await _timingAdvance())     ?? _lastData.timingAdvanceDeg,
       );
       if (!_dataController.isClosed) _dataController.add(_lastData);
     } finally {

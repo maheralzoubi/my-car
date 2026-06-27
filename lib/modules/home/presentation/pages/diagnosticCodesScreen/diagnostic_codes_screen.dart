@@ -5,7 +5,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/dtc_history_service.dart';
 import '../../../../../core/services/dtc_repository.dart';
+import '../../../../../core/services/maintenance_service.dart';
 import '../../../../../core/services/obd_service.dart';
 
 // ── DTC view model ─────────────────────────────────────────────────────────────
@@ -202,6 +204,10 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
       if (!mounted) return;
       setState(() => _dtcItems = items);
+
+      // Record this scan in history and keep maintenance mileage in sync.
+      final mileage = MaintenanceService.instance.currentMileageKm;
+      await DtcHistoryService.instance.record(codes: codes, mileageKm: mileage);
 
       // Fetch freeze frame after the list is shown so it doesn't block rendering.
       // Mode 02 stores ONE snapshot shared by all confirmed codes.

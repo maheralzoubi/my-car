@@ -32,4 +32,7 @@ abstract final class AppRoutes {
 
   // Maintenance tracker
   static const String maintenance = '/maintenance';
+
+  // Live data graph
+  static const String liveGraph = '/live-graph';
 }
