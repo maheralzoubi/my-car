@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/alert_service.dart';
 import '../../../../../core/services/dtc_repository.dart';
 import '../../../../../core/services/maintenance_service.dart';
 import '../../../../../core/services/obd_service.dart';
@@ -38,6 +39,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _vin;
   Map<String, String> _vinInfo = {};
 
+  // In-app alert overlay
+  OBDAlert? _activeAlert;
+  StreamSubscription<OBDAlert>? _alertSub;
+
   List<Map<String, dynamic>> warningLights = [
     {'icon': '⚠️', 'label': 'check_engine', 'active': false, 'codes': <String>[]},
     {'icon': '🔋', 'label': 'battery',      'active': false, 'codes': <String>[]},
@@ -47,6 +52,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {'icon': '🌡️', 'label': 'temp',          'active': false, 'codes': <String>[]},
     {'icon': '⛽', 'label': 'fuel',           'active': false, 'codes': <String>[]},
     {'icon': '💨', 'label': 'exhaust',        'active': false, 'codes': <String>[]},
+    {'icon': '🔄', 'label': 'transmission',  'active': false, 'codes': <String>[]},
+    {'icon': '💥', 'label': 'misfire',        'active': false, 'codes': <String>[]},
+    {'icon': '🔌', 'label': 'o2_sensor',     'active': false, 'codes': <String>[]},
+    {'icon': '📊', 'label': 'fuel_trim',     'active': false, 'codes': <String>[]},
+    {'icon': '💉', 'label': 'injector',      'active': false, 'codes': <String>[]},
+    {'icon': '🌬️', 'label': 'maf_sensor',     'active': false, 'codes': <String>[]},
+    {'icon': '📡', 'label': 'network',          'active': false, 'codes': <String>[]},
+    {'icon': '🔧', 'label': 'service',          'active': false, 'codes': <String>[]},
+    {'icon': '🔵', 'label': 'traction',         'active': false, 'codes': <String>[]},
+    {'icon': '🚗', 'label': 'steering',         'active': false, 'codes': <String>[]},
+    {'icon': '🌀', 'label': 'egr',              'active': false, 'codes': <String>[]},
+    {'icon': '⚡', 'label': 'throttle',         'active': false, 'codes': <String>[]},
+    {'icon': '💧', 'label': 'fuel_pressure',   'active': false, 'codes': <String>[]},
   ];
 
   @override
@@ -63,7 +81,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _subscribeSensorThresholds();
       _startTripTracking();
       _fetchVin();
+      _startAlerts();
     }
+  }
+
+  void _startAlerts() {
+    AlertService.instance.startMonitoring();
+    _alertSub?.cancel();
+    _alertSub = AlertService.instance.alerts.listen((alert) {
+      if (!mounted) return;
+      setState(() => _activeAlert = alert);
+      // Auto-dismiss warning alerts after 6 s; critical stay until tapped.
+      if (alert.severity == AlertSeverity.warning) {
+        Future.delayed(const Duration(seconds: 6), () {
+          if (mounted && _activeAlert?.id == alert.id) {
+            setState(() => _activeAlert = null);
+          }
+        });
+      }
+    });
   }
 
   // ── Trip computer ──────────────────────────────────────────────────────────
@@ -105,6 +141,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _sensorWarnings['check_engine'] = (_sensorWarnings['check_engine'] ?? false) ||
             (d.rpm != null && d.rpm! > 6500) ||
             (d.intakeAirTempC != null && d.intakeAirTempC! > 60);
+        // Fuel trim: severe deviation > ±25 % indicates rich/lean fault.
+        _sensorWarnings['fuel_trim'] =
+            (d.fuelTrimShortPct != null && d.fuelTrimShortPct!.abs() > 25) ||
+            (d.fuelTrimLongPct  != null && d.fuelTrimLongPct!.abs()  > 25) ||
+            (d.fuelTrimShortB2  != null && d.fuelTrimShortB2!.abs()  > 25) ||
+            (d.fuelTrimLongB2   != null && d.fuelTrimLongB2!.abs()   > 25);
+        // Service: mirror the maintenance-due flag into sensor warnings.
+        _sensorWarnings['service'] = MaintenanceService.instance.dueCount > 0;
       });
     });
   }
@@ -126,13 +170,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Prefixes owned by specific lights — excluded from the generic check-engine list.
     const specificPrefixes = [
-      'P056', 'P057', 'P115',        // battery
-      'P052', 'P053',                 // oil
-      'P011', 'P012', 'P025',        // temp
-      'P008', 'P009', 'P046',        // fuel
-      'P042', 'P043', 'P044', 'P045', // exhaust
+      'P056', 'P057', 'P115',                        // battery
+      'P052', 'P053',                                 // oil
+      'P011', 'P012', 'P025',                        // temp
+      'P008', 'P009', 'P046',                        // fuel
+      'P042', 'P043', 'P044', 'P045',                // exhaust
+      'P07', 'P08',                                   // transmission
+      'P030', 'P032', 'P033', 'P034', 'P035',        // misfire / ignition
+      'P013', 'P014', 'P015', 'P016',                // o2_sensor
+      'P017', 'P018',                                 // fuel_trim
+      'P020', 'P021',                                 // injector
+      'P010',                                         // maf_sensor
     ];
-    bool isSpecific(String c) => _matchPrefix(c, specificPrefixes);
+    bool isSpecific(String c) =>
+        _matchPrefix(c, specificPrefixes) || c.startsWith('U');
 
     setState(() {
       _scanningDtcs = false;
@@ -162,6 +213,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
         {'icon': '💨', 'label': 'exhaust',
           'codes': codesFor((c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045'])),
           'active': codes.any((c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045']))},
+        {'icon': '🔄', 'label': 'transmission',
+          'codes': codesFor((c) => _matchPrefix(c, ['P07', 'P08'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P07', 'P08']))},
+        {'icon': '💥', 'label': 'misfire',
+          'codes': codesFor((c) => _matchPrefix(c, ['P030', 'P032', 'P033', 'P034', 'P035'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P030', 'P032', 'P033', 'P034', 'P035']))},
+        {'icon': '🔌', 'label': 'o2_sensor',
+          'codes': codesFor((c) => _matchPrefix(c, ['P013', 'P014', 'P015', 'P016'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P013', 'P014', 'P015', 'P016']))},
+        {'icon': '📊', 'label': 'fuel_trim',
+          'codes': codesFor((c) => _matchPrefix(c, ['P017', 'P018'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P017', 'P018']))},
+        {'icon': '💉', 'label': 'injector',
+          'codes': codesFor((c) => _matchPrefix(c, ['P020', 'P021'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P020', 'P021']))},
+        {'icon': '🌬️', 'label': 'maf_sensor',
+          'codes': codesFor((c) => _matchPrefix(c, ['P010'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P010']))},
+        {'icon': '📡', 'label': 'network',
+          'codes': codesFor((c) => c.startsWith('U')),
+          'active': codes.any((c) => c.startsWith('U'))},
+        {'icon': '🔧', 'label': 'service',
+          'codes': <String>[],
+          'active': MaintenanceService.instance.dueCount > 0},
       ];
     });
   }
@@ -173,8 +248,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     OBDService.instance.stopPolling();
     TripService.instance.stop();
+    AlertService.instance.stopMonitoring();
     _liveWarningSub?.cancel();
     _tripSub?.cancel();
+    _alertSub?.cancel();
     super.dispose();
   }
 
@@ -199,18 +276,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: Scaffold(
-        body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0D0D0D), Color(0xFF0A1929)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
+        body: Stack(
+          children: [
+            Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0D0D0D), Color(0xFF0A1929)],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(),
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(20.r),
@@ -244,6 +323,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+            // ── In-app alert overlay ────────────────────────────────────
+            if (_activeAlert != null)
+              _buildAlertOverlay(_activeAlert!),
+          ],
+        ),
         bottomNavigationBar: _buildBottomNavBar(),
       ),
     );
@@ -407,6 +491,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ── Card ──────────────────────────────────────────────────────────────────
 
+  // ── Alert overlay ─────────────────────────────────────────────────────────
+
+  Widget _buildAlertOverlay(OBDAlert alert) {
+    final isCritical = alert.severity == AlertSeverity.critical;
+    final bgColor    = isCritical ? const Color(0xFFFF1744) : const Color(0xFFFF6B35);
+
+    return Positioned(
+      top: 0, left: 0, right: 0,
+      child: SafeArea(
+        child: GestureDetector(
+          onTap: () => setState(() => _activeAlert = null),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: EdgeInsets.all(12.r),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(color: bgColor.withValues(alpha: 0.6),
+                    blurRadius: 20, offset: const Offset(0, 6)),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isCritical ? Icons.warning_rounded : Icons.info_rounded,
+                  color: Colors.white, size: 28.r,
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(alert.title,
+                          style: TextStyle(
+                              fontSize: 15.sp, fontWeight: FontWeight.w800,
+                              color: Colors.white)),
+                      SizedBox(height: 3.h),
+                      Text(alert.message,
+                          style: TextStyle(
+                              fontSize: 12.sp, color: Colors.white.withValues(alpha: 0.9))),
+                    ],
+                  ),
+                ),
+                Icon(Icons.close, color: Colors.white.withValues(alpha: 0.7), size: 18.r),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── VIN card ──────────────────────────────────────────────────────────────
 
   Widget _buildVinCard() {
@@ -554,9 +692,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Expanded(child: SizedBox()),
             ],
           ),
+          SizedBox(height: 12.h),
+          // ── Drive score ──────────────────────────────────────────────
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              color: _driveScoreColor(trip.driveScore).withValues(alpha: 0.1),
+              border: Border.all(
+                  color: _driveScoreColor(trip.driveScore).withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Row(
+              children: [
+                Text('🏎️', style: TextStyle(fontSize: 20.sp)),
+                SizedBox(width: 10.w),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Drive Score',
+                        style: TextStyle(fontSize: 10.sp,
+                            color: const Color(0xFFE8EAED).withValues(alpha: 0.55))),
+                    Text(trip.driveScoreLabel,
+                        style: TextStyle(fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: _driveScoreColor(trip.driveScore))),
+                  ],
+                ),
+                const Spacer(),
+                Text('${trip.driveScore}',
+                    style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.w900,
+                        color: _driveScoreColor(trip.driveScore))),
+                Text(' / 100',
+                    style: TextStyle(fontSize: 12.sp,
+                        color: const Color(0xFFE8EAED).withValues(alpha: 0.4))),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Color _driveScoreColor(int score) {
+    if (score >= 85) return const Color(0xFF00E676);
+    if (score >= 65) return const Color(0xFF00D9FF);
+    if (score >= 45) return const Color(0xFFFFD600);
+    return const Color(0xFFFF1744);
   }
 
   Widget _tripStat(String label, String value, Color color) {

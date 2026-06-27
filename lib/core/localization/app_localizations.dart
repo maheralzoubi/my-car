@@ -122,6 +122,13 @@ class AppLocalizations {
       'temp': 'Temp',
       'fuel': 'Fuel',
       'exhaust': 'Exhaust',
+      'misfire': 'Misfire',
+      'o2_sensor': 'O2 Sensor',
+      'fuel_trim': 'Fuel Trim',
+      'injector': 'Injector',
+      'maf_sensor': 'MAF',
+      'network': 'Network',
+      'service': 'Service',
 
       // Diagnostic Codes
       'diagnostic_codes': 'Diagnostic Codes',
@@ -210,6 +217,82 @@ class AppLocalizations {
       'auto_start_sub': 'Begin recording when app opens',
       'incident_detection': 'Incident Detection',
       'incident_detection_sub': 'Save clip automatically on sudden stop',
+
+      // DTC Lookup page
+      'dtc_lookup_title': 'DTC Lookup',
+      'dtc_enter_code_hint': 'Enter DTC code (e.g. P0300)',
+      'dtc_get_description': 'Get Description',
+      'dtc_description_label': 'Description:',
+      'dtc_enter_code_error': 'Please enter a DTC code.',
+      'dtc_no_description_prefix': 'No description found for code',
+      'dtc_fetch_failed': 'Failed to fetch description. Please try again.',
+
+      // Exit app dialog
+      'exit_app': 'Exit App',
+      'exit_app_confirm': 'Are you sure you want to exit?',
+      'exit': 'Exit',
+
+      // Live data graph
+      'live_data_graph': 'Live Data Graph',
+      'live_data': 'Live Data',
+      'select_channel': 'Select at least one channel',
+
+      // History screen
+      'no_scan_history_yet': 'No scan history yet',
+      'run_scan_to_log': 'Run a diagnostic scan to start logging.',
+      'clear_history': 'Clear History?',
+      'clear_history_content': 'All scan records will be deleted permanently.',
+      'clear_all': 'Clear All',
+      'total_scans': 'Total Scans',
+      'with_codes': 'With Codes',
+      'clean_scan': 'Clean',
+
+      // Maintenance screen
+      'maintenance_tracker': 'Maintenance Tracker',
+      'current_mileage': 'Current Mileage',
+      'set': 'Set',
+      'log_label': 'Log',
+      'confirm': 'Confirm',
+      'set_current_mileage': 'Set Current Mileage',
+      'mileage_km': 'Mileage (km)',
+      'never_serviced': 'Never serviced',
+      'status_overdue': 'OVERDUE',
+      'status_due_soon': 'DUE SOON',
+      'status_ok': 'OK',
+      'log_service_msg_prefix': 'This will record today\'s date and',
+      'log_service_msg_suffix': 'km as the last service.',
+
+      // Mode selection screen
+      'what_do_you_need': 'What do you need today?',
+      'car_diagnostics': 'Car Diagnostics',
+      'car_diagnostics_sub':
+          'Connect via Bluetooth OBD-II adapter to read live data, fault codes and performance metrics',
+      'connect_bluetooth': 'Connect Bluetooth',
+      'roadside_assistance': 'Roadside Assistance',
+      'roadside_assistance_sub':
+          'Request a certified driver for towing, battery, tire or fuel service — anywhere, anytime',
+      'request_help': 'Request Help',
+      'switch_services': 'You can switch between services anytime',
+      'live_engine_data': 'Live engine data & RPM',
+      'fault_code_scanner': 'Fault code scanner (DTC)',
+      'performance_metrics': 'Performance metrics',
+      'towing_service': 'Towing & flatbed service',
+      'battery_tire_repair': 'Battery & tire repair',
+      'fuel_delivery': 'Fuel delivery',
+
+      // Diagnostic codes screen
+      'failed_clear_codes': 'Failed to clear codes – check adapter connection.',
+      'go_to_connection': 'Go to Connection',
+      'clear_codes': 'Clear Codes?',
+      'clear': 'Clear',
+      'failed_read_codes': 'Failed to read codes',
+      'clear_codes_content':
+          'This will erase all fault codes and reset the MIL lamp. '
+          'Emissions readiness monitors will also reset.',
+
+      // Dashboard screen
+      'graph': 'Graph',
+      'timing': 'Timing',
     },
     'ar': {
       // Common
@@ -310,6 +393,13 @@ class AppLocalizations {
       'temp': 'الحرارة',
       'fuel': 'الوقود',
       'exhaust': 'العادم',
+      'misfire': 'اشتعال خاطئ',
+      'o2_sensor': 'مستشعر O2',
+      'fuel_trim': 'تعديل الوقود',
+      'injector': 'الحاقن',
+      'maf_sensor': 'مستشعر MAF',
+      'network': 'الشبكة',
+      'service': 'الصيانة',
 
       // Diagnostic Codes
       'diagnostic_codes': 'أكواد التشخيص',
@@ -398,6 +488,82 @@ class AppLocalizations {
       'auto_start_sub': 'ابدأ التسجيل عند فتح التطبيق',
       'incident_detection': 'كشف الحوادث',
       'incident_detection_sub': 'حفظ المقطع تلقائياً عند التوقف المفاجئ',
+
+      // DTC Lookup page
+      'dtc_lookup_title': 'بحث DTC',
+      'dtc_enter_code_hint': 'أدخل كود DTC (مثال: P0300)',
+      'dtc_get_description': 'احصل على الوصف',
+      'dtc_description_label': 'الوصف:',
+      'dtc_enter_code_error': 'يرجى إدخال كود DTC.',
+      'dtc_no_description_prefix': 'لم يتم العثور على وصف للكود',
+      'dtc_fetch_failed': 'فشل في جلب الوصف. يرجى المحاولة مجدداً.',
+
+      // Exit app dialog
+      'exit_app': 'الخروج من التطبيق',
+      'exit_app_confirm': 'هل أنت متأكد أنك تريد الخروج؟',
+      'exit': 'خروج',
+
+      // Live data graph
+      'live_data_graph': 'رسم البيانات الحية',
+      'live_data': 'البيانات الحية',
+      'select_channel': 'اختر قناة واحدة على الأقل',
+
+      // History screen
+      'no_scan_history_yet': 'لا يوجد سجل فحص بعد',
+      'run_scan_to_log': 'قم بإجراء فحص تشخيصي لبدء السجل.',
+      'clear_history': 'مسح السجل؟',
+      'clear_history_content': 'سيتم حذف جميع سجلات الفحص بشكل دائم.',
+      'clear_all': 'مسح الكل',
+      'total_scans': 'إجمالي الفحوصات',
+      'with_codes': 'مع أكواد',
+      'clean_scan': 'نظيف',
+
+      // Maintenance screen
+      'maintenance_tracker': 'متتبع الصيانة',
+      'current_mileage': 'عداد الكيلومترات الحالي',
+      'set': 'تعيين',
+      'log_label': 'تسجيل',
+      'confirm': 'تأكيد',
+      'set_current_mileage': 'تعيين عداد الكيلومترات الحالي',
+      'mileage_km': 'المسافة (كم)',
+      'never_serviced': 'لم يتم الصيانة من قبل',
+      'status_overdue': 'متأخر',
+      'status_due_soon': 'موعده قريب',
+      'status_ok': 'جيد',
+      'log_service_msg_prefix': 'سيسجل هذا تاريخ اليوم و',
+      'log_service_msg_suffix': 'كم كآخر خدمة.',
+
+      // Mode selection screen
+      'what_do_you_need': 'ماذا تحتاج اليوم؟',
+      'car_diagnostics': 'تشخيص السيارة',
+      'car_diagnostics_sub':
+          'اتصل عبر محول OBD-II بالبلوتوث لقراءة البيانات الحية وأكواد الأعطال ومقاييس الأداء',
+      'connect_bluetooth': 'الاتصال بالبلوتوث',
+      'roadside_assistance': 'المساعدة على الطريق',
+      'roadside_assistance_sub':
+          'اطلب سائقاً معتمداً لخدمات السحب والبطارية والإطارات أو الوقود — في أي مكان وأي وقت',
+      'request_help': 'طلب مساعدة',
+      'switch_services': 'يمكنك التبديل بين الخدمات في أي وقت',
+      'live_engine_data': 'بيانات المحرك الحية وعدد الدورات',
+      'fault_code_scanner': 'ماسح أكواد الأعطال (DTC)',
+      'performance_metrics': 'مقاييس الأداء',
+      'towing_service': 'خدمة السحب والمقطورة',
+      'battery_tire_repair': 'إصلاح البطارية والإطارات',
+      'fuel_delivery': 'توصيل الوقود',
+
+      // Diagnostic codes screen
+      'failed_clear_codes': 'فشل في مسح الأكواد – تحقق من اتصال المحول.',
+      'go_to_connection': 'الانتقال إلى الاتصال',
+      'clear_codes': 'مسح الأكواد؟',
+      'clear': 'مسح',
+      'failed_read_codes': 'فشل في قراءة الأكواد',
+      'clear_codes_content':
+          'سيؤدي هذا إلى مسح جميع أكواد الأعطال وإعادة تعيين مصباح MIL. '
+          'ستتم إعادة تعيين مراقبات جاهزية الانبعاثات أيضاً.',
+
+      // Dashboard screen
+      'graph': 'رسم بياني',
+      'timing': 'التوقيت',
     },
   };
 }

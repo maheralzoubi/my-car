@@ -48,6 +48,8 @@ dependencies:
   url_launcher: ^6.3.0
   share_plus: ^10.1.4
   fl_chart: ^0.70.2
+  flutter_local_notifications: ^18.0.1
+  audioplayers: ^6.4.0
 
   # Responsive UI
   flutter_screenutil: ^5.9.3
@@ -89,6 +91,7 @@ flutter:
   assets:
     - assets/dtcmapping.json
     - assets/dtcmapping_ar.json
+    - assets/sounds/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

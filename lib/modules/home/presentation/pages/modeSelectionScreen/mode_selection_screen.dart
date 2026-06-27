@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class ModeSelectionScreen extends StatefulWidget {
   const ModeSelectionScreen({super.key});
@@ -89,24 +90,25 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   }
 
   Future<bool> _onWillPop() async {
+    final exitApp = context.tr('exit_app');
+    final exitConfirm = context.tr('exit_app_confirm');
+    final cancel = context.tr('cancel');
+    final exit = context.tr('exit');
     final shouldExit = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0A1929),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Exit App', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Are you sure you want to exit?',
-          style: TextStyle(color: Color(0xFFE8EAED)),
-        ),
+        title: Text(exitApp, style: const TextStyle(color: Colors.white)),
+        content: Text(exitConfirm, style: const TextStyle(color: Color(0xFFE8EAED))),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF00D9FF))),
+            child: Text(cancel, style: const TextStyle(color: Color(0xFF00D9FF))),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Exit', style: TextStyle(color: Color(0xFFFF6B35))),
+            child: Text(exit, style: const TextStyle(color: Color(0xFFFF6B35))),
           ),
         ],
       ),

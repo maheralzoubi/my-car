@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/dtc_repository.dart';
 
 class DtcLookupPage extends StatefulWidget {
@@ -28,11 +29,15 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
     final code = _controller.text.trim();
     if (code.isEmpty) {
       setState(() {
-        _error = 'Please enter a DTC code.';
+        _error = context.tr('dtc_enter_code_error');
         _result = null;
       });
       return;
     }
+
+    // Pre-translate error messages before async gap
+    final noDescMsg = '${context.tr('dtc_no_description_prefix')} "$code".';
+    final fetchFailedMsg = context.tr('dtc_fetch_failed');
 
     setState(() {
       _isLoading = true;
@@ -49,7 +54,7 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
       setState(() {
         if (description == null || description.isEmpty) {
           _result = null;
-          _error = 'No description found for code "$code".';
+          _error = noDescMsg;
         } else {
           _result = description;
           _error = null;
@@ -58,7 +63,7 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
     } catch (e) {
       setState(() {
         _result = null;
-        _error = 'Failed to fetch description. Please try again.';
+        _error = fetchFailedMsg;
       });
     } finally {
       if (mounted) {
@@ -73,7 +78,7 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DTC Lookup'),
+        title: Text(context.tr('dtc_lookup_title')),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.r),
@@ -83,9 +88,9 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
             TextField(
               controller: _controller,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                labelText: 'Enter DTC code (e.g. P0300)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.tr('dtc_enter_code_hint'),
+                border: const OutlineInputBorder(),
               ),
               onSubmitted: (_) => _lookup(),
             ),
@@ -104,13 +109,13 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
                               AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text('Get Description'),
+                    : Text(context.tr('dtc_get_description')),
               ),
             ),
             SizedBox(height: 24.h),
             if (_result != null) ...[
               Text(
-                'Description:',
+                context.tr('dtc_description_label'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16.sp,
