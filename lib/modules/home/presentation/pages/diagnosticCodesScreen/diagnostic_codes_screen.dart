@@ -14,12 +14,14 @@ class _DtcItem {
   final String description;
   final String system;
   final String severity;
+  final bool isPending; // true = mode 07 code, not yet confirmed by ECU
 
   const _DtcItem({
     required this.code,
     required this.description,
     required this.system,
     required this.severity,
+    this.isPending = false,
   });
 }
 
@@ -79,13 +81,17 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       final isArabic = Localizations.localeOf(context).languageCode == 'ar';
       final lang = isArabic ? 'ar' : 'en';
 
-      final items = await Future.wait(codes.map((code) async {
+      final items = await Future.wait(codes.map((raw) async {
+        // Codes prefixed with '~' are mode-07 pending codes.
+        final isPending = raw.startsWith('~');
+        final code = isPending ? raw.substring(1) : raw;
         final desc = await _repo.getDtcDescription(code, languageCode: lang);
         return _DtcItem(
           code: code,
           description: desc ?? code,
           system: _systemFromCode(code),
           severity: _severityFromCode(code),
+          isPending: isPending,
         );
       }));
 
@@ -103,13 +109,13 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     setState(() => _clearing = true);
     final ok = await OBDService.instance.clearDtcs();
     if (!mounted) return;
-    setState(() {
-      _clearing = false;
-      if (ok) _dtcItems = [];
-    });
-    if (!ok) {
+    if (ok) {
+      // Re-scan immediately to confirm all codes were erased.
+      await _fetchDtcs();
+    } else {
+      setState(() => _clearing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Failed to clear codes – check adapter connection.'),
           backgroundColor: Colors.redAccent,
         ),
@@ -249,9 +255,9 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   }
 
   Widget _buildSummary() {
-    final critical = _dtcItems.where((d) => d.severity == 'critical').length;
-    final warning = _dtcItems.where((d) => d.severity == 'warning').length;
-    final info = _dtcItems.where((d) => d.severity == 'info').length;
+    final confirmed = _dtcItems.where((d) => !d.isPending).length;
+    final pending   = _dtcItems.where((d) =>  d.isPending).length;
+    final critical  = _dtcItems.where((d) => d.severity == 'critical').length;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
@@ -272,9 +278,9 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _summaryItem(context.tr('severity_critical'), critical, _colCritical),
-          _summaryItem(context.tr('severity_warning'), warning, _colWarning),
-          _summaryItem(context.tr('severity_info'), info, _colInfo),
+          _summaryItem('Confirmed', confirmed, _colCritical),
+          _summaryItem('Pending',   pending,   const Color(0xFFFFD600)),
+          _summaryItem('Critical',  critical,  _colWarning),
         ],
       ),
     );
@@ -508,6 +514,25 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                   _codeChip(item.code, color),
                   SizedBox(width: 10.w),
                   _systemChip(item.system),
+                  if (item.isPending) ...[
+                    SizedBox(width: 8.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD600).withValues(alpha: 0.15),
+                        border: Border.all(color: const Color(0xFFFFD600)),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        'Pending',
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          color: const Color(0xFFFFD600),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   Icon(_severityIcon(item.severity), color: color, size: 24.r),
                 ],

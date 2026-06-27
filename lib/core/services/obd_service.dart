@@ -77,20 +77,32 @@ class OBDService {
   /// Returns `[]` when not connected or on error.
   Future<List<String>> getDtcs() async {
     if (!_initialized) return [];
+    // Stop the live-data timer so its pending _sendAT calls don't
+    // overwrite the Completer that getDtcs is about to create.
+    _adapter.stopLiveData();
+    // Brief pause to let any in-flight poll command fully complete.
+    await Future.delayed(const Duration(milliseconds: 300));
     try {
       return await _adapter.getDtcs();
     } catch (_) {
       return [];
+    } finally {
+      // Always restart polling when done.
+      if (_initialized) _adapter.startLiveData();
     }
   }
 
   /// Clears stored DTCs and resets the MIL. Returns `false` on error.
   Future<bool> clearDtcs() async {
     if (!_initialized) return false;
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
     try {
       return await _adapter.clearDtcs();
     } catch (_) {
       return false;
+    } finally {
+      if (_initialized) _adapter.startLiveData();
     }
   }
 

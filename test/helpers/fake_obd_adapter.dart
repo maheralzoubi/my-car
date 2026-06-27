@@ -50,6 +50,9 @@ class FakeOBDAdapter implements OBDAdapter {
   bool get isConnected => _connected;
 
   @override
+  String? get connectedDeviceName => _connected ? 'FakeAdapter' : null;
+
+  @override
   Stream<OBDLiveData> get liveDataStream => _dataController.stream;
 
   @override

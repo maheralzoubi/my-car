@@ -13,6 +13,7 @@ class OBDLiveData {
   final double? throttlePct;
   final double? fuelLevelPct;
   final double? engineLoad;
+  final double? batteryVoltage; // PID 0142 — control module voltage (V)
 
   const OBDLiveData({
     this.rpm,
@@ -21,6 +22,7 @@ class OBDLiveData {
     this.throttlePct,
     this.fuelLevelPct,
     this.engineLoad,
+    this.batteryVoltage,
   });
 }
 
@@ -73,6 +75,8 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   final _dataController = StreamController<OBDLiveData>.broadcast();
   Timer? _pollingTimer;
+  bool _polling = false;          // guard against overlapping polls
+  OBDLiveData _lastData = const OBDLiveData(); // last known good values
 
   // ── OBDAdapter API ─────────────────────────────────────────────────────────
 
@@ -252,18 +256,26 @@ class ProductionOBDAdapter implements OBDAdapter {
   }
 
   Future<double?> _throttle() async {
-    final b = _bytes(await _query('0111'), '4111');
+    final b = _bytes(await _query('0111', timeout: 1000), '4111');
     return b.isNotEmpty ? b[0] * 100 / 255 : null;
   }
 
   Future<double?> _fuel() async {
-    final b = _bytes(await _query('012F'), '412F');
+    // PID 012F is optional on many vehicles — use a short timeout to fail fast.
+    final b = _bytes(await _query('012F', timeout: 1000), '412F');
     return b.isNotEmpty ? b[0] * 100 / 255 : null;
   }
 
   Future<double?> _load() async {
-    final b = _bytes(await _query('0104'), '4104');
+    final b = _bytes(await _query('0104', timeout: 1500), '4104');
     return b.isNotEmpty ? b[0] * 100 / 255 : null;
+  }
+
+  Future<double?> _batteryVoltage() async {
+    // PID 0142 = Control module voltage. Formula: (A*256 + B) / 1000 → volts.
+    // Reflects the actual system voltage (battery / alternator). < 11.5 V = problem.
+    final b = _bytes(await _query('0142', timeout: 1000), '4142');
+    return b.length >= 2 ? (b[0] * 256 + b[1]) / 1000.0 : null;
   }
 
   // ── Live data ──────────────────────────────────────────────────────────────
@@ -271,8 +283,10 @@ class ProductionOBDAdapter implements OBDAdapter {
   @override
   void startLiveData() {
     _pollingTimer?.cancel();
+    // 3 s gives each poll room to finish (6 PIDs × up to 2 s worst-case timeout)
+    // before the next one fires.
     _pollingTimer = Timer.periodic(
-      const Duration(seconds: 2),
+      const Duration(seconds: 3),
       (_) => _poll(),
     );
   }
@@ -285,15 +299,26 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   Future<void> _poll() async {
     if (!_connected || _initPhase) return;
-    final snapshot = OBDLiveData(
-      rpm:          await _rpm(),
-      speedKmh:     await _speed(),
-      coolantTempC: await _coolant(),
-      throttlePct:  await _throttle(),
-      fuelLevelPct: await _fuel(),
-      engineLoad:   await _load(),
-    );
-    if (!_dataController.isClosed) _dataController.add(snapshot);
+    // Skip this tick if a previous poll is still in progress.
+    if (_polling) return;
+    _polling = true;
+    try {
+      // Fall back to the last known good value when a PID returns null
+      // (unsupported sensor, transient timeout, etc.) so the UI never
+      // flickers back to '--' after a value has been established.
+      _lastData = OBDLiveData(
+        rpm:            (await _rpm())             ?? _lastData.rpm,
+        speedKmh:       (await _speed())           ?? _lastData.speedKmh,
+        coolantTempC:   (await _coolant())         ?? _lastData.coolantTempC,
+        throttlePct:    (await _throttle())        ?? _lastData.throttlePct,
+        fuelLevelPct:   (await _fuel())            ?? _lastData.fuelLevelPct,
+        engineLoad:     (await _load())            ?? _lastData.engineLoad,
+        batteryVoltage: (await _batteryVoltage())  ?? _lastData.batteryVoltage,
+      );
+      if (!_dataController.isClosed) _dataController.add(_lastData);
+    } finally {
+      _polling = false;
+    }
   }
 
   // ── DTCs ───────────────────────────────────────────────────────────────────
@@ -301,8 +326,23 @@ class ProductionOBDAdapter implements OBDAdapter {
   @override
   Future<List<String>> getDtcs() async {
     if (!_connected) return [];
-    final r = await _sendAT('03', timeout: 10000);
-    return _parseDtcs(r);
+
+    // Mode 03 — confirmed stored codes (MIL is ON for these).
+    final r03 = await _sendAT('03', timeout: 10000);
+    final confirmed = _parseDtcs(r03, header: '43');
+
+    // Mode 07 — pending codes: detected this drive cycle but not yet confirmed.
+    // Real faults (airbag, sensor failures, etc.) often appear here before they
+    // become "confirmed". Prefix with '~' so the UI can label them "Pending".
+    final r07 = await _sendAT('07', timeout: 5000);
+    final pending = _parseDtcs(r07, header: '47')
+        .map((c) => '~$c')
+        .toList();
+
+    // Merge: confirmed first, then pending codes not already in confirmed list.
+    final confirmedSet = confirmed.toSet();
+    final uniquePending = pending.where((p) => !confirmedSet.contains(p.substring(1))).toList();
+    return [...confirmed, ...uniquePending];
   }
 
   @override
@@ -354,18 +394,54 @@ class ProductionOBDAdapter implements OBDAdapter {
     return result;
   }
 
-  List<String> _parseDtcs(String response) {
-    final clean = response.replaceAll(' ', '').toUpperCase();
+  List<String> _parseDtcs(String response, {String header = '43'}) {
+    // Normalise: strip spaces, CR/LF, and ELM327 multi-frame line prefixes (e.g. "0:", "1:").
+    final clean = response
+        .replaceAll(' ', '')
+        .replaceAll('\r', '')
+        .replaceAll('\n', '')
+        .replaceAll(RegExp(r'\d:'), '')
+        .toUpperCase();
+
+    // Ignore ELM327 error responses.
+    const errorTokens = ['NODATA', 'UNABLETOCONNECT', 'CANERROR', 'STOPPED', 'ERROR'];
+    if (errorTokens.any(clean.contains)) return [];
+
     final dtcs = <String>[];
-    final idx = clean.indexOf('43');
+    final idx = clean.indexOf(header.toUpperCase());
     if (idx == -1) return dtcs;
-    final data = clean.substring(idx + 2);
-    for (var i = 0; i + 3 < data.length; i += 4) {
+
+    String data = clean.substring(idx + header.length);
+
+    // ISO 9141 / KWP2000 vehicles prepend a count byte before the DTC pairs.
+    // CAN vehicles (ISO 15765) do not include a count byte.
+    // Detection: if first byte is 1–6 AND there are at least count×2 bytes
+    // of DTC data following AND the first DTC byte after it is non-zero,
+    // treat the first byte as a count and skip it.
+    if (data.length >= 6) {
+      final possibleCount = int.tryParse(data.substring(0, 2), radix: 16) ?? 0;
+      if (possibleCount >= 1 && possibleCount <= 6) {
+        final minLen = 2 + possibleCount * 4; // count(2 chars) + DTCs
+        if (data.length >= minLen) {
+          final firstDtcHi = int.tryParse(data.substring(2, 4), radix: 16) ?? 0;
+          final firstDtcLo = int.tryParse(data.substring(4, 6), radix: 16) ?? 0;
+          if (firstDtcHi != 0 || firstDtcLo != 0) {
+            // Looks like a count byte — extract exactly count DTC pairs.
+            data = data.substring(2, 2 + possibleCount * 4);
+          }
+        }
+      }
+    }
+
+    for (var i = 0; i + 4 <= data.length; i += 4) {
       final b1 = int.tryParse(data.substring(i, i + 2), radix: 16) ?? 0;
       final b2 = int.tryParse(data.substring(i + 2, i + 4), radix: 16) ?? 0;
       if (b1 == 0 && b2 == 0) continue;
+
       final prefix = ['P', 'C', 'B', 'U'][(b1 >> 6) & 3];
-      final num = ((b1 & 0x3F) << 8 | b2).toString().padLeft(4, '0');
+      // Use hex formatting: P0300 → "0300", not decimal 768 → "0768".
+      final num = (b1 & 0x3F).toRadixString(16).padLeft(2, '0').toUpperCase() +
+                  b2.toRadixString(16).padLeft(2, '0').toUpperCase();
       dtcs.add('$prefix$num');
     }
     return dtcs;
