@@ -58,12 +58,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _liveWarningSub = OBDService.instance.liveDataStream.listen((d) {
       if (!mounted) return;
       setState(() {
-        // Temp: warn if coolant ≥ 105 °C (overheating range).
-        _sensorWarnings['temp']    = d.coolantTempC != null && d.coolantTempC! >= 105;
+        // Temp: warn if coolant ≥ 105 °C (overheating).
+        _sensorWarnings['temp']         = d.coolantTempC   != null && d.coolantTempC!   >= 105;
         // Fuel: warn if fuel level ≤ 10 %.
-        _sensorWarnings['fuel']    = d.fuelLevelPct != null && d.fuelLevelPct! <= 10;
+        _sensorWarnings['fuel']         = d.fuelLevelPct   != null && d.fuelLevelPct!   <= 10;
         // Battery: warn if system voltage < 11.5 V (charging / battery fault).
-        _sensorWarnings['battery'] = d.batteryVoltage != null && d.batteryVoltage! < 11.5;
+        _sensorWarnings['battery']      = d.batteryVoltage != null && d.batteryVoltage! < 11.5;
+        // Oil: warn if oil temperature > 130 °C (oil degrading / overheating).
+        _sensorWarnings['oil']          = d.oilTempC       != null && d.oilTempC!       > 130;
+        // Check engine: warn on RPM over-rev > 6 500.
+        _sensorWarnings['check_engine'] = (_sensorWarnings['check_engine'] ?? false) ||
+            (d.rpm != null && d.rpm! > 6500);
       });
     });
   }
@@ -714,6 +719,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+              SizedBox(height: 10.h),
+              Row(
+                children: [
+                  _buildFuelTrimTile(
+                    'Trim S',
+                    d.fuelTrimShortPct,
+                    'Short-term fuel trim',
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildFuelTrimTile(
+                    'Trim L',
+                    d.fuelTrimLongPct,
+                    'Long-term fuel trim',
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    'Oil Temp',
+                    d.oilTempC != null ? '${d.oilTempC!.toStringAsFixed(0)}°C' : '--',
+                    '',
+                    Icons.oil_barrel,
+                    d.oilTempC != null && d.oilTempC! > 130
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFF00E676),
+                  ),
+                ],
+              ),
             ],
           ),
         );
@@ -761,6 +792,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontSize: 9.sp,
                 color: color.withValues(alpha: 0.7),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Fuel trim tile: colour-codes the value (green = normal, red = lean/rich).
+  Widget _buildFuelTrimTile(String label, double? value, String tooltip) {
+    final hasValue = value != null;
+    final color = hasValue
+        ? (value.abs() <= 10
+            ? const Color(0xFF00E676)   // normal ±10 %
+            : value.abs() <= 20
+                ? const Color(0xFFFFD600) // moderate ±20 %
+                : const Color(0xFFFF1744)) // severe > 20 %
+        : Colors.white24;
+    final prefix = hasValue && value > 0 ? '+' : '';
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.track_changes, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              hasValue ? '$prefix${value.toStringAsFixed(1)}' : '--',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            Text(
+              '%',
+              style: TextStyle(fontSize: 9.sp, color: color.withValues(alpha: 0.7)),
             ),
           ],
         ),

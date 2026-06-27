@@ -3,7 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'obd_adapter.dart';
 
-export 'obd_adapter.dart' show OBDLiveData;
+export 'obd_adapter.dart' show OBDLiveData, ReadinessMonitor;
 
 /// Singleton facade over [OBDAdapter].
 ///
@@ -101,6 +101,34 @@ class OBDService {
       return await _adapter.clearDtcs();
     } catch (_) {
       return false;
+    } finally {
+      if (_initialized) _adapter.startLiveData();
+    }
+  }
+
+  /// Sensor values captured by the ECU at the moment a fault occurred.
+  Future<Map<String, String>> getFreezeFrame() async {
+    if (!_initialized) return {};
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      return await _adapter.getFreezeFrame();
+    } catch (_) {
+      return {};
+    } finally {
+      if (_initialized) _adapter.startLiveData();
+    }
+  }
+
+  /// Emission-system readiness monitors.
+  Future<List<ReadinessMonitor>> getReadinessMonitors() async {
+    if (!_initialized) return [];
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      return await _adapter.getReadinessMonitors();
+    } catch (_) {
+      return [];
     } finally {
       if (_initialized) _adapter.startLiveData();
     }

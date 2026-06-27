@@ -92,6 +92,12 @@ class FakeOBDAdapter implements OBDAdapter {
     return !clearShouldFail;
   }
 
+  @override
+  Future<Map<String, String>> getFreezeFrame() async => {};
+
+  @override
+  Future<List<ReadinessMonitor>> getReadinessMonitors() async => [];
+
   // ── Test helpers ──────────────────────────────────────────────────────────
 
   /// Push a [OBDLiveData] snapshot to listeners of [liveDataStream].

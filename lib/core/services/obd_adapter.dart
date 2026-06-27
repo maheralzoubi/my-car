@@ -13,7 +13,10 @@ class OBDLiveData {
   final double? throttlePct;
   final double? fuelLevelPct;
   final double? engineLoad;
-  final double? batteryVoltage; // PID 0142 — control module voltage (V)
+  final double? batteryVoltage;  // PID 0142 — control module voltage (V)
+  final double? oilTempC;        // PID 015C — engine oil temperature (°C)
+  final double? fuelTrimShortPct; // PID 0106 — short-term fuel trim bank 1 (%)
+  final double? fuelTrimLongPct;  // PID 0107 — long-term fuel trim bank 1 (%)
 
   const OBDLiveData({
     this.rpm,
@@ -23,7 +26,19 @@ class OBDLiveData {
     this.fuelLevelPct,
     this.engineLoad,
     this.batteryVoltage,
+    this.oilTempC,
+    this.fuelTrimShortPct,
+    this.fuelTrimLongPct,
   });
+}
+
+// ── Readiness monitor result ──────────────────────────────────────────────────
+
+class ReadinessMonitor {
+  final String name;
+  final bool complete; // true = test passed/ready, false = not yet complete
+
+  const ReadinessMonitor({required this.name, required this.complete});
 }
 
 // ── Abstract contract (testable) ──────────────────────────────────────────────
@@ -41,6 +56,12 @@ abstract class OBDAdapter {
 
   Future<List<String>> getDtcs();
   Future<bool> clearDtcs();
+
+  /// Snapshot of sensor values captured by the ECU when a fault occurred.
+  Future<Map<String, String>> getFreezeFrame();
+
+  /// Emission-system readiness monitors from PID 0101.
+  Future<List<ReadinessMonitor>> getReadinessMonitors();
 }
 
 // ── Production implementation ─────────────────────────────────────────────────
@@ -273,9 +294,27 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   Future<double?> _batteryVoltage() async {
     // PID 0142 = Control module voltage. Formula: (A*256 + B) / 1000 → volts.
-    // Reflects the actual system voltage (battery / alternator). < 11.5 V = problem.
     final b = _bytes(await _query('0142', timeout: 1000), '4142');
     return b.length >= 2 ? (b[0] * 256 + b[1]) / 1000.0 : null;
+  }
+
+  Future<double?> _oilTemp() async {
+    // PID 015C = Engine oil temperature. Formula: A - 40 (°C). Optional on many vehicles.
+    final b = _bytes(await _query('015C', timeout: 1000), '415C');
+    return b.isNotEmpty ? (b[0] - 40).toDouble() : null;
+  }
+
+  Future<double?> _fuelTrimShort() async {
+    // PID 0106 = Short-term fuel trim bank 1. Formula: (A/1.28) - 100 (%).
+    // Negative = lean (ECU adding fuel), positive = rich (ECU removing fuel).
+    final b = _bytes(await _query('0106', timeout: 1000), '4106');
+    return b.isNotEmpty ? (b[0] / 1.28) - 100 : null;
+  }
+
+  Future<double?> _fuelTrimLong() async {
+    // PID 0107 = Long-term fuel trim bank 1.
+    final b = _bytes(await _query('0107', timeout: 1000), '4107');
+    return b.isNotEmpty ? (b[0] / 1.28) - 100 : null;
   }
 
   // ── Live data ──────────────────────────────────────────────────────────────
@@ -307,13 +346,16 @@ class ProductionOBDAdapter implements OBDAdapter {
       // (unsupported sensor, transient timeout, etc.) so the UI never
       // flickers back to '--' after a value has been established.
       _lastData = OBDLiveData(
-        rpm:            (await _rpm())             ?? _lastData.rpm,
-        speedKmh:       (await _speed())           ?? _lastData.speedKmh,
-        coolantTempC:   (await _coolant())         ?? _lastData.coolantTempC,
-        throttlePct:    (await _throttle())        ?? _lastData.throttlePct,
-        fuelLevelPct:   (await _fuel())            ?? _lastData.fuelLevelPct,
-        engineLoad:     (await _load())            ?? _lastData.engineLoad,
-        batteryVoltage: (await _batteryVoltage())  ?? _lastData.batteryVoltage,
+        rpm:              (await _rpm())              ?? _lastData.rpm,
+        speedKmh:         (await _speed())            ?? _lastData.speedKmh,
+        coolantTempC:     (await _coolant())          ?? _lastData.coolantTempC,
+        throttlePct:      (await _throttle())         ?? _lastData.throttlePct,
+        fuelLevelPct:     (await _fuel())             ?? _lastData.fuelLevelPct,
+        engineLoad:       (await _load())             ?? _lastData.engineLoad,
+        batteryVoltage:   (await _batteryVoltage())   ?? _lastData.batteryVoltage,
+        oilTempC:         (await _oilTemp())          ?? _lastData.oilTempC,
+        fuelTrimShortPct: (await _fuelTrimShort())    ?? _lastData.fuelTrimShortPct,
+        fuelTrimLongPct:  (await _fuelTrimLong())     ?? _lastData.fuelTrimLongPct,
       );
       if (!_dataController.isClosed) _dataController.add(_lastData);
     } finally {
@@ -350,6 +392,81 @@ class ProductionOBDAdapter implements OBDAdapter {
     if (!_connected) return false;
     await _sendAT('04', timeout: 5000);
     return true;
+  }
+
+  // ── Freeze frame (mode 02) ────────────────────────────────────────────────
+
+  @override
+  Future<Map<String, String>> getFreezeFrame() async {
+    if (!_connected) return {};
+    final data = <String, String>{};
+
+    // Each key: PID to send.  Value: (label, response header, expected data bytes, converter).
+    final queries = <(String, String, String, int, String Function(List<int>))>[
+      ('020C', '420C', 'RPM',         2, (b) => '${((b[0]*256+b[1])/4).toStringAsFixed(0)} rpm'),
+      ('020D', '420D', 'Speed',        1, (b) => '${b[0]} km/h'),
+      ('0205', '4205', 'Coolant',      1, (b) => '${b[0]-40}°C'),
+      ('0204', '4204', 'Engine Load',  1, (b) => '${(b[0]*100/255).toStringAsFixed(1)}%'),
+      ('020F', '420F', 'Air Temp',     1, (b) => '${b[0]-40}°C'),
+      ('0211', '4211', 'Throttle',     1, (b) => '${(b[0]*100/255).toStringAsFixed(1)}%'),
+      ('0206', '4206', 'Fuel Trim',    1, (b) => '${((b[0]/1.28)-100).toStringAsFixed(1)}%'),
+      ('020B', '420B', 'MAP',          1, (b) => '${b[0]} kPa'),
+    ];
+
+    for (final q in queries) {
+      final r = await _sendAT(q.$1, timeout: 1200);
+      final raw = _bytes(r, q.$2);
+      // Mode 02 responses include a frame-number byte (0–3) before the data.
+      final b = (raw.length == q.$4 + 1 && raw[0] <= 3) ? raw.sublist(1) : raw;
+      if (b.length >= q.$4) {
+        data[q.$3] = q.$5(b);
+      }
+    }
+    return data;
+  }
+
+  // ── Readiness monitors (PID 0101) ─────────────────────────────────────────
+
+  @override
+  Future<List<ReadinessMonitor>> getReadinessMonitors() async {
+    if (!_connected) return [];
+    final r = await _sendAT('0101', timeout: 3000);
+    final b = _bytes(r, '4101');
+    if (b.length < 3) return [];
+
+    // Byte B: incomplete flags (1=not done). Byte C: supported flags (1=supported).
+    final incomplete = b[1];
+    final supported  = b[2];
+    // Byte D (optional): more monitors.
+    final incD = b.length > 3 ? b[3] : 0;
+    final supD = b.length > 4 ? b[4] : 0xFF;
+
+    final monitors = <ReadinessMonitor>[];
+
+    void add(String name, int supByte, int incByte, int bit) {
+      if ((supByte >> bit) & 1 == 1) {
+        monitors.add(ReadinessMonitor(
+          name: name,
+          complete: ((incByte >> bit) & 1) == 0,
+        ));
+      }
+    }
+
+    // Byte B monitors (bits 0-7)
+    add('Misfire',          supported, incomplete, 0);
+    add('Fuel System',      supported, incomplete, 1);
+    add('Components',       supported, incomplete, 2);
+    add('Catalyst',         supported, incomplete, 4);
+    add('Heated Catalyst',  supported, incomplete, 5);
+    add('Evap System',      supported, incomplete, 6);
+    add('Secondary Air',    supported, incomplete, 7);
+    // Byte D monitors
+    add('A/C System',       supD, incD, 0);
+    add('O2 Sensor',        supD, incD, 1);
+    add('O2 Sensor Heater', supD, incD, 2);
+    add('EGR / VVT',        supD, incD, 3);
+
+    return monitors;
   }
 
   // ── Cleanup ────────────────────────────────────────────────────────────────

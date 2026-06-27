@@ -15,6 +15,7 @@ class _DtcItem {
   final String system;
   final String severity;
   final bool isPending; // true = mode 07 code, not yet confirmed by ECU
+  final Map<String, String> freezeFrame; // sensor snapshot when fault occurred
 
   const _DtcItem({
     required this.code,
@@ -22,6 +23,7 @@ class _DtcItem {
     required this.system,
     required this.severity,
     this.isPending = false,
+    this.freezeFrame = const {},
   });
 }
 
@@ -45,6 +47,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   String? _errorMessage;
   List<_DtcItem> _dtcItems = [];
   String _selectedFilter = 'All';
+  List<ReadinessMonitor> _monitors = [];
 
   static const _filters = ['All', 'Engine', 'Chassis', 'Body', 'Network'];
 
@@ -56,6 +59,14 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   void initState() {
     super.initState();
     _fetchDtcs();
+    _fetchMonitors();
+  }
+
+  Future<void> _fetchMonitors() async {
+    if (!OBDService.instance.isInitialized) return;
+    final monitors = await OBDService.instance.getReadinessMonitors();
+    if (!mounted) return;
+    setState(() => _monitors = monitors);
   }
 
   // ── Data loading ──────────────────────────────────────────────────────────
@@ -97,6 +108,26 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
       if (!mounted) return;
       setState(() => _dtcItems = items);
+
+      // Fetch freeze frame after the list is shown so it doesn't block rendering.
+      // Mode 02 stores ONE snapshot shared by all confirmed codes.
+      if (items.any((i) => !i.isPending)) {
+        final ff = await OBDService.instance.getFreezeFrame();
+        if (!mounted || ff.isEmpty) return;
+        setState(() {
+          _dtcItems = _dtcItems.map((item) =>
+            item.isPending ? item :
+            _DtcItem(
+              code: item.code,
+              description: item.description,
+              system: item.system,
+              severity: item.severity,
+              isPending: item.isPending,
+              freezeFrame: ff,
+            ),
+          ).toList();
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'fetch_error');
@@ -198,6 +229,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             children: [
               _buildHeader(),
               if (!_loading && _errorMessage == null) _buildSummary(),
+              if (_monitors.isNotEmpty) _buildReadinessMonitors(),
               _buildFilters(),
               Expanded(child: _buildBody()),
             ],
@@ -306,6 +338,72 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReadinessMonitors() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 4.h),
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.03),
+        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.checklist_rtl, color: AppColors.accentCyan, size: 16.r),
+              SizedBox(width: 8.w),
+              Text(
+                'Emissions Readiness',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentCyan,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 6.h,
+            children: _monitors.map((m) {
+              final color = m.complete
+                  ? const Color(0xFF00E676)
+                  : const Color(0xFFFF6B35);
+              final icon = m.complete ? Icons.check_circle : Icons.cancel;
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  border: Border.all(color: color.withValues(alpha: 0.5)),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: color, size: 11.r),
+                    SizedBox(width: 4.w),
+                    Text(
+                      m.name,
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -546,6 +644,63 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                   height: 1.4,
                 ),
               ),
+              // Freeze frame snapshot ────────────────────────────────────────
+              if (item.freezeFrame.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.all(12.r),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: AppColors.accentCyan.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.camera_alt_outlined,
+                              color: AppColors.accentCyan, size: 13.r),
+                          SizedBox(width: 5.w),
+                          Text(
+                            'Freeze Frame — values at fault moment',
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: AppColors.accentCyan,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 6.h,
+                        children: item.freezeFrame.entries.map((e) =>
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentCyan.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              '${e.key}: ${e.value}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: AppColors.textLight.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ),
+                        ).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               SizedBox(height: 12.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
