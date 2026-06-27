@@ -720,19 +720,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               SizedBox(height: 10.h),
+              // ── Fuel trim Bank 1 + oil temp ──────────────────────────────
               Row(
                 children: [
-                  _buildFuelTrimTile(
-                    'Trim S',
-                    d.fuelTrimShortPct,
-                    'Short-term fuel trim',
-                  ),
+                  _buildFuelTrimTile('STFT B1', d.fuelTrimShortPct, ''),
                   SizedBox(width: 10.w),
-                  _buildFuelTrimTile(
-                    'Trim L',
-                    d.fuelTrimLongPct,
-                    'Long-term fuel trim',
-                  ),
+                  _buildFuelTrimTile('LTFT B1', d.fuelTrimLongPct, ''),
                   SizedBox(width: 10.w),
                   _buildLiveTile(
                     'Oil Temp',
@@ -743,6 +736,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ? const Color(0xFFFF1744)
                         : const Color(0xFF00E676),
                   ),
+                ],
+              ),
+              // ── Fuel trim Bank 2 (V6/V8) ─────────────────────────────────
+              if (d.fuelTrimShortB2 != null || d.fuelTrimLongB2 != null) ...[
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    _buildFuelTrimTile('STFT B2', d.fuelTrimShortB2, ''),
+                    SizedBox(width: 10.w),
+                    _buildFuelTrimTile('LTFT B2', d.fuelTrimLongB2, ''),
+                    SizedBox(width: 10.w),
+                    Expanded(child: SizedBox()),
+                  ],
+                ),
+              ],
+              SizedBox(height: 10.h),
+              // ── O2 sensor voltages ───────────────────────────────────────
+              Row(
+                children: [
+                  _buildO2Tile('O2 B1S1', d.o2B1S1Voltage),
+                  SizedBox(width: 10.w),
+                  _buildO2Tile('O2 B1S2', d.o2B1S2Voltage),
+                  SizedBox(width: 10.w),
+                  _buildO2Tile('O2 B2S1', d.o2B2S1Voltage),
                 ],
               ),
             ],
@@ -840,6 +857,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(
               '%',
               style: TextStyle(fontSize: 9.sp, color: color.withValues(alpha: 0.7)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildO2Tile(String label, double? voltage) {
+    // O2 sensor voltage 0–1.275 V.
+    // < 0.1 V  = lean   (or sensor cold/dead)
+    // 0.1–0.9  = cycling — healthy, engine controlling fuel properly
+    // > 0.9 V  = rich
+    // ~0.45 V  = stuck — sensor dead or lazy
+    Color color;
+    String status;
+    if (voltage == null) {
+      color = Colors.white24;
+      status = '--';
+    } else if (voltage < 0.1) {
+      color = const Color(0xFFFFD600); // lean
+      status = '${voltage.toStringAsFixed(2)}V';
+    } else if (voltage > 0.9) {
+      color = const Color(0xFFFF6B35); // rich
+      status = '${voltage.toStringAsFixed(2)}V';
+    } else if ((voltage - 0.45).abs() < 0.05) {
+      color = const Color(0xFFFF1744); // stuck ~0.45V → dead sensor
+      status = '${voltage.toStringAsFixed(2)}V';
+    } else {
+      color = const Color(0xFF00E676); // cycling normally
+      status = '${voltage.toStringAsFixed(2)}V';
+    }
+
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.sensors, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              status,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ],
         ),

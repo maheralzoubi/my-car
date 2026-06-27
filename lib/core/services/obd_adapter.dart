@@ -15,8 +15,13 @@ class OBDLiveData {
   final double? engineLoad;
   final double? batteryVoltage;  // PID 0142 — control module voltage (V)
   final double? oilTempC;        // PID 015C — engine oil temperature (°C)
-  final double? fuelTrimShortPct; // PID 0106 — short-term fuel trim bank 1 (%)
-  final double? fuelTrimLongPct;  // PID 0107 — long-term fuel trim bank 1 (%)
+  final double? fuelTrimShortPct;  // PID 0106 — STFT bank 1 (%)
+  final double? fuelTrimLongPct;   // PID 0107 — LTFT bank 1 (%)
+  final double? fuelTrimShortB2;   // PID 0108 — STFT bank 2 (%)  — V6/V8 only
+  final double? fuelTrimLongB2;    // PID 0109 — LTFT bank 2 (%)  — V6/V8 only
+  final double? o2B1S1Voltage;     // PID 0114 — O2 sensor bank 1 sensor 1 upstream (V)
+  final double? o2B1S2Voltage;     // PID 0115 — O2 sensor bank 1 sensor 2 downstream (V)
+  final double? o2B2S1Voltage;     // PID 0118 — O2 sensor bank 2 sensor 1 (V) — V6/V8
 
   const OBDLiveData({
     this.rpm,
@@ -29,6 +34,11 @@ class OBDLiveData {
     this.oilTempC,
     this.fuelTrimShortPct,
     this.fuelTrimLongPct,
+    this.fuelTrimShortB2,
+    this.fuelTrimLongB2,
+    this.o2B1S1Voltage,
+    this.o2B1S2Voltage,
+    this.o2B2S1Voltage,
   });
 }
 
@@ -312,9 +322,41 @@ class ProductionOBDAdapter implements OBDAdapter {
   }
 
   Future<double?> _fuelTrimLong() async {
-    // PID 0107 = Long-term fuel trim bank 1.
     final b = _bytes(await _query('0107', timeout: 1000), '4107');
     return b.isNotEmpty ? (b[0] / 1.28) - 100 : null;
+  }
+
+  Future<double?> _fuelTrimShortB2() async {
+    // PID 0108 = Short-term fuel trim bank 2 (V6/V8 engines only).
+    final b = _bytes(await _query('0108', timeout: 800), '4108');
+    return b.isNotEmpty ? (b[0] / 1.28) - 100 : null;
+  }
+
+  Future<double?> _fuelTrimLongB2() async {
+    // PID 0109 = Long-term fuel trim bank 2 (V6/V8 engines only).
+    final b = _bytes(await _query('0109', timeout: 800), '4109');
+    return b.isNotEmpty ? (b[0] / 1.28) - 100 : null;
+  }
+
+  Future<double?> _o2B1S1() async {
+    // PID 0114 = O2 sensor bank 1 sensor 1 (upstream before catalyst).
+    // Byte A = voltage: A/200 → 0–1.275 V.  Healthy sensor cycles 0.1–0.9 V.
+    // Stuck near 0.45 V = dead/lazy sensor.
+    final b = _bytes(await _query('0114', timeout: 800), '4114');
+    return b.isNotEmpty ? b[0] / 200.0 : null;
+  }
+
+  Future<double?> _o2B1S2() async {
+    // PID 0115 = O2 sensor bank 1 sensor 2 (downstream after catalyst).
+    // Should be relatively stable ~0.6–0.8 V when catalyst is healthy.
+    final b = _bytes(await _query('0115', timeout: 800), '4115');
+    return b.isNotEmpty ? b[0] / 200.0 : null;
+  }
+
+  Future<double?> _o2B2S1() async {
+    // PID 0118 = O2 sensor bank 2 sensor 1 (V6/V8 engines only).
+    final b = _bytes(await _query('0118', timeout: 800), '4118');
+    return b.isNotEmpty ? b[0] / 200.0 : null;
   }
 
   // ── Live data ──────────────────────────────────────────────────────────────
@@ -356,6 +398,11 @@ class ProductionOBDAdapter implements OBDAdapter {
         oilTempC:         (await _oilTemp())          ?? _lastData.oilTempC,
         fuelTrimShortPct: (await _fuelTrimShort())    ?? _lastData.fuelTrimShortPct,
         fuelTrimLongPct:  (await _fuelTrimLong())     ?? _lastData.fuelTrimLongPct,
+        fuelTrimShortB2:  (await _fuelTrimShortB2())  ?? _lastData.fuelTrimShortB2,
+        fuelTrimLongB2:   (await _fuelTrimLongB2())   ?? _lastData.fuelTrimLongB2,
+        o2B1S1Voltage:    (await _o2B1S1())           ?? _lastData.o2B1S1Voltage,
+        o2B1S2Voltage:    (await _o2B1S2())           ?? _lastData.o2B1S2Voltage,
+        o2B2S1Voltage:    (await _o2B2S1())           ?? _lastData.o2B2S1Voltage,
       );
       if (!_dataController.isClosed) _dataController.add(_lastData);
     } finally {
