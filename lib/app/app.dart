@@ -16,6 +16,7 @@ import '../modules/home/presentation/pages/profileScreen/edit_profile_screen.dar
 import '../modules/home/presentation/pages/videoTutorialsScreen/upload_video_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/video_player_screen.dart';
 import '../modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
+import '../modules/home/presentation/pages/maintenanceScreen/maintenance_screen.dart';
 import '../modules/home/presentation/pages/settingsScreen/dash_cam_settings_screen.dart';
 import '../modules/roadside/data/repositories/mock_roadside_repository.dart';
 import '../modules/roadside/presentation/bloc/roadside_bloc.dart';
@@ -74,6 +75,7 @@ class App extends StatelessWidget {
                   AppRoutes.modeSelection: (_) => const ModeSelectionScreen(),
                   AppRoutes.roadside: (_) => const RoadsideHomeScreen(),
                   AppRoutes.dashCamSettings: (_) => const DashCamSettingsScreen(),
+                  AppRoutes.maintenance: (_) => const MaintenanceScreen(),
                   AppRoutes.codeDetail: (context) {
                     final args = ModalRoute.of(context)?.settings.arguments
                         as Map<String, dynamic>?;

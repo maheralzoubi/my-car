@@ -93,6 +93,10 @@ abstract class OBDAdapter {
 
   /// Emission-system readiness monitors from PID 0101.
   Future<ReadinessResult> getReadinessMonitors();
+
+  /// Vehicle Identification Number from mode 09 PID 02. Returns null when
+  /// unsupported or when the response cannot be parsed to 17 chars.
+  Future<String?> getVin();
 }
 
 // ── Production implementation ─────────────────────────────────────────────────
@@ -469,6 +473,45 @@ class ProductionOBDAdapter implements OBDAdapter {
     if (!_connected) return false;
     await _sendAT('04', timeout: 5000);
     return true;
+  }
+
+  // ── VIN (mode 09 PID 02) ─────────────────────────────────────────────────
+
+  @override
+  Future<String?> getVin() async {
+    if (!_connected) return null;
+    final r = await _sendAT('0902', timeout: 6000);
+    return _parseVin(r);
+  }
+
+  String? _parseVin(String response) {
+    final clean = response
+        .replaceAll(' ', '')
+        .replaceAll('\r', '')
+        .replaceAll('\n', '')
+        .replaceAll(RegExp(r'\d:'), '') // strip ELM327 multi-frame indices
+        .toUpperCase();
+
+    const header = '4902';
+    final idx = clean.indexOf(header);
+    if (idx == -1) return null;
+
+    var data = clean.substring(idx + header.length);
+
+    // Skip the "number of messages" byte (usually 01) if present.
+    if (data.length >= 2) {
+      final first = int.tryParse(data.substring(0, 2), radix: 16) ?? 0xFF;
+      if (first <= 4) data = data.substring(2);
+    }
+
+    // Decode hex pairs as ASCII — valid VIN chars are 0-9 and A-Z (no I, O, Q).
+    final chars = <String>[];
+    for (var i = 0; i + 1 < data.length && chars.length < 17; i += 2) {
+      final byte = int.tryParse(data.substring(i, i + 2), radix: 16) ?? 0;
+      if (byte >= 0x30 && byte <= 0x5A) chars.add(String.fromCharCode(byte));
+    }
+
+    return chars.length >= 17 ? chars.take(17).join() : null;
   }
 
   // ── Freeze frame (mode 02) ────────────────────────────────────────────────

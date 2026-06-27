@@ -135,6 +135,20 @@ class OBDService {
     }
   }
 
+  /// Vehicle Identification Number (mode 09 PID 02).
+  Future<String?> getVin() async {
+    if (!_initialized) return null;
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      return await _adapter.getVin();
+    } catch (_) {
+      return null;
+    } finally {
+      if (_initialized) _adapter.startLiveData();
+    }
+  }
+
   /// Disconnects from the adapter and resets state.
   Future<void> disconnect() async {
     _adapter.stopLiveData();

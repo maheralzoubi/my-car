@@ -29,4 +29,7 @@ abstract final class AppRoutes {
 
   // Dash cam settings
   static const String dashCamSettings = '/dash-cam-settings';
+
+  // Maintenance tracker
+  static const String maintenance = '/maintenance';
 }

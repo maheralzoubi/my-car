@@ -8,7 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/dtc_repository.dart';
+import '../../../../../core/services/maintenance_service.dart';
 import '../../../../../core/services/obd_service.dart';
+import '../../../../../core/services/trip_service.dart';
+import '../../../../../core/services/vin_decoder.dart';
 import 'obd_gauge.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -25,9 +28,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _dtcRepo = DtcRepository();
 
   // Sensor-threshold warnings updated in real-time from live OBD data.
-  // Key = warning light label, value = true when threshold exceeded.
   final Map<String, bool> _sensorWarnings = {};
   StreamSubscription<OBDLiveData>? _liveWarningSub;
+
+  // Trip computer
+  StreamSubscription<OBDLiveData>? _tripSub;
+
+  // VIN
+  String? _vin;
+  Map<String, String> _vinInfo = {};
 
   List<Map<String, dynamic>> warningLights = [
     {'icon': '⚠️', 'label': 'check_engine', 'active': false, 'codes': <String>[]},
@@ -43,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    MaintenanceService.instance.load();
     _startPollingIfConnected();
   }
 
@@ -51,7 +61,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       OBDService.instance.startPolling();
       _fetchDtcsAndUpdateLights();
       _subscribeSensorThresholds();
+      _startTripTracking();
+      _fetchVin();
     }
+  }
+
+  // ── Trip computer ──────────────────────────────────────────────────────────
+
+  void _startTripTracking() {
+    TripService.instance.start();
+    _tripSub?.cancel();
+    _tripSub = OBDService.instance.liveDataStream.listen((d) {
+      TripService.instance.addSample(d);
+      if (mounted) setState(() {});         // refresh trip card every poll
+    });
+  }
+
+  // ── VIN ────────────────────────────────────────────────────────────────────
+
+  Future<void> _fetchVin() async {
+    final vin = await OBDService.instance.getVin();
+    if (!mounted || vin == null) return;
+    setState(() {
+      _vin = vin;
+      _vinInfo = VinDecoder.decode(vin);
+    });
   }
 
   void _subscribeSensorThresholds() {
@@ -138,7 +172,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     OBDService.instance.stopPolling();
+    TripService.instance.stop();
     _liveWarningSub?.cancel();
+    _tripSub?.cancel();
     super.dispose();
   }
 
@@ -181,10 +217,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_vin != null) _buildVinCard(),
+                      if (_vin != null) SizedBox(height: 16.h),
+                      if (MaintenanceService.instance.dueCount > 0) _buildMaintenanceAlert(),
+                      if (MaintenanceService.instance.dueCount > 0) SizedBox(height: 16.h),
                       _buildHealthCard(),
                       SizedBox(height: 20.h),
                       _buildLiveDataSection(),
-                      SizedBox(height: 30.h),
+                      SizedBox(height: 20.h),
+                      if (TripService.instance.isRunning) _buildTripCard(),
+                      if (TripService.instance.isRunning) SizedBox(height: 20.h),
+                      SizedBox(height: 10.h),
                       _buildWarningLightsSection(),
                       SizedBox(height: 30.h),
                       _buildQuickScanButton(),
@@ -363,6 +406,178 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ── Card ──────────────────────────────────────────────────────────────────
+
+  // ── VIN card ──────────────────────────────────────────────────────────────
+
+  Widget _buildVinCard() {
+    final manufacturer = _vinInfo['manufacturer'] ?? '';
+    final year         = _vinInfo['year'] ?? '';
+    final country      = _vinInfo['country'] ?? '';
+    return Container(
+      padding: EdgeInsets.all(14.r),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.directions_car, color: const Color(0xFF00D9FF), size: 22.r),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  manufacturer.isNotEmpty ? '$manufacturer  •  $year' : _vin ?? '',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE8EAED),
+                  ),
+                ),
+                if (country.isNotEmpty)
+                  Text(
+                    '$country  •  VIN: $_vin',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: const Color(0xFF00D9FF).withValues(alpha: 0.7),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Maintenance alert ─────────────────────────────────────────────────────
+
+  Widget _buildMaintenanceAlert() {
+    final count = MaintenanceService.instance.dueCount;
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.maintenance),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFD600).withValues(alpha: 0.08),
+          border: Border.all(color: const Color(0xFFFFD600).withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.build_outlined, color: const Color(0xFFFFD600), size: 18.r),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Text(
+                '$count maintenance item${count == 1 ? '' : 's'} due — tap to review',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xFFFFD600),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: const Color(0xFFFFD600), size: 12.r),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Trip computer card ────────────────────────────────────────────────────
+
+  Widget _buildTripCard() {
+    final trip = TripService.instance;
+    final elapsed = trip.elapsed;
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final timeStr = h > 0 ? '$h:$m:$s' : '$m:$s';
+
+    return Container(
+      padding: EdgeInsets.all(18.r),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(18.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.route, color: const Color(0xFF00E676), size: 18.r),
+              SizedBox(width: 8.w),
+              Text(
+                'Trip Computer',
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFE8EAED),
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => setState(() => trip.reset()),
+                child: Text(
+                  'Reset',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: const Color(0xFF00E676).withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14.h),
+          Row(
+            children: [
+              _tripStat('Distance', '${trip.distanceKm.toStringAsFixed(1)} km', const Color(0xFF00D9FF)),
+              _tripStat('Time', timeStr, const Color(0xFF00E676)),
+              _tripStat('Avg Speed', '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h', const Color(0xFFFFD600)),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              _tripStat('Fuel Used', '${trip.fuelUsedL.toStringAsFixed(2)} L', const Color(0xFFFF6B35)),
+              _tripStat(
+                'Efficiency',
+                trip.fuelEfficiencyL100km > 0
+                    ? '${trip.fuelEfficiencyL100km.toStringAsFixed(1)} L/100km'
+                    : '--',
+                const Color(0xFF9C27B0),
+              ),
+              Expanded(child: SizedBox()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tripStat(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10.sp,
+                  color: const Color(0xFFE8EAED).withValues(alpha: 0.55))),
+          SizedBox(height: 2.h),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
+                  color: color)),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHealthCard() {
     final connected = OBDService.instance.isInitialized;

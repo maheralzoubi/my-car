@@ -93,6 +93,9 @@ class FakeOBDAdapter implements OBDAdapter {
   }
 
   @override
+  Future<String?> getVin() async => null;
+
+  @override
   Future<Map<String, String>> getFreezeFrame() async => {};
 
   @override
