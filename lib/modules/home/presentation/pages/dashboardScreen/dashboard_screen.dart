@@ -9,6 +9,7 @@ import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/dtc_repository.dart';
 import '../../../../../core/services/obd_service.dart';
+import 'obd_gauge.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -664,31 +665,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                 ],
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: 12.h),
+              // ── Arc gauges: RPM + Speed ──────────────────────────────────
               Row(
                 children: [
-                  _buildLiveTile(
-                    'RPM',
-                    d.rpm != null ? d.rpm!.toStringAsFixed(0) : '--',
-                    'rpm',
-                    Icons.rotate_right,
-                    const Color(0xFF00D9FF),
+                  Expanded(
+                    child: OBDGauge(
+                      value: d.rpm,
+                      max: 8000,
+                      label: 'RPM',
+                      unit: 'rpm',
+                      color: const Color(0xFF00D9FF),
+                      dangerAt: 6500,
+                    ),
                   ),
-                  SizedBox(width: 10.w),
-                  _buildLiveTile(
-                    'Speed',
-                    d.speedKmh != null ? d.speedKmh!.toStringAsFixed(0) : '--',
-                    'km/h',
-                    Icons.speed,
-                    const Color(0xFF00E676),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: OBDGauge(
+                      value: d.speedKmh,
+                      max: 240,
+                      label: 'Speed',
+                      unit: 'km/h',
+                      color: const Color(0xFF00E676),
+                    ),
                   ),
-                  SizedBox(width: 10.w),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              // ── Coolant tile (stays as number) ───────────────────────────
+              Row(
+                children: [
                   _buildLiveTile(
                     'Coolant',
                     d.coolantTempC != null ? d.coolantTempC!.toStringAsFixed(0) : '--',
                     '°C',
                     Icons.thermostat,
-                    const Color(0xFFFFD600),
+                    d.coolantTempC != null && d.coolantTempC! >= 105
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFFFFD600),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    'Air Temp',
+                    d.intakeAirTempC != null ? '${d.intakeAirTempC!.toStringAsFixed(0)}°C' : '--',
+                    '',
+                    Icons.air,
+                    d.intakeAirTempC != null && d.intakeAirTempC! > 60
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFF00D9FF),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    'Battery',
+                    d.batteryVoltage != null ? '${d.batteryVoltage!.toStringAsFixed(1)}V' : '--',
+                    '',
+                    Icons.battery_charging_full,
+                    d.batteryVoltage != null && d.batteryVoltage! < 11.5
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFF00E676),
                   ),
                 ],
               ),
@@ -737,24 +771,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ? const Color(0xFFFF1744)
                         : const Color(0xFF00E676),
                   ),
-                ],
-              ),
-              SizedBox(height: 10.h),
-              Row(
-                children: [
-                  _buildLiveTile(
-                    'Air Temp',
-                    d.intakeAirTempC != null ? '${d.intakeAirTempC!.toStringAsFixed(0)}°C' : '--',
-                    '',
-                    Icons.air,
-                    d.intakeAirTempC != null && d.intakeAirTempC! > 60
-                        ? const Color(0xFFFF1744)
-                        : const Color(0xFF00D9FF),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(child: SizedBox()),
-                  SizedBox(width: 10.w),
-                  Expanded(child: SizedBox()),
                 ],
               ),
               // ── Fuel trim Bank 2 (V6/V8) ─────────────────────────────────
