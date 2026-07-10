@@ -43,6 +43,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   OBDAlert? _activeAlert;
   StreamSubscription<OBDAlert>? _alertSub;
 
+  // MIL (Check Engine Lamp) hardware status from mode-01 readiness monitors.
+  bool _milOn = false;
+
+  // Tracks how many km of the current trip have already been committed to
+  // MaintenanceService — prevents double-counting across commits.
+  double _committedKm = 0;
+
   List<Map<String, dynamic>> warningLights = [
     {'icon': '⚠️', 'label': 'check_engine', 'active': false, 'codes': <String>[]},
     {'icon': '🔋', 'label': 'battery',      'active': false, 'codes': <String>[]},
@@ -65,6 +72,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {'icon': '🌀', 'label': 'egr',              'active': false, 'codes': <String>[]},
     {'icon': '⚡', 'label': 'throttle',         'active': false, 'codes': <String>[]},
     {'icon': '💧', 'label': 'fuel_pressure',   'active': false, 'codes': <String>[]},
+    {'icon': '🔴', 'label': 'mil',             'active': false, 'codes': <String>[]},
+    {'icon': '💡', 'label': 'body',            'active': false, 'codes': <String>[]},
   ];
 
   @override
@@ -106,10 +115,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _startTripTracking() {
     TripService.instance.start();
+    _committedKm = 0;
     _tripSub?.cancel();
     _tripSub = OBDService.instance.liveDataStream.listen((d) {
       TripService.instance.addSample(d);
-      if (mounted) setState(() {});         // refresh trip card every poll
+      // Commit to maintenance odometer every 1 km so it survives app crashes.
+      final uncommitted = TripService.instance.distanceKm - _committedKm;
+      if (uncommitted >= 1.0) {
+        MaintenanceService.instance.addMileage(uncommitted);
+        _committedKm = TripService.instance.distanceKm;
+      }
+      if (mounted) setState(() {});
     });
   }
 
@@ -149,6 +165,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             (d.fuelTrimLongB2   != null && d.fuelTrimLongB2!.abs()   > 25);
         // Service: mirror the maintenance-due flag into sensor warnings.
         _sensorWarnings['service'] = MaintenanceService.instance.dueCount > 0;
+        // Throttle: stuck open if > 90 % at idle (RPM < 1000).
+        _sensorWarnings['throttle'] = d.throttlePct != null &&
+            d.throttlePct! > 90 &&
+            d.rpm != null && d.rpm! < 1000;
+        // Timing: heavy knock retard (< -10°) = ECU protecting engine from damage.
+        _sensorWarnings['check_engine'] = (_sensorWarnings['check_engine'] ?? false) ||
+            (d.timingAdvanceDeg != null && d.timingAdvanceDeg! < -10);
+        // MAF/MAP: overboost > 200 kPa on turbo engines.
+        _sensorWarnings['maf_sensor'] = (_sensorWarnings['maf_sensor'] ?? false) ||
+            (d.mapKpa != null && d.mapKpa! > 200);
+        // MIL: reflect hardware lamp status fetched from readiness monitors.
+        _sensorWarnings['mil'] = _milOn;
       });
     });
   }
@@ -160,6 +188,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final rawCodes = await OBDService.instance.getDtcs();
     if (!mounted) return;
+
+    // Fetch MIL (Check Engine Lamp) hardware state from mode-01 readiness byte.
+    final readiness = await OBDService.instance.getReadinessMonitors();
+    if (!mounted) return;
+    setState(() => _milOn = readiness.milOn);
 
     // Strip the '~' pending prefix so matching works the same for both
     // confirmed (mode 03) and pending (mode 07) codes.
@@ -181,9 +214,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'P017', 'P018',                                 // fuel_trim
       'P020', 'P021',                                 // injector
       'P010',                                         // maf_sensor
+      'P040', 'P041',                                 // egr
+      'P21',                                          // throttle / TAC
+      'P022', 'P023', 'P024',                        // fuel_pressure
     ];
     bool isSpecific(String c) =>
         _matchPrefix(c, specificPrefixes) || c.startsWith('U');
+
+    // C-code helpers: split by SAE sub-range prefix.
+    // C00xx = ABS / brake wheel-speed, C01xx = traction/ESC, C02xx+ = steering/suspension.
+    bool isAbsCode(String c)      => c.startsWith('C00');
+    bool isTractionCode(String c) => c.startsWith('C01');
+    bool isSteeringCode(String c) => c.startsWith('C') && !isAbsCode(c) && !isTractionCode(c);
 
     setState(() {
       _scanningDtcs = false;
@@ -199,11 +241,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'codes': codesFor((c) => _matchPrefix(c, ['P052', 'P053'])),
           'active': codes.any((c) => _matchPrefix(c, ['P052', 'P053']))},
         {'icon': '🛞', 'label': 'abs',
-          'codes': codesFor((c) => c.startsWith('C')),
-          'active': codes.any((c) => c.startsWith('C'))},
+          'codes': codesFor(isAbsCode),
+          'active': codes.any(isAbsCode)},
         {'icon': '🛡️', 'label': 'airbag',
-          'codes': codesFor((c) => c.startsWith('B')),
-          'active': codes.any((c) => c.startsWith('B'))},
+          'codes': codesFor((c) => c.startsWith('B00')),
+          'active': codes.any((c) => c.startsWith('B00'))},
         {'icon': '🌡️', 'label': 'temp',
           'codes': codesFor((c) => _matchPrefix(c, ['P011', 'P012', 'P025'])),
           'active': codes.any((c) => _matchPrefix(c, ['P011', 'P012', 'P025']))},
@@ -237,6 +279,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         {'icon': '🔧', 'label': 'service',
           'codes': <String>[],
           'active': MaintenanceService.instance.dueCount > 0},
+        {'icon': '🔵', 'label': 'traction',
+          'codes': codesFor(isTractionCode),
+          'active': codes.any(isTractionCode)},
+        {'icon': '🚗', 'label': 'steering',
+          'codes': codesFor(isSteeringCode),
+          'active': codes.any(isSteeringCode)},
+        {'icon': '🌀', 'label': 'egr',
+          'codes': codesFor((c) => _matchPrefix(c, ['P040', 'P041'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P040', 'P041']))},
+        {'icon': '⚡', 'label': 'throttle',
+          'codes': codesFor((c) => _matchPrefix(c, ['P21'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P21']))},
+        {'icon': '💧', 'label': 'fuel_pressure',
+          'codes': codesFor((c) => _matchPrefix(c, ['P022', 'P023', 'P024'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P022', 'P023', 'P024']))},
+        {'icon': '🔴', 'label': 'mil',
+          'codes': <String>[],
+          'active': readiness.milOn},
+        {'icon': '💡', 'label': 'body',
+          'codes': codesFor((c) => c.startsWith('B') && !c.startsWith('B00')),
+          'active': codes.any((c) => c.startsWith('B') && !c.startsWith('B00'))},
       ];
     });
   }
@@ -246,6 +309,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    // Flush any sub-1 km remainder before the trip is destroyed.
+    final remaining = TripService.instance.distanceKm - _committedKm;
+    if (remaining > 0.01) {
+      MaintenanceService.instance.addMileage(remaining);
+    }
     OBDService.instance.stopPolling();
     TripService.instance.stop();
     AlertService.instance.stopMonitoring();
@@ -1042,7 +1110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icon(Icons.speed, color: Color(0xFF00D9FF), size: 20.r),
                   SizedBox(width: 8.w),
                   Text(
-                    'Live Data',
+                    context.tr('live_data'),
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
@@ -1065,7 +1133,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Icon(Icons.show_chart, color: const Color(0xFF00D9FF), size: 13.r),
                             SizedBox(width: 4.w),
-                            Text('Graph', style: TextStyle(fontSize: 11.sp, color: const Color(0xFF00D9FF), fontWeight: FontWeight.w600)),
+                            Text(context.tr('graph'), style: TextStyle(fontSize: 11.sp, color: const Color(0xFF00D9FF), fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ),
@@ -1414,7 +1482,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Icon(Icons.flash_on, color: color, size: 18.r),
             SizedBox(height: 6.h),
-            Text('Timing',
+            Text(context.tr('timing'),
                 style: TextStyle(
                     fontSize: 10.sp,
                     color: const Color(0xFFE8EAED).withValues(alpha: 0.6))),

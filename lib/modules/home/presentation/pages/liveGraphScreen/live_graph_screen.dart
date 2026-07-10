@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/obd_service.dart';
 
 // ── Sensor channel definition ─────────────────────────────────────────────────
@@ -128,7 +129,7 @@ class _LiveGraphScreenState extends State<LiveGraphScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            'Live Data Graph',
+            context.tr('live_data_graph'),
             style: TextStyle(
               fontSize: 20.sp, fontWeight: FontWeight.w700,
               color: AppColors.textLight,
@@ -196,7 +197,7 @@ class _LiveGraphScreenState extends State<LiveGraphScreen> {
     final activeChannels = _channels.where((c) => _active.contains(c.id)).toList();
     if (activeChannels.isEmpty) {
       return Center(
-        child: Text('Select at least one channel',
+        child: Text(context.tr('select_channel'),
             style: TextStyle(color: AppColors.textLight.withValues(alpha: 0.5))),
       );
     }

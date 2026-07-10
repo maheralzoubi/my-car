@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/map_marker_helper.dart';
 import '../../data/models/service_request.dart';
 import '../../data/models/service_type.dart';
@@ -279,7 +280,7 @@ class _StatusBanner extends StatelessWidget {
           if (onCancel != null)
             GestureDetector(
               onTap: onCancel,
-              child: Text('Cancel',
+              child: Text(context.tr('cancel'),
                   style: TextStyle(color: AppColors.error, fontSize: 13.sp)),
             ),
         ],

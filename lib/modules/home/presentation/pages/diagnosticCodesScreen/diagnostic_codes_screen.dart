@@ -246,8 +246,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     } else {
       setState(() => _clearing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to clear codes – check adapter connection.'),
+        SnackBar(
+          content: Text(context.tr('failed_clear_codes')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -688,7 +688,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r)),
             ),
-            child: const Text('Go to Connection'),
+            child: Text(context.tr('go_to_connection')),
           ),
         ],
       ),
@@ -704,7 +704,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
           SizedBox(height: 20.h),
           Text(
-            'Failed to read codes',
+            context.tr('failed_read_codes'),
             style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
           ),
           SizedBox(height: 24.h),
@@ -715,7 +715,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r)),
             ),
-            child: const Text('Retry'),
+            child: Text(context.tr('retry')),
           ),
         ],
       ),
@@ -954,12 +954,11 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-        title: const Text('Clear Codes?',
-            style: TextStyle(color: AppColors.textLight)),
-        content: const Text(
-          'This will erase all fault codes and reset the MIL lamp. '
-          'Emissions readiness monitors will also reset.',
-          style: TextStyle(color: AppColors.textLight),
+        title: Text(context.tr('clear_codes'),
+            style: const TextStyle(color: AppColors.textLight)),
+        content: Text(
+          context.tr('clear_codes_content'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
         actions: [
           TextButton(
@@ -977,7 +976,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r)),
             ),
-            child: const Text('Clear'),
+            child: Text(context.tr('clear')),
           ),
         ],
       ),

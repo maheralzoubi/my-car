@@ -129,6 +129,13 @@ class AppLocalizations {
       'maf_sensor': 'MAF',
       'network': 'Network',
       'service': 'Service',
+      'traction': 'Traction',
+      'steering': 'Steering',
+      'egr': 'EGR',
+      'throttle': 'Throttle',
+      'fuel_pressure': 'Fuel Press',
+      'mil': 'MIL',
+      'body': 'Body',
 
       // Diagnostic Codes
       'diagnostic_codes': 'Diagnostic Codes',
@@ -293,6 +300,40 @@ class AppLocalizations {
       // Dashboard screen
       'graph': 'Graph',
       'timing': 'Timing',
+
+      // Profile screen
+      'update': 'Update',
+      'done': 'Done',
+      'success': 'Success!',
+      'profile_updated': 'Your profile has been updated successfully!',
+      'drive_score': 'Drive Score',
+
+      // Video player screen
+      'like': 'Like',
+      'enable_pip': 'Enable PIP',
+
+      // Roadside screens
+      'select_service_needed': 'Select the service you need',
+      'avg_15_min': 'Avg. 15 min',
+      'certified_drivers': 'Certified Drivers',
+      'rating_48': '4.8 Rating',
+      'how_was_experience': 'How was your experience?',
+      'service_details': 'Service Details',
+      'your_location': 'Your Location',
+      'price_estimate_label': 'Price Estimate',
+      'total_estimate': 'Total Estimate',
+      'cash_payment': 'Cash payment on service completion',
+      'photos': 'Photos',
+      'add': 'Add',
+      'no_photos_added': 'No photos added — tap Add to take one',
+      'request_service_label': 'Request Service',
+      'request_history_title': 'Request History',
+      'no_requests_yet': 'No requests yet',
+      'detecting_address': 'Detecting address...',
+      'finding_nearest_driver': 'Finding Nearest Driver',
+      'drivers_online': 'Drivers Online',
+      'search_radius_label': 'Search Radius',
+      'avg_arrival': 'Avg. Arrival',
     },
     'ar': {
       // Common
@@ -400,6 +441,13 @@ class AppLocalizations {
       'maf_sensor': 'مستشعر MAF',
       'network': 'الشبكة',
       'service': 'الصيانة',
+      'traction': 'التثبيت',
+      'steering': 'التوجيه',
+      'egr': 'EGR',
+      'throttle': 'الخانق',
+      'fuel_pressure': 'ضغط الوقود',
+      'mil': 'MIL',
+      'body': 'الكهرباء',
 
       // Diagnostic Codes
       'diagnostic_codes': 'أكواد التشخيص',
@@ -564,6 +612,40 @@ class AppLocalizations {
       // Dashboard screen
       'graph': 'رسم بياني',
       'timing': 'التوقيت',
+
+      // Profile screen
+      'update': 'تحديث',
+      'done': 'تم',
+      'success': 'تم بنجاح!',
+      'profile_updated': 'تم تحديث ملفك الشخصي بنجاح!',
+      'drive_score': 'نقاط القيادة',
+
+      // Video player screen
+      'like': 'إعجاب',
+      'enable_pip': 'تفعيل PIP',
+
+      // Roadside screens
+      'select_service_needed': 'اختر الخدمة التي تحتاجها',
+      'avg_15_min': 'متوسط 15 دقيقة',
+      'certified_drivers': 'سائقون معتمدون',
+      'rating_48': 'تقييم 4.8',
+      'how_was_experience': 'كيف كانت تجربتك؟',
+      'service_details': 'تفاصيل الخدمة',
+      'your_location': 'موقعك',
+      'price_estimate_label': 'تقدير السعر',
+      'total_estimate': 'الإجمالي المقدر',
+      'cash_payment': 'الدفع نقداً عند اكتمال الخدمة',
+      'photos': 'الصور',
+      'add': 'إضافة',
+      'no_photos_added': 'لم تُضف صور — اضغط "إضافة" لالتقاط صورة',
+      'request_service_label': 'طلب الخدمة',
+      'request_history_title': 'سجل الطلبات',
+      'no_requests_yet': 'لا توجد طلبات بعد',
+      'detecting_address': 'جارٍ تحديد العنوان...',
+      'finding_nearest_driver': 'البحث عن أقرب سائق',
+      'drivers_online': 'سائقون متصلون',
+      'search_radius_label': 'نطاق البحث',
+      'avg_arrival': 'متوسط وقت الوصول',
     },
   };
 }

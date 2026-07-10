@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
@@ -103,7 +104,7 @@ class _Header extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Roadside Assistance',
+                    context.tr('roadside_assistance'),
                     style: TextStyle(
                       color: AppColors.white,
                       fontSize: 20.sp,
@@ -111,7 +112,7 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Select the service you need',
+                    context.tr('select_service_needed'),
                     style: TextStyle(
                       color: AppColors.textLight.withValues(alpha: 0.6),
                       fontSize: 12.sp,
@@ -126,19 +127,19 @@ class _Header extends StatelessWidget {
             children: [
               _StatChip(
                 icon: Icons.access_time_rounded,
-                label: 'Avg. 15 min',
+                label: context.tr('avg_15_min'),
                 color: AppColors.accentCyan,
               ),
               SizedBox(width: 8.w),
               _StatChip(
                 icon: Icons.verified_rounded,
-                label: 'Certified Drivers',
+                label: context.tr('certified_drivers'),
                 color: AppColors.accentOrange,
               ),
               SizedBox(width: 8.w),
               _StatChip(
                 icon: Icons.star_rounded,
-                label: '4.8 Rating',
+                label: context.tr('rating_48'),
                 color: const Color(0xFFFFD700),
               ),
             ],

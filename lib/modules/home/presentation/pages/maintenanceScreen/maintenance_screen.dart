@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/maintenance_service.dart';
 
 class MaintenanceScreen extends StatefulWidget {
@@ -73,7 +74,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            'Maintenance Tracker',
+            context.tr('maintenance_tracker'),
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
@@ -105,7 +106,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Current Mileage',
+                  context.tr('current_mileage'),
                   style: TextStyle(
                       fontSize: 12.sp,
                       color: AppColors.textLight.withValues(alpha: 0.6)),
@@ -124,7 +125,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           TextButton.icon(
             onPressed: _showSetMileageDialog,
             icon: Icon(Icons.edit, size: 15.r, color: AppColors.accentCyan),
-            label: Text('Set',
+            label: Text(context.tr('set'),
                 style: TextStyle(
                     fontSize: 13.sp, color: AppColors.accentCyan)),
           ),
@@ -144,13 +145,13 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     final String statusText;
     if (overdue) {
       statusColor = const Color(0xFFFF1744);
-      statusText  = 'OVERDUE';
+      statusText  = context.tr('status_overdue');
     } else if (due) {
       statusColor = const Color(0xFFFFD600);
-      statusText  = 'DUE SOON';
+      statusText  = context.tr('status_due_soon');
     } else {
       statusColor = const Color(0xFF00E676);
-      statusText  = 'OK';
+      statusText  = context.tr('status_ok');
     }
 
     return Container(
@@ -220,7 +221,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 Text(
                   hasLog
                       ? 'Last: ${_formatDate(item.lastServiceDate!)}  •  ${item.lastMileageKm!.toStringAsFixed(0)} km'
-                      : 'Never serviced',
+                      : context.tr('never_serviced'),
                   style: TextStyle(
                     fontSize: 11.sp,
                     color: AppColors.textLight.withValues(alpha: 0.55),
@@ -250,7 +251,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Text(
-                'Log',
+                context.tr('log_label'),
                 style: TextStyle(
                   fontSize: 12.sp,
                   color: AppColors.accentCyan,
@@ -273,18 +274,18 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         backgroundColor: AppColors.surfaceDark,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text('Log ${item.name}?',
+        title: Text('${context.tr('log_label')} ${item.name}?',
             style: const TextStyle(color: AppColors.textLight)),
         content: Text(
-          'This will record today\'s date and '
-          '${_svc.currentMileageKm.toStringAsFixed(0)} km as the last service.',
+          '${context.tr('log_service_msg_prefix')} '
+          '${_svc.currentMileageKm.toStringAsFixed(0)} ${context.tr('log_service_msg_suffix')}',
           style:
               TextStyle(color: AppColors.textLight.withValues(alpha: 0.8)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
+            child: Text(context.tr('cancel'),
                 style: TextStyle(color: AppColors.accentCyan)),
           ),
           ElevatedButton(
@@ -294,7 +295,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r)),
             ),
-            child: const Text('Confirm'),
+            child: Text(context.tr('confirm')),
           ),
         ],
       ),
@@ -314,16 +315,16 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         backgroundColor: AppColors.surfaceDark,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: const Text('Set Current Mileage',
-            style: TextStyle(color: AppColors.textLight)),
+        title: Text(context.tr('set_current_mileage'),
+            style: const TextStyle(color: AppColors.textLight)),
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           style: const TextStyle(color: AppColors.textLight),
-          decoration: const InputDecoration(
-            labelText: 'Mileage (km)',
-            labelStyle: TextStyle(color: AppColors.accentCyan),
-            enabledBorder: OutlineInputBorder(
+          decoration: InputDecoration(
+            labelText: context.tr('mileage_km'),
+            labelStyle: const TextStyle(color: AppColors.accentCyan),
+            enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(color: AppColors.accentCyan),
             ),
           ),
@@ -331,8 +332,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.accentCyan)),
+            child: Text(context.tr('cancel'),
+                style: const TextStyle(color: AppColors.accentCyan)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -348,7 +349,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r)),
             ),
-            child: const Text('Save'),
+            child: Text(context.tr('save')),
           ),
         ],
       ),

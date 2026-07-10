@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Screen for editing user profile: name, email, phone, location, avatar, password.
 class EditProfileScreen extends StatefulWidget {
@@ -605,7 +606,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 borderRadius: BorderRadius.circular(10.r),
               ),
             ),
-            child: const Text('Update'),
+            child: Text(context.tr('update')),
           ),
         ],
       ),
@@ -632,13 +633,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20.r),
             ),
-            title: const Text(
-              'Success!',
-              style: TextStyle(color: AppColors.textLight),
+            title: Text(
+              context.tr('success'),
+              style: const TextStyle(color: AppColors.textLight),
             ),
-            content: const Text(
-              'Your profile has been updated successfully!',
-              style: TextStyle(color: AppColors.textLight),
+            content: Text(
+              context.tr('profile_updated'),
+              style: const TextStyle(color: AppColors.textLight),
             ),
             actions: [
               ElevatedButton(
@@ -652,7 +653,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                 ),
-                child: const Text('Done'),
+                child: Text(context.tr('done')),
               ),
             ],
           ),

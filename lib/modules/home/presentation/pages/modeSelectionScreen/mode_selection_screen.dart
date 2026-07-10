@@ -167,23 +167,22 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                         child: FadeTransition(
                           opacity: _card1Fade,
                           child: _ModeCard(
-                            title: 'Car Diagnostics',
-                            subtitle:
-                                'Connect via Bluetooth OBD-II adapter to read live data, fault codes and performance metrics',
+                            title: context.tr('car_diagnostics'),
+                            subtitle: context.tr('car_diagnostics_sub'),
                             icon: Icons.bluetooth_searching_rounded,
                             accentColor: AppColors.accentCyan,
                             tag: 'OBD-II',
                             tagIcon: Icons.electrical_services_rounded,
-                            features: const [
-                              'Live engine data & RPM',
-                              'Fault code scanner (DTC)',
-                              'Performance metrics',
+                            features: [
+                              context.tr('live_engine_data'),
+                              context.tr('fault_code_scanner'),
+                              context.tr('performance_metrics'),
                             ],
                             onTap: () => Navigator.pushNamed(
                               context,
                               AppRoutes.dashboard,
                             ),
-                            buttonLabel: 'Connect Bluetooth',
+                            buttonLabel: context.tr('connect_bluetooth'),
                             buttonIcon: Icons.bluetooth_rounded,
                           ),
                         ),
@@ -199,23 +198,22 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                         child: FadeTransition(
                           opacity: _card2Fade,
                           child: _ModeCard(
-                            title: 'Roadside Assistance',
-                            subtitle:
-                                'Request a certified driver for towing, battery, tire or fuel service — anywhere, anytime',
+                            title: context.tr('roadside_assistance'),
+                            subtitle: context.tr('roadside_assistance_sub'),
                             icon: Icons.car_repair,
                             accentColor: AppColors.accentOrange,
                             tag: '24 / 7',
                             tagIcon: Icons.access_time_filled_rounded,
-                            features: const [
-                              'Towing & flatbed service',
-                              'Battery & tire repair',
-                              'Fuel delivery',
+                            features: [
+                              context.tr('towing_service'),
+                              context.tr('battery_tire_repair'),
+                              context.tr('fuel_delivery'),
                             ],
                             onTap: () => Navigator.pushNamed(
                               context,
                               AppRoutes.roadside,
                             ),
-                            buttonLabel: 'Request Help',
+                            buttonLabel: context.tr('request_help'),
                             buttonIcon: Icons.local_shipping_rounded,
                           ),
                         ),
@@ -228,7 +226,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                     FadeTransition(
                       opacity: _card2Fade,
                       child: Text(
-                        'You can switch between services anytime',
+                        context.tr('switch_services'),
                         style: TextStyle(
                           color: AppColors.textLight.withValues(alpha: 0.35),
                           fontSize: 12.sp,
@@ -273,7 +271,7 @@ class _Header extends StatelessWidget {
         ),
         SizedBox(height: 6.h),
         Text(
-          'What do you need today?',
+          context.tr('what_do_you_need'),
           style: TextStyle(
             color: AppColors.textLight.withValues(alpha: 0.55),
             fontSize: 14.sp,

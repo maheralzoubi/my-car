@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Screen for playing a tutorial video. Receives [tutorial] from route arguments.
 class VideoPlayerScreen extends StatefulWidget {
@@ -314,7 +315,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.thumb_up_outlined),
-                label: const Text('Like'),
+                label: Text(context.tr('like')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.white.withValues(alpha: 0.1),
                   foregroundColor: AppColors.accentCyan,
@@ -330,7 +331,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.bookmark_border),
-                label: const Text('Save'),
+                label: Text(context.tr('save')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.white.withValues(alpha: 0.1),
                   foregroundColor: _ratingYellow,
@@ -671,7 +672,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 borderRadius: BorderRadius.circular(10.r),
               ),
             ),
-            child: const Text('Enable PIP'),
+            child: Text(context.tr('enable_pip')),
           ),
         ],
       ),

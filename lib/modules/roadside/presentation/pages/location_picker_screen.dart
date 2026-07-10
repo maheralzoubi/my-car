@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
@@ -251,7 +252,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                                       ),
                                     ),
                                     SizedBox(width: 8.w),
-                                    Text('Detecting address...',
+                                    Text(context.tr('detecting_address'),
                                         style: TextStyle(
                                             color: AppColors.textLight
                                                 .withValues(alpha: 0.6),

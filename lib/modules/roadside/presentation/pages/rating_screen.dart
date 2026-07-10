@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
@@ -170,7 +171,7 @@ class _RatingScreenState extends State<RatingScreen>
                             ],
                           ),
                           SizedBox(height: 16.h),
-                          Text('How was your experience?',
+                          Text(context.tr('how_was_experience'),
                               style: TextStyle(
                                   color: AppColors.textLight, fontSize: 13.sp)),
                           SizedBox(height: 12.h),

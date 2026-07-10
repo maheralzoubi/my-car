@@ -118,9 +118,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _stat('Total Scans', all.length, AppColors.accentCyan),
-          _stat('With Codes',  withCode,   _colWarning),
-          _stat('Clean',       clean,      _colClean),
+          _stat(context.tr('total_scans'), all.length, AppColors.accentCyan),
+          _stat(context.tr('with_codes'),  withCode,   _colWarning),
+          _stat(context.tr('clean_scan'),  clean,      _colClean),
         ],
       ),
     );
@@ -159,7 +159,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 borderRadius: BorderRadius.circular(25.r),
               ),
               child: Center(
-                child: Text(f, style: TextStyle(
+                child: Text(_trFilter(f), style: TextStyle(
                   fontSize: 13.sp, fontWeight: FontWeight.w600,
                   color: sel ? AppColors.white : AppColors.textLight,
                 )),
@@ -183,10 +183,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Icon(Icons.history, size: 70.r,
                 color: AppColors.accentCyan.withValues(alpha: 0.3)),
             SizedBox(height: 16.h),
-            Text('No scan history yet',
+            Text(context.tr('no_scan_history_yet'),
                 style: TextStyle(fontSize: 16.sp, color: AppColors.textLight)),
             SizedBox(height: 8.h),
-            Text('Run a diagnostic scan to start logging.',
+            Text(context.tr('run_scan_to_log'),
                 style: TextStyle(fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.5))),
           ],
@@ -264,7 +264,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: Text(
                     hasCode
                         ? '${entry.codes.length} code${entry.codes.length > 1 ? 's' : ''}'
-                        : 'Clean',
+                        : context.tr('clean_scan'),
                     style: TextStyle(
                         fontSize: 11.sp, fontWeight: FontWeight.w700,
                         color: color),
@@ -321,6 +321,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  String _trFilter(String f) {
+    switch (f) {
+      case 'All':        return context.tr('all');
+      case 'With Codes': return context.tr('with_codes');
+      case 'Clean':      return context.tr('clean_scan');
+      default:           return f;
+    }
+  }
+
   String _formatDate(DateTime d) {
     final now = DateTime.now();
     final diff = now.difference(d);
@@ -339,17 +348,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
-        title: const Text('Clear History?',
-            style: TextStyle(color: AppColors.textLight)),
-        content: const Text(
-          'All scan records will be deleted permanently.',
-          style: TextStyle(color: AppColors.textLight),
+        title: Text(context.tr('clear_history'),
+            style: const TextStyle(color: AppColors.textLight)),
+        content: Text(
+          context.tr('clear_history_content'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.accentCyan)),
+            child: Text(context.tr('cancel'),
+                style: const TextStyle(color: AppColors.accentCyan)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -362,7 +371,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r)),
             ),
-            child: const Text('Clear All'),
+            child: Text(context.tr('clear_all')),
           ),
         ],
       ),
