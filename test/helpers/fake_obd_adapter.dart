@@ -50,6 +50,9 @@ class FakeOBDAdapter implements OBDAdapter {
   bool get isConnected => _connected;
 
   @override
+  String? get connectedDeviceName => _connected ? 'FakeAdapter' : null;
+
+  @override
   Stream<OBDLiveData> get liveDataStream => _dataController.stream;
 
   @override
@@ -88,6 +91,16 @@ class FakeOBDAdapter implements OBDAdapter {
     clearDtcsCalled = true;
     return !clearShouldFail;
   }
+
+  @override
+  Future<String?> getVin() async => null;
+
+  @override
+  Future<Map<String, String>> getFreezeFrame() async => {};
+
+  @override
+  Future<ReadinessResult> getReadinessMonitors() async =>
+      const ReadinessResult(milOn: false, dtcCount: 0, monitors: []);
 
   // ── Test helpers ──────────────────────────────────────────────────────────
 

@@ -21,6 +21,20 @@ class DriverModel {
     required this.distanceKm,
   });
 
+  factory DriverModel.fromJson(Map<String, dynamic> json) {
+    return DriverModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      phone: json['phone'] as String,
+      rating: (json['rating'] as num).toDouble(),
+      totalJobs: json['totalJobs'] as int,
+      vehicleType: json['vehicleType'] as String,
+      vehiclePlate: json['vehiclePlate'] as String,
+      avatarInitials: json['avatarInitials'] as String,
+      distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
   static const List<DriverModel> mockDrivers = [
     DriverModel(
       id: 'd1',

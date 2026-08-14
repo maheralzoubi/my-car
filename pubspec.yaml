@@ -45,6 +45,11 @@ dependencies:
   flutter_blue_plus: ^2.1.0
   permission_handler: ^11.3.1
   device_info_plus: ^10.1.0
+  url_launcher: ^6.3.0
+  share_plus: ^10.1.4
+  fl_chart: ^0.70.2
+  flutter_local_notifications: ^18.0.1
+  audioplayers: ^6.4.0
 
   # Responsive UI
   flutter_screenutil: ^5.9.3
@@ -56,6 +61,15 @@ dependencies:
   google_maps_flutter: ^2.9.0
   geolocator: ^13.0.0
   image_picker: ^1.1.0
+
+  # Backend networking
+  dio: ^5.7.0
+  socket_io_client: ^2.0.3+1
+  flutter_secure_storage: ^9.2.2
+
+  # Push notifications
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -85,6 +99,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/dtcmapping.json
+    - assets/dtcmapping_ar.json
+    - assets/sounds/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

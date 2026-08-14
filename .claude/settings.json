@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(keytool -printcert -jarfile /Users/maheralzoubi/Desktop/CARDIAG-v1.0.0.apk)",
+      "Bash(unzip -l build/app/outputs/flutter-apk/app-release.apk)",
+      "Bash(adb logcat *)",
+      "Bash(adb devices *)",
+      "Read(//Users/maheralzoubi/.pub-cache/**)",
+      "Bash(xargs cat)",
+      "Bash(xargs ls)",
+      "Bash(open /Users/maheralzoubi/Desktop/projects/my-car/build/app/outputs/flutter-apk/)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(rm -f /tmp/approvals-*.png)",
+      "Bash(mkdir -p com/app/cardiag_driver)",
+      "Bash(mv com/connectedmotion/mycar_driver/MainActivity.kt com/app/cardiag_driver/MainActivity.kt)",
+      "Bash(rmdir com/connectedmotion/mycar_driver)",
+      "Bash(rmdir com/connectedmotion)",
+      "Bash(rm -f com/connectedmotion/mycardriver/MainActivity.kt)",
+      "Bash(rmdir com/connectedmotion/mycardriver)",
+      "Bash(unzip -p \"/Users/maheralzoubi/Desktop/projects/my-car/build/app/outputs/flutter-apk/app-release.apk\" res/values/strings.xml)",
+      "Bash(unzip -l \"/Users/maheralzoubi/Desktop/projects/my-car/build/app/outputs/flutter-apk/app-release.apk\")",
+      "Bash(ls -la /Users/maheralzoubi/Desktop/projects/my-car | head -30 && echo \"---rico---\" && ls -la /Users/maheralzoubi/Downloads/rico_app/server/rico-backend 2>/dev/null)",
+      "Read(//Users/maheralzoubi/Downloads/rico_app/server/rico-backend/**)",
+      "Bash(cd /Users/maheralzoubi/Downloads/rico_app/server/rico-backend && find . -maxdepth 1 -iname \"*render*\" -o -iname \"Dockerfile\" -maxdepth 1 2>/dev/null; echo \"---main.ts---\"; cat src/main.ts 2>/dev/null)",
+      "Bash(git check-ignore *)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Screen for uploading a tutorial video with metadata and optional tools list.
 class UploadVideoScreen extends StatefulWidget {
@@ -645,7 +646,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                 ),
-                child: const Text('Done'),
+                child: Text(context.tr('done')),
               ),
             ],
           ),

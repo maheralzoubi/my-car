@@ -7,6 +7,7 @@ enum RequestStatus {
   searching,
   driverFound,
   driverEnRoute,
+  arrived,
   inProgress,
   completed,
   cancelled,
@@ -14,10 +15,12 @@ enum RequestStatus {
 
 class ServiceRequest {
   final String id;
+  final String? customerId;
   final ServiceType serviceType;
   final LatLng customerLocation;
   final String customerAddress;
   final double estimatedPrice;
+  final double? finalPrice;
   final int estimatedMinutes;
   final RequestStatus status;
   final DriverModel? assignedDriver;
@@ -27,13 +30,16 @@ class ServiceRequest {
   final List<String> photoPaths;
   final int? rating;
   final String? review;
+  final bool cashCollected;
 
   const ServiceRequest({
     required this.id,
+    this.customerId,
     required this.serviceType,
     required this.customerLocation,
     required this.customerAddress,
     required this.estimatedPrice,
+    this.finalPrice,
     required this.estimatedMinutes,
     required this.status,
     this.assignedDriver,
@@ -43,7 +49,12 @@ class ServiceRequest {
     this.photoPaths = const [],
     this.rating,
     this.review,
+    this.cashCollected = false,
   });
+
+  /// The amount to show the customer — the driver-confirmed final price
+  /// once the job is complete, falling back to the estimate until then.
+  double get displayPrice => finalPrice ?? estimatedPrice;
 
   ServiceRequest copyWith({
     RequestStatus? status,
@@ -56,10 +67,12 @@ class ServiceRequest {
   }) {
     return ServiceRequest(
       id: id,
+      customerId: customerId,
       serviceType: serviceType,
       customerLocation: customerLocation,
       customerAddress: customerAddress,
       estimatedPrice: estimatedPrice,
+      finalPrice: finalPrice,
       estimatedMinutes: estimatedMinutes,
       status: status ?? this.status,
       assignedDriver: assignedDriver ?? this.assignedDriver,
@@ -69,6 +82,7 @@ class ServiceRequest {
       photoPaths: photoPaths ?? this.photoPaths,
       rating: rating ?? this.rating,
       review: review ?? this.review,
+      cashCollected: cashCollected,
     );
   }
 }

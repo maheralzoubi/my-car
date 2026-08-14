@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/map_marker_helper.dart';
 import '../../data/models/service_request.dart';
 import '../../data/models/service_type.dart';
@@ -232,6 +234,8 @@ class _StatusBanner extends StatelessWidget {
         return 'Driver found — preparing to depart';
       case RequestStatus.driverEnRoute:
         return 'Driver is on the way';
+      case RequestStatus.arrived:
+        return 'Driver has arrived';
       case RequestStatus.inProgress:
         return 'Service in progress';
       case RequestStatus.completed:
@@ -247,6 +251,8 @@ class _StatusBanner extends StatelessWidget {
         return Icons.check_circle_rounded;
       case RequestStatus.driverEnRoute:
         return Icons.navigation_rounded;
+      case RequestStatus.arrived:
+        return Icons.pin_drop_rounded;
       case RequestStatus.inProgress:
         return Icons.build_circle_rounded;
       case RequestStatus.completed:
@@ -279,7 +285,7 @@ class _StatusBanner extends StatelessWidget {
           if (onCancel != null)
             GestureDetector(
               onTap: onCancel,
-              child: Text('Cancel',
+              child: Text(context.tr('cancel'),
                   style: TextStyle(color: AppColors.error, fontSize: 13.sp)),
             ),
         ],
@@ -372,7 +378,7 @@ class _DriverCard extends StatelessWidget {
               ),
               // Call button
               GestureDetector(
-                onTap: () {},
+                onTap: () => launchUrl(Uri(scheme: 'tel', path: driver.phone as String)),
                 child: Container(
                   width: 44.r,
                   height: 44.r,

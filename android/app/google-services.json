@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "227393913422",
+    "project_id": "mycar-45834",
+    "storage_bucket": "mycar-45834.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227393913422:android:aec40f584142a432b9b91f",
+        "android_client_info": {
+          "package_name": "com.app.cardiag"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvpqYxgOojD5Umfh5Cq0UN7sO5hjY7RtI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227393913422:android:d2e54aee6d8b351cb9b91f",
+        "android_client_info": {
+          "package_name": "com.app.cardiag_driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvpqYxgOojD5Umfh5Cq0UN7sO5hjY7RtI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

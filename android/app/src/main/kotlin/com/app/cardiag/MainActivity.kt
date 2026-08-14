@@ -1,4 +1,4 @@
-package com.connectedmotion.cardiag
+package com.app.cardiag
 
 import io.flutter.embedding.android.FlutterActivity
 

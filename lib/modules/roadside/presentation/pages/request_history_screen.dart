@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_request.dart';
 import '../../data/models/service_type.dart';
 import '../../roadside_service.dart';
@@ -29,7 +30,7 @@ class _RequestHistoryScreenState extends State<RequestHistoryScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.backgroundDark,
         foregroundColor: AppColors.white,
-        title: Text('Request History',
+        title: Text(context.tr('request_history_title'),
             style:
                 TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
         elevation: 0,
@@ -50,7 +51,7 @@ class _RequestHistoryScreenState extends State<RequestHistoryScreen> {
                   Icon(Icons.history_rounded,
                       color: AppColors.outline, size: 64.r),
                   SizedBox(height: 16.h),
-                  Text('No requests yet',
+                  Text(context.tr('no_requests_yet'),
                       style: TextStyle(
                           color: AppColors.textLight.withValues(alpha: 0.5),
                           fontSize: 16.sp)),

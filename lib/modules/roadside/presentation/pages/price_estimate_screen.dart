@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
@@ -64,7 +65,7 @@ class _PriceEstimateScreenState extends State<PriceEstimateScreen> {
             appBar: AppBar(
               backgroundColor: AppColors.backgroundDark,
               foregroundColor: AppColors.white,
-              title: Text('Service Details',
+              title: Text(context.tr('service_details'),
                   style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
               elevation: 0,
             ),
@@ -198,7 +199,7 @@ class _LocationCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your Location',
+                Text(context.tr('your_location'),
                     style: TextStyle(
                         color: AppColors.textLight.withValues(alpha: 0.6),
                         fontSize: 11.sp)),
@@ -241,7 +242,7 @@ class _PriceBreakdownCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Price Estimate',
+          Text(context.tr('price_estimate_label'),
               style: TextStyle(
                   color: AppColors.white,
                   fontSize: 14.sp,
@@ -262,7 +263,7 @@ class _PriceBreakdownCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total Estimate',
+              Text(context.tr('total_estimate'),
                   style: TextStyle(
                       color: AppColors.white,
                       fontSize: 15.sp,
@@ -287,7 +288,7 @@ class _PriceBreakdownCard extends StatelessWidget {
                 Icon(Icons.payments_rounded,
                     color: AppColors.success, size: 14.r),
                 SizedBox(width: 6.w),
-                Text('Cash payment on service completion',
+                Text(context.tr('cash_payment'),
                     style: TextStyle(
                         color: AppColors.success, fontSize: 11.sp)),
               ],
@@ -367,7 +368,7 @@ class _PhotosSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Photos',
+            Text(context.tr('photos'),
                 style: TextStyle(
                     color: AppColors.white,
                     fontSize: 14.sp,
@@ -376,7 +377,7 @@ class _PhotosSection extends StatelessWidget {
               onPressed: onAdd,
               icon: Icon(Icons.add_a_photo_rounded,
                   color: AppColors.accentCyan, size: 16.r),
-              label: Text('Add',
+              label: Text(context.tr('add'),
                   style: TextStyle(
                       color: AppColors.accentCyan, fontSize: 13.sp)),
             ),
@@ -418,7 +419,7 @@ class _PhotosSection extends StatelessWidget {
                   style: BorderStyle.solid),
             ),
             child: Center(
-              child: Text('No photos added — tap Add to take one',
+              child: Text(context.tr('no_photos_added'),
                   style: TextStyle(
                       color: AppColors.textLight.withValues(alpha: 0.4),
                       fontSize: 12.sp)),
@@ -476,7 +477,7 @@ class _RequestButton extends StatelessWidget {
               Icon(Icons.local_shipping_rounded,
                   color: AppColors.white, size: 20.r),
               SizedBox(width: 8.w),
-              Text('Request Service — \$${(price + 5).toStringAsFixed(0)}',
+              Text('${context.tr('request_service_label')} — \$${(price + 5).toStringAsFixed(0)}',
                   style: TextStyle(
                       color: AppColors.white,
                       fontSize: 15.sp,

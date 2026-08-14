@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/dtc_history_service.dart';
 import '../../../../../core/services/dtc_repository.dart';
+import '../../../../../core/services/maintenance_service.dart';
 import '../../../../../core/services/obd_service.dart';
 
 // ── DTC view model ─────────────────────────────────────────────────────────────
@@ -14,12 +17,16 @@ class _DtcItem {
   final String description;
   final String system;
   final String severity;
+  final bool isPending; // true = mode 07 code, not yet confirmed by ECU
+  final Map<String, String> freezeFrame; // sensor snapshot when fault occurred
 
   const _DtcItem({
     required this.code,
     required this.description,
     required this.system,
     required this.severity,
+    this.isPending = false,
+    this.freezeFrame = const {},
   });
 }
 
@@ -43,6 +50,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   String? _errorMessage;
   List<_DtcItem> _dtcItems = [];
   String _selectedFilter = 'All';
+  ReadinessResult? _readiness;
 
   static const _filters = ['All', 'Engine', 'Chassis', 'Body', 'Network'];
 
@@ -54,6 +62,107 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   void initState() {
     super.initState();
     _fetchDtcs();
+    _fetchMonitors();
+  }
+
+  Future<void> _fetchMonitors() async {
+    if (!OBDService.instance.isInitialized) return;
+    final monitors = await OBDService.instance.getReadinessMonitors();
+    if (!mounted) return;
+    setState(() => _readiness = monitors);
+  }
+
+  // ── Export report ─────────────────────────────────────────────────────────
+
+  Future<void> _exportReport() async {
+    final d = OBDService.instance.currentData;
+    final device = OBDService.instance.connectedDeviceName ?? 'OBD-II Adapter';
+    final now = DateTime.now();
+    final dateStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-'
+        '${now.day.toString().padLeft(2,'0')} '
+        '${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
+
+    final buf = StringBuffer();
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  VEHICLE DIAGNOSTIC REPORT');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('Date     : $dateStr');
+    buf.writeln('Adapter  : $device');
+    buf.writeln();
+
+    // ── Fault codes ──────────────────────────────────────────────────────
+    final confirmed = _dtcItems.where((i) => !i.isPending).toList();
+    final pending   = _dtcItems.where((i) =>  i.isPending).toList();
+
+    buf.writeln('── FAULT CODES (${_dtcItems.length} total) ──────────────');
+    if (_dtcItems.isEmpty) {
+      buf.writeln('  No fault codes stored.');
+    } else {
+      for (final item in confirmed) {
+        buf.writeln('  [${item.severity.toUpperCase()}] ${item.code}');
+        buf.writeln('    ${item.description}');
+        if (item.freezeFrame.isNotEmpty) {
+          buf.writeln('    Freeze Frame:');
+          item.freezeFrame.forEach((k, v) => buf.writeln('      $k: $v'));
+        }
+      }
+      if (pending.isNotEmpty) {
+        buf.writeln();
+        buf.writeln('  PENDING CODES:');
+        for (final item in pending) {
+          buf.writeln('  [PENDING] ${item.code}  ${item.description}');
+        }
+      }
+    }
+
+    // ── Readiness monitors ───────────────────────────────────────────────
+    if (_readiness != null && _readiness!.monitors.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('── EMISSIONS READINESS ─────────────────────────');
+      buf.writeln('  MIL: ${_readiness!.milOn ? "ON" : "OFF"}   DTCs stored: ${_readiness!.dtcCount}');
+      for (final m in _readiness!.monitors) {
+        final status = switch (m.status) {
+          MonitorStatus.ready          => '✓ Ready',
+          MonitorStatus.notReady       => '✗ Not ready',
+          MonitorStatus.notApplicable  => '⬜ N/A',
+        };
+        buf.writeln('  $status  ${m.name}');
+      }
+    }
+
+    // ── Live sensor readings ─────────────────────────────────────────────
+    buf.writeln();
+    buf.writeln('── LIVE SENSOR READINGS ────────────────────────');
+    void sensor(String label, double? v, String unit) {
+      final val = v != null ? '${v.toStringAsFixed(1)} $unit' : 'N/A';
+      buf.writeln('  $label: $val');
+    }
+    sensor('RPM',              d.rpm,              'rpm');
+    sensor('Speed',            d.speedKmh,         'km/h');
+    sensor('Coolant Temp',     d.coolantTempC,     '°C');
+    sensor('Engine Load',      d.engineLoad,       '%');
+    sensor('Throttle',         d.throttlePct,      '%');
+    sensor('Fuel Level',       d.fuelLevelPct,     '%');
+    sensor('Battery Voltage',  d.batteryVoltage,   'V');
+    sensor('Oil Temp',         d.oilTempC,         '°C');
+    sensor('Intake Air Temp',  d.intakeAirTempC,   '°C');
+    sensor('STFT Bank 1',      d.fuelTrimShortPct, '%');
+    sensor('LTFT Bank 1',      d.fuelTrimLongPct,  '%');
+    if (d.fuelTrimShortB2 != null) sensor('STFT Bank 2', d.fuelTrimShortB2, '%');
+    if (d.fuelTrimLongB2  != null) sensor('LTFT Bank 2', d.fuelTrimLongB2,  '%');
+    if (d.o2B1S1Voltage   != null) sensor('O2 B1S1',     d.o2B1S1Voltage,   'V');
+    if (d.o2B1S2Voltage   != null) sensor('O2 B1S2',     d.o2B1S2Voltage,   'V');
+    if (d.o2B2S1Voltage   != null) sensor('O2 B2S1',     d.o2B2S1Voltage,   'V');
+
+    buf.writeln();
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('Generated by MyCar Diagnostics');
+
+    await Share.shareXFiles(
+      [],
+      text: buf.toString(),
+      subject: 'Vehicle Diagnostic Report – $dateStr',
+    );
   }
 
   // ── Data loading ──────────────────────────────────────────────────────────
@@ -79,18 +188,46 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       final isArabic = Localizations.localeOf(context).languageCode == 'ar';
       final lang = isArabic ? 'ar' : 'en';
 
-      final items = await Future.wait(codes.map((code) async {
+      final items = await Future.wait(codes.map((raw) async {
+        // Codes prefixed with '~' are mode-07 pending codes.
+        final isPending = raw.startsWith('~');
+        final code = isPending ? raw.substring(1) : raw;
         final desc = await _repo.getDtcDescription(code, languageCode: lang);
         return _DtcItem(
           code: code,
           description: desc ?? code,
           system: _systemFromCode(code),
           severity: _severityFromCode(code),
+          isPending: isPending,
         );
       }));
 
       if (!mounted) return;
       setState(() => _dtcItems = items);
+
+      // Record this scan in history and keep maintenance mileage in sync.
+      final mileage = MaintenanceService.instance.currentMileageKm;
+      await DtcHistoryService.instance.record(codes: codes, mileageKm: mileage);
+
+      // Fetch freeze frame after the list is shown so it doesn't block rendering.
+      // Mode 02 stores ONE snapshot shared by all confirmed codes.
+      if (items.any((i) => !i.isPending)) {
+        final ff = await OBDService.instance.getFreezeFrame();
+        if (!mounted || ff.isEmpty) return;
+        setState(() {
+          _dtcItems = _dtcItems.map((item) =>
+            item.isPending ? item :
+            _DtcItem(
+              code: item.code,
+              description: item.description,
+              system: item.system,
+              severity: item.severity,
+              isPending: item.isPending,
+              freezeFrame: ff,
+            ),
+          ).toList();
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'fetch_error');
@@ -103,14 +240,14 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     setState(() => _clearing = true);
     final ok = await OBDService.instance.clearDtcs();
     if (!mounted) return;
-    setState(() {
-      _clearing = false;
-      if (ok) _dtcItems = [];
-    });
-    if (!ok) {
+    if (ok) {
+      // Re-scan immediately to confirm all codes were erased.
+      await _fetchDtcs();
+    } else {
+      setState(() => _clearing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to clear codes – check adapter connection.'),
+          content: Text(context.tr('failed_clear_codes')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -192,6 +329,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             children: [
               _buildHeader(),
               if (!_loading && _errorMessage == null) _buildSummary(),
+              if (_readiness != null && _readiness!.monitors.isNotEmpty) _buildReadinessMonitors(),
               _buildFilters(),
               Expanded(child: _buildBody()),
             ],
@@ -238,20 +376,26 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             icon: Icon(Icons.refresh, color: AppColors.accentCyan),
             onPressed: _loading ? null : _fetchDtcs,
           ),
-          if (_dtcItems.isNotEmpty)
+          if (_dtcItems.isNotEmpty) ...[
+            IconButton(
+              icon: Icon(Icons.share_outlined, color: AppColors.accentCyan),
+              onPressed: _exportReport,
+              tooltip: 'Export report',
+            ),
             IconButton(
               icon: Icon(Icons.clear_all, color: AppColors.accentCyan),
               onPressed: _clearing ? null : _showClearDialog,
             ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildSummary() {
-    final critical = _dtcItems.where((d) => d.severity == 'critical').length;
-    final warning = _dtcItems.where((d) => d.severity == 'warning').length;
-    final info = _dtcItems.where((d) => d.severity == 'info').length;
+    final confirmed = _dtcItems.where((d) => !d.isPending).length;
+    final pending   = _dtcItems.where((d) =>  d.isPending).length;
+    final critical  = _dtcItems.where((d) => d.severity == 'critical').length;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
@@ -272,9 +416,9 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _summaryItem(context.tr('severity_critical'), critical, _colCritical),
-          _summaryItem(context.tr('severity_warning'), warning, _colWarning),
-          _summaryItem(context.tr('severity_info'), info, _colInfo),
+          _summaryItem('Confirmed', confirmed, _colCritical),
+          _summaryItem('Pending',   pending,   const Color(0xFFFFD600)),
+          _summaryItem('Critical',  critical,  _colWarning),
         ],
       ),
     );
@@ -300,6 +444,150 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReadinessMonitors() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 4.h),
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.03),
+        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.checklist_rtl, color: AppColors.accentCyan, size: 16.r),
+              SizedBox(width: 8.w),
+              Text(
+                'Emissions Readiness',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentCyan,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          // MIL + DTC count row
+          Row(
+            children: [
+              _milBadge(_readiness!.milOn),
+              SizedBox(width: 10.w),
+              Text(
+                '${_readiness!.dtcCount} DTC${_readiness!.dtcCount == 1 ? '' : 's'} stored',
+                style: TextStyle(fontSize: 12.sp, color: AppColors.textLight.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          // Monitor rows — two per line
+          ...(() {
+            final monitors = _readiness!.monitors;
+            final rows = <Widget>[];
+            for (var i = 0; i < monitors.length; i += 2) {
+              rows.add(Row(
+                children: [
+                  Expanded(child: _monitorTile(monitors[i])),
+                  SizedBox(width: 8.w),
+                  if (i + 1 < monitors.length)
+                    Expanded(child: _monitorTile(monitors[i + 1]))
+                  else
+                    const Expanded(child: SizedBox()),
+                ],
+              ));
+              if (i + 2 < monitors.length) rows.add(SizedBox(height: 6.h));
+            }
+            return rows;
+          })(),
+        ],
+      ),
+    );
+  }
+
+  Widget _milBadge(bool on) {
+    final color = on ? const Color(0xFFFF1744) : const Color(0xFF00E676);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(on ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+              color: color, size: 13.r),
+          SizedBox(width: 4.w),
+          Text(
+            'MIL ${on ? "ON" : "OFF"}',
+            style: TextStyle(fontSize: 11.sp, color: color, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _monitorTile(ReadinessMonitor m) {
+    final Color color;
+    final IconData icon;
+    final String label;
+    switch (m.status) {
+      case MonitorStatus.ready:
+        color = const Color(0xFF00E676);
+        icon  = Icons.check_circle;
+        label = 'Ready';
+        break;
+      case MonitorStatus.notReady:
+        color = const Color(0xFFFF6B35);
+        icon  = Icons.cancel;
+        label = 'Not ready';
+        break;
+      case MonitorStatus.notApplicable:
+        color = Colors.white24;
+        icon  = Icons.remove_circle_outline;
+        label = 'N/A';
+        break;
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 14.r),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  m.name,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: AppColors.textLight.withValues(alpha: m.isApplicable ? 0.9 : 0.4),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 9.sp, color: color),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -400,7 +688,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r)),
             ),
-            child: const Text('Go to Connection'),
+            child: Text(context.tr('go_to_connection')),
           ),
         ],
       ),
@@ -416,7 +704,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
           SizedBox(height: 20.h),
           Text(
-            'Failed to read codes',
+            context.tr('failed_read_codes'),
             style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
           ),
           SizedBox(height: 24.h),
@@ -427,7 +715,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r)),
             ),
-            child: const Text('Retry'),
+            child: Text(context.tr('retry')),
           ),
         ],
       ),
@@ -508,6 +796,25 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                   _codeChip(item.code, color),
                   SizedBox(width: 10.w),
                   _systemChip(item.system),
+                  if (item.isPending) ...[
+                    SizedBox(width: 8.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD600).withValues(alpha: 0.15),
+                        border: Border.all(color: const Color(0xFFFFD600)),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        'Pending',
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          color: const Color(0xFFFFD600),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   Icon(_severityIcon(item.severity), color: color, size: 24.r),
                 ],
@@ -521,6 +828,63 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                   height: 1.4,
                 ),
               ),
+              // Freeze frame snapshot ────────────────────────────────────────
+              if (item.freezeFrame.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.all(12.r),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: AppColors.accentCyan.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.camera_alt_outlined,
+                              color: AppColors.accentCyan, size: 13.r),
+                          SizedBox(width: 5.w),
+                          Text(
+                            'Freeze Frame — values at fault moment',
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: AppColors.accentCyan,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 6.h,
+                        children: item.freezeFrame.entries.map((e) =>
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentCyan.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              '${e.key}: ${e.value}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: AppColors.textLight.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ),
+                        ).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               SizedBox(height: 12.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -590,12 +954,11 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-        title: const Text('Clear Codes?',
-            style: TextStyle(color: AppColors.textLight)),
-        content: const Text(
-          'This will erase all fault codes and reset the MIL lamp. '
-          'Emissions readiness monitors will also reset.',
-          style: TextStyle(color: AppColors.textLight),
+        title: Text(context.tr('clear_codes'),
+            style: const TextStyle(color: AppColors.textLight)),
+        content: Text(
+          context.tr('clear_codes_content'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
         actions: [
           TextButton(
@@ -613,7 +976,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r)),
             ),
-            child: const Text('Clear'),
+            child: Text(context.tr('clear')),
           ),
         ],
       ),

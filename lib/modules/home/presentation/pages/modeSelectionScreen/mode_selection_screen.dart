@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class ModeSelectionScreen extends StatefulWidget {
   const ModeSelectionScreen({super.key});
@@ -89,24 +90,25 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   }
 
   Future<bool> _onWillPop() async {
+    final exitApp = context.tr('exit_app');
+    final exitConfirm = context.tr('exit_app_confirm');
+    final cancel = context.tr('cancel');
+    final exit = context.tr('exit');
     final shouldExit = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0A1929),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Exit App', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Are you sure you want to exit?',
-          style: TextStyle(color: Color(0xFFE8EAED)),
-        ),
+        title: Text(exitApp, style: const TextStyle(color: Colors.white)),
+        content: Text(exitConfirm, style: const TextStyle(color: Color(0xFFE8EAED))),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF00D9FF))),
+            child: Text(cancel, style: const TextStyle(color: Color(0xFF00D9FF))),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Exit', style: TextStyle(color: Color(0xFFFF6B35))),
+            child: Text(exit, style: const TextStyle(color: Color(0xFFFF6B35))),
           ),
         ],
       ),
@@ -165,23 +167,22 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                         child: FadeTransition(
                           opacity: _card1Fade,
                           child: _ModeCard(
-                            title: 'Car Diagnostics',
-                            subtitle:
-                                'Connect via Bluetooth OBD-II adapter to read live data, fault codes and performance metrics',
+                            title: context.tr('car_diagnostics'),
+                            subtitle: context.tr('car_diagnostics_sub'),
                             icon: Icons.bluetooth_searching_rounded,
                             accentColor: AppColors.accentCyan,
                             tag: 'OBD-II',
                             tagIcon: Icons.electrical_services_rounded,
-                            features: const [
-                              'Live engine data & RPM',
-                              'Fault code scanner (DTC)',
-                              'Performance metrics',
+                            features: [
+                              context.tr('live_engine_data'),
+                              context.tr('fault_code_scanner'),
+                              context.tr('performance_metrics'),
                             ],
                             onTap: () => Navigator.pushNamed(
                               context,
                               AppRoutes.dashboard,
                             ),
-                            buttonLabel: 'Connect Bluetooth',
+                            buttonLabel: context.tr('connect_bluetooth'),
                             buttonIcon: Icons.bluetooth_rounded,
                           ),
                         ),
@@ -197,23 +198,22 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                         child: FadeTransition(
                           opacity: _card2Fade,
                           child: _ModeCard(
-                            title: 'Roadside Assistance',
-                            subtitle:
-                                'Request a certified driver for towing, battery, tire or fuel service — anywhere, anytime',
+                            title: context.tr('roadside_assistance'),
+                            subtitle: context.tr('roadside_assistance_sub'),
                             icon: Icons.car_repair,
                             accentColor: AppColors.accentOrange,
                             tag: '24 / 7',
                             tagIcon: Icons.access_time_filled_rounded,
-                            features: const [
-                              'Towing & flatbed service',
-                              'Battery & tire repair',
-                              'Fuel delivery',
+                            features: [
+                              context.tr('towing_service'),
+                              context.tr('battery_tire_repair'),
+                              context.tr('fuel_delivery'),
                             ],
                             onTap: () => Navigator.pushNamed(
                               context,
                               AppRoutes.roadside,
                             ),
-                            buttonLabel: 'Request Help',
+                            buttonLabel: context.tr('request_help'),
                             buttonIcon: Icons.local_shipping_rounded,
                           ),
                         ),
@@ -226,7 +226,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                     FadeTransition(
                       opacity: _card2Fade,
                       child: Text(
-                        'You can switch between services anytime',
+                        context.tr('switch_services'),
                         style: TextStyle(
                           color: AppColors.textLight.withValues(alpha: 0.35),
                           fontSize: 12.sp,
@@ -271,7 +271,7 @@ class _Header extends StatelessWidget {
         ),
         SizedBox(height: 6.h),
         Text(
-          'What do you need today?',
+          context.tr('what_do_you_need'),
           style: TextStyle(
             color: AppColors.textLight.withValues(alpha: 0.55),
             fontSize: 14.sp,

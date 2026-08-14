@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
@@ -55,7 +56,8 @@ class _RatingScreenState extends State<RatingScreen>
         final driver = state.activeRequest?.assignedDriver;
         final service = state.selectedService;
         final color = service?.color ?? AppColors.accentOrange;
-        final price = state.activeRequest?.estimatedPrice ?? 0;
+        final price = state.activeRequest?.displayPrice ?? 0;
+        final cashCollected = state.activeRequest?.cashCollected ?? false;
 
         return Scaffold(
           backgroundColor: AppColors.backgroundDark,
@@ -115,15 +117,15 @@ class _RatingScreenState extends State<RatingScreen>
                         SizedBox(height: 8.h),
                         _ReceiptRow(
                             label: 'Amount',
-                            value: '\$${(price + 5).toStringAsFixed(0)}',
+                            value: '\$${price.toStringAsFixed(2)}',
                             valueColor: color),
                         SizedBox(height: 8.h),
                         _ReceiptRow(label: 'Payment', value: 'Cash'),
                         SizedBox(height: 8.h),
                         _ReceiptRow(
                             label: 'Status',
-                            value: '✓ Paid',
-                            valueColor: AppColors.success),
+                            value: cashCollected ? '✓ Paid' : 'Pending',
+                            valueColor: cashCollected ? AppColors.success : AppColors.textLight),
                       ],
                     ),
                   ),
@@ -170,7 +172,7 @@ class _RatingScreenState extends State<RatingScreen>
                             ],
                           ),
                           SizedBox(height: 16.h),
-                          Text('How was your experience?',
+                          Text(context.tr('how_was_experience'),
                               style: TextStyle(
                                   color: AppColors.textLight, fontSize: 13.sp)),
                           SizedBox(height: 12.h),

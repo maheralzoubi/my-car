@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
@@ -80,7 +81,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                             Navigator.of(context)
                                 .popUntil((r) => r.isFirst);
                           },
-                          child: Text('Cancel',
+                          child: Text(context.tr('cancel'),
                               style: TextStyle(
                                   color: AppColors.error, fontSize: 14.sp)),
                         ),
@@ -157,7 +158,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                   SizedBox(height: 40.h),
 
                   Text(
-                    'Finding Nearest Driver',
+                    context.tr('finding_nearest_driver'),
                     style: TextStyle(
                       color: AppColors.white,
                       fontSize: 20.sp,
@@ -184,7 +185,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                       children: [
                         _StatItem(
                           value: '12',
-                          label: 'Drivers Online',
+                          label: context.tr('drivers_online'),
                           color: AppColors.accentCyan,
                         ),
                         Container(
@@ -193,7 +194,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                             color: AppColors.outline.withValues(alpha: 0.3)),
                         _StatItem(
                           value: '< 5 km',
-                          label: 'Search Radius',
+                          label: context.tr('search_radius_label'),
                           color: AppColors.accentOrange,
                         ),
                         Container(
@@ -202,7 +203,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                             color: AppColors.outline.withValues(alpha: 0.3)),
                         _StatItem(
                           value: '~${service?.etaMinutes ?? 15} min',
-                          label: 'Avg. Arrival',
+                          label: context.tr('avg_arrival'),
                           color: color,
                         ),
                       ],

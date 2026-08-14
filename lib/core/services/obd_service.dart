@@ -3,7 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'obd_adapter.dart';
 
-export 'obd_adapter.dart' show OBDLiveData;
+export 'obd_adapter.dart' show OBDLiveData, ReadinessMonitor, ReadinessResult, MonitorStatus;
 
 /// Singleton facade over [OBDAdapter].
 ///
@@ -77,20 +77,75 @@ class OBDService {
   /// Returns `[]` when not connected or on error.
   Future<List<String>> getDtcs() async {
     if (!_initialized) return [];
+    // Stop the live-data timer so its pending _sendAT calls don't
+    // overwrite the Completer that getDtcs is about to create.
+    _adapter.stopLiveData();
+    // Brief pause to let any in-flight poll command fully complete.
+    await Future.delayed(const Duration(milliseconds: 300));
     try {
       return await _adapter.getDtcs();
     } catch (_) {
       return [];
+    } finally {
+      // Always restart polling when done.
+      if (_initialized) _adapter.startLiveData();
     }
   }
 
   /// Clears stored DTCs and resets the MIL. Returns `false` on error.
   Future<bool> clearDtcs() async {
     if (!_initialized) return false;
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
     try {
       return await _adapter.clearDtcs();
     } catch (_) {
       return false;
+    } finally {
+      if (_initialized) _adapter.startLiveData();
+    }
+  }
+
+  /// Sensor values captured by the ECU at the moment a fault occurred.
+  Future<Map<String, String>> getFreezeFrame() async {
+    if (!_initialized) return {};
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      return await _adapter.getFreezeFrame();
+    } catch (_) {
+      return {};
+    } finally {
+      if (_initialized) _adapter.startLiveData();
+    }
+  }
+
+  /// Emission-system readiness monitors.
+  Future<ReadinessResult> getReadinessMonitors() async {
+    const empty = ReadinessResult(milOn: false, dtcCount: 0, monitors: []);
+    if (!_initialized) return empty;
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      return await _adapter.getReadinessMonitors();
+    } catch (_) {
+      return empty;
+    } finally {
+      if (_initialized) _adapter.startLiveData();
+    }
+  }
+
+  /// Vehicle Identification Number (mode 09 PID 02).
+  Future<String?> getVin() async {
+    if (!_initialized) return null;
+    _adapter.stopLiveData();
+    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      return await _adapter.getVin();
+    } catch (_) {
+      return null;
+    } finally {
+      if (_initialized) _adapter.startLiveData();
     }
   }
 
