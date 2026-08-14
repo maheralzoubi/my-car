@@ -11,6 +11,10 @@ class RoadsideBloc extends Bloc<RoadsideEvent, RoadsideState> {
   final RoadsideRepository _repo;
   StreamSubscription<ServiceRequest>? _requestSub;
 
+  /// Exposed so screens can call one-off repository methods (e.g. reverse
+  /// geocoding while dragging the map) that don't warrant their own event.
+  RoadsideRepository get repository => _repo;
+
   RoadsideBloc(this._repo) : super(const RoadsideState()) {
     on<SelectService>(_onSelectService);
     on<ConfirmLocation>(_onConfirmLocation);
@@ -86,6 +90,7 @@ class RoadsideBloc extends Bloc<RoadsideEvent, RoadsideState> {
         break;
       case RequestStatus.driverFound:
       case RequestStatus.driverEnRoute:
+      case RequestStatus.arrived:
       case RequestStatus.inProgress:
         phase = RoadsidePhase.tracking;
         break;

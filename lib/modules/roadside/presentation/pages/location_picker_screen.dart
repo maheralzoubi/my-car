@@ -73,14 +73,22 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _resolveAddress(LatLng pos) async {
     setState(() => _resolvingAddress = true);
-    // Mock reverse geocode — replace with geocoding package when API key ready
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (mounted) {
-      setState(() {
-        _address =
-            '${pos.latitude.toStringAsFixed(4)}°N, ${pos.longitude.toStringAsFixed(4)}°E';
-        _resolvingAddress = false;
-      });
+    try {
+      final address = await context.read<RoadsideBloc>().repository.reverseGeocode(pos);
+      if (mounted) {
+        setState(() {
+          _address = address;
+          _resolvingAddress = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _address =
+              '${pos.latitude.toStringAsFixed(4)}°N, ${pos.longitude.toStringAsFixed(4)}°E';
+          _resolvingAddress = false;
+        });
+      }
     }
   }
 

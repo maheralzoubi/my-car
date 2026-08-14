@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../../core/app_services.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/network/api_exception.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -19,14 +22,12 @@ class _AuthScreenState extends State<AuthScreen>
   final _signupFormKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _loginEmailController = TextEditingController(
-    text: 'maher@gmail.com',
-  );
-  final TextEditingController _loginPasswordController = TextEditingController(
-    text: 'maher1997',
-  );
+  final TextEditingController _loginEmailController = TextEditingController();
+  final TextEditingController _loginPasswordController =
+      TextEditingController();
   final TextEditingController _signupNameController = TextEditingController();
   final TextEditingController _signupEmailController = TextEditingController();
+  final TextEditingController _signupPhoneController = TextEditingController();
   final TextEditingController _signupPasswordController =
       TextEditingController();
   final TextEditingController _signupConfirmPasswordController =
@@ -35,6 +36,7 @@ class _AuthScreenState extends State<AuthScreen>
   bool _isLoginPasswordVisible = false;
   bool _isSignupPasswordVisible = false;
   bool _isSignupConfirmPasswordVisible = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -49,44 +51,62 @@ class _AuthScreenState extends State<AuthScreen>
     _loginPasswordController.dispose();
     _signupNameController.dispose();
     _signupEmailController.dispose();
+    _signupPhoneController.dispose();
     _signupPasswordController.dispose();
     _signupConfirmPasswordController.dispose();
     super.dispose();
   }
 
-  static const String _validEmail = 'maher@gmail.com';
-  static const String _validPassword = 'maher1997';
-
   Future<void> _handleLogin() async {
     if (!_loginFormKey.currentState!.validate()) return;
-    final email = _loginEmailController.text.trim();
-    final password = _loginPasswordController.text;
-    if (email == _validEmail && password == _validPassword) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_logged_in', true);
+    setState(() => _isSubmitting = true);
+    try {
+      await AppServices.instance.authRepository.login(
+        _loginEmailController.text.trim(),
+        _loginPasswordController.text,
+      );
+      AppServices.instance.socketClient.connect();
+      unawaited(AppServices.instance.registerPushNotifications());
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
       }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('invalid_credentials')),
-            backgroundColor: const Color(0xFFB3261E),
-          ),
-        );
-      }
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   Future<void> _handleSignup() async {
-    if (_signupFormKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_logged_in', true);
+    if (!_signupFormKey.currentState!.validate()) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await AppServices.instance.authRepository.register(
+        email: _signupEmailController.text.trim(),
+        password: _signupPasswordController.text,
+        name: _signupNameController.text.trim(),
+        phone: _signupPhoneController.text.trim(),
+      );
+      AppServices.instance.socketClient.connect();
+      unawaited(AppServices.instance.registerPushNotifications());
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
       }
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFB3261E),
+      ),
+    );
   }
 
   @override
@@ -278,7 +298,8 @@ class _AuthScreenState extends State<AuthScreen>
           SizedBox(height: 30.h),
           _buildGradientButton(
             text: context.tr('login_tab'),
-            onPressed: _handleLogin,
+            onPressed: _isSubmitting ? null : _handleLogin,
+            isLoading: _isSubmitting,
           ),
         ],
       ),
@@ -311,6 +332,18 @@ class _AuthScreenState extends State<AuthScreen>
                 if (value == null || value.isEmpty)
                   return context.tr('enter_email');
                 if (!value.contains('@')) return context.tr('enter_email');
+                return null;
+              },
+            ),
+            SizedBox(height: 20.h),
+            _buildTextField(
+              controller: _signupPhoneController,
+              label: context.tr('phone'),
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty)
+                  return context.tr('enter_phone');
                 return null;
               },
             ),
@@ -357,7 +390,8 @@ class _AuthScreenState extends State<AuthScreen>
             SizedBox(height: 30.h),
             _buildGradientButton(
               text: context.tr('signup_tab'),
-              onPressed: _handleSignup,
+              onPressed: _isSubmitting ? null : _handleSignup,
+              isLoading: _isSubmitting,
             ),
           ],
         ),
@@ -428,7 +462,8 @@ class _AuthScreenState extends State<AuthScreen>
 
   Widget _buildGradientButton({
     required String text,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
+    bool isLoading = false,
   }) {
     return Container(
       width: double.infinity,
@@ -455,15 +490,24 @@ class _AuthScreenState extends State<AuthScreen>
             borderRadius: BorderRadius.circular(15.r),
           ),
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
-            color: Colors.white,
-          ),
-        ),
+        child: isLoading
+            ? SizedBox(
+                width: 22.r,
+                height: 22.r,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            : Text(
+                text,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }

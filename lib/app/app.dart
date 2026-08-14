@@ -19,7 +19,7 @@ import '../modules/home/presentation/pages/modeSelectionScreen/mode_selection_sc
 import '../modules/home/presentation/pages/liveGraphScreen/live_graph_screen.dart';
 import '../modules/home/presentation/pages/maintenanceScreen/maintenance_screen.dart';
 import '../modules/home/presentation/pages/settingsScreen/dash_cam_settings_screen.dart';
-import '../modules/roadside/data/repositories/mock_roadside_repository.dart';
+import '../core/app_services.dart';
 import '../modules/roadside/presentation/bloc/roadside_bloc.dart';
 import '../modules/roadside/presentation/pages/roadside_home_screen.dart';
 
@@ -40,7 +40,7 @@ class App extends StatelessWidget {
               providers: [
                 ...HomeModule.providers,
                 BlocProvider<RoadsideBloc>(
-                  create: (_) => RoadsideBloc(MockRoadsideRepository()),
+                  create: (_) => RoadsideBloc(AppServices.instance.roadsideRepository),
                 ),
               ],
               child: MaterialApp(

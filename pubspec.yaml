@@ -62,6 +62,15 @@ dependencies:
   geolocator: ^13.0.0
   image_picker: ^1.1.0
 
+  # Backend networking
+  dio: ^5.7.0
+  socket_io_client: ^2.0.3+1
+  flutter_secure_storage: ^9.2.2
+
+  # Push notifications
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
