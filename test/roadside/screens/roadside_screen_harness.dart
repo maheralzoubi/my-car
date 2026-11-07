@@ -189,6 +189,7 @@ Future<void> pumpRoadsideScreen(
   required RoadsideBloc bloc,
   required Widget screen,
   Locale locale = kEn,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     ScreenUtilInit(
@@ -198,6 +199,7 @@ Future<void> pumpRoadsideScreen(
       child: BlocProvider<RoadsideBloc>.value(
         value: bloc,
         child: MaterialApp(
+          theme: theme,
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

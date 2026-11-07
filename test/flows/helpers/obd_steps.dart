@@ -8,7 +8,7 @@ import 'package:mycar/core/services/obd_service.dart';
 import 'package:mycar/modules/home/presentation/pages/connectionScreen/connection_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/dashboardScreen/dashboard_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/dashboardScreen/obd_gauge.dart';
-import 'package:mycar/modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
+import 'package:mycar/modules/home/presentation/pages/shell/app_shell.dart';
 
 import '../../helpers/fake_obd_adapter.dart';
 import 'flow_harness.dart';
@@ -122,33 +122,62 @@ OBDLiveData driving({double rpm = 2500, double speedKmh = 60}) => OBDLiveData(
 Finder gaugeShowing(String value) =>
     find.descendant(of: find.byType(OBDGauge), matching: find.text(value));
 
-/// Boots the real [App] in [locale] and waits out the splash.
-Future<void> bootToModeSelection(
+/// Boots the real [App] in [locale] and waits out the splash: a signed-in
+/// user lands in the bottom-navigation [AppShell], on the Home tab (the
+/// dashboard).
+Future<void> bootToShell(
   WidgetTester tester, {
   Locale locale = const Locale('en'),
 }) async {
   await tester.pumpWidget(const App());
   await setAppLocale(tester, locale);
   await advance(tester, const Duration(milliseconds: 5500));
-  expectOnScreen<ModeSelectionScreen>();
-}
-
-/// From mode selection, taps the "Car Diagnostics" card.
-Future<void> openDiagnostics(WidgetTester tester, {String lang = 'en'}) async {
-  // Let the 900 ms entrance animation bring the cards in.
-  await advance(tester, const Duration(seconds: 1));
-  await tapOn(tester, findTr('car_diagnostics', lang));
-  await advance(tester, const Duration(milliseconds: 600));
+  expectOnScreen<AppShell>();
+  expect(currentTab(tester), AppTab.home);
   expectOnScreen<DashboardScreen>();
 }
 
+/// The dashboard is the shell's Home tab, so this is [bootToShell].
 Future<void> bootToDashboard(
   WidgetTester tester, {
   Locale locale = const Locale('en'),
+}) => bootToShell(tester, locale: locale);
+
+/// Localization key of each bottom-navigation tab's label.
+const navLabelKeys = <AppTab, String>{
+  AppTab.home: 'nav_home',
+  AppTab.diagnose: 'nav_diagnose',
+  AppTab.roadside: 'nav_roadside',
+  AppTab.history: 'nav_history',
+  AppTab.profile: 'nav_profile',
+};
+
+/// The bottom-navigation destination labelled for [tab] in [lang].
+Finder navTab(AppTab tab, {String lang = 'en'}) => find.descendant(
+  of: find.byType(NavigationBar),
+  matching: findTr(navLabelKeys[tab]!, lang),
+);
+
+/// Taps [tab] in the shell's bottom navigation bar.
+Future<void> goToTab(
+  WidgetTester tester,
+  AppTab tab, {
+  String lang = 'en',
 }) async {
-  await bootToModeSelection(tester, locale: locale);
-  await openDiagnostics(tester, lang: locale.languageCode);
+  await tapOn(tester, navTab(tab, lang: lang), scroll: false);
+  await advance(tester, const Duration(milliseconds: 400));
 }
+
+/// The shell's selected tab (also while a route is pushed over the shell).
+AppTab currentTab(WidgetTester tester) => tester
+    .state<AppShellState>(find.byType(AppShell, skipOffstage: false))
+    .tab;
+
+/// The tab the bottom navigation bar highlights (also while a route is
+/// pushed over the shell).
+AppTab highlightedTab(WidgetTester tester) => AppTab.values[tester
+    .widget<NavigationBar>(find.byType(NavigationBar, skipOffstage: false))
+    .selectedIndex];
 
 /// Dashboard (disconnected) → connection screen → scan → tap the ELM327 →
 /// connected → "SCAN VEHICLE" back to the dashboard, then drains the
@@ -199,12 +228,12 @@ Future<void> pumpUntilFoundAsync(
   fail('Timed out waiting for $finder');
 }
 
-/// On the codes screen: clear-all icon → confirm dialog → "Clear".
+/// On the codes screen: "Clear codes" button → confirm dialog → "Clear".
 Future<void> clearCodesViaDialog(
   WidgetTester tester, {
   String lang = 'en',
 }) async {
-  await tapOn(tester, find.byIcon(Icons.clear_all));
+  await tapOn(tester, findTr('dtc_clear_codes_action', lang));
   await advance(tester, const Duration(milliseconds: 400));
   expect(findTr('clear_codes', lang), findsOneWidget);
   await tapOn(tester, findTr('clear', lang));

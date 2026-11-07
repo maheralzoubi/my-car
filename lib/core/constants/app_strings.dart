@@ -10,7 +10,8 @@ abstract final class AppStrings {
   static const String homeWelcome = 'Welcome to MyCar';
   static const String homeSubtitle = 'Your car companion app';
   static const String counterLabel = 'Counter';
-  static const String counterHint = 'You have pushed the button this many times:';
+  static const String counterHint =
+      'You have pushed the button this many times:';
   static const String increment = 'Increment';
   static const String decrement = 'Decrement';
 

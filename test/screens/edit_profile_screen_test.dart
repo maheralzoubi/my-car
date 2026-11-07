@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mycar/core/app_services.dart';
+import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/profileScreen/edit_profile_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -162,6 +163,34 @@ void main() {
       expectNoException(tester);
     });
 
+    for (final locale in [en, ar]) {
+      testWidgets('light theme renders, scrolled through '
+          '(${locale.languageCode})', (tester) async {
+        await pumpScreen(
+          tester,
+          const EditProfileScreen(),
+          locale: locale,
+          theme: AppTheme.light,
+        );
+        expectNoException(tester);
+        await tester.drag(
+          find.byType(SingleChildScrollView),
+          const Offset(0, -4000),
+        );
+        await tester.pumpAndSettle();
+        expectNoException(tester);
+      });
+    }
+
+    testWidgets('"Change photo" link opens the picture options', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await tapVisible(tester, find.text(tr('change_photo')));
+      await tester.pumpAndSettle();
+      expect(find.text(tr('change_profile_picture')), findsOneWidget);
+    });
+
     testWidgets('fields are pre-filled from the signed-in user', (
       tester,
     ) async {
@@ -222,13 +251,13 @@ void main() {
 
       // Button shows a spinner and is disabled while saving.
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      final button = tester.widget<ElevatedButton>(
+      final button = tester.widget<InkWell>(
         find.ancestor(
           of: find.byType(CircularProgressIndicator),
-          matching: find.byType(ElevatedButton),
+          matching: find.byType(InkWell),
         ),
       );
-      expect(button.onPressed, isNull);
+      expect(button.onTap, isNull);
 
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
@@ -247,7 +276,7 @@ void main() {
       await _pump(tester, pushed: true);
       await _save(tester);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pump();
       await tester.pumpAndSettle();
       await tester.pump(const Duration(seconds: 3));
@@ -308,7 +337,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.camera_alt));
+      await tester.tap(find.byIcon(Icons.photo_camera_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text(tr('change_profile_picture')), findsOneWidget);
@@ -325,7 +354,7 @@ void main() {
       final calls = _mockPicker(tester, (_) async => null);
 
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.camera_alt));
+      await tester.tap(find.byIcon(Icons.photo_camera_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('choose_from_gallery')));
       await tester.pumpAndSettle();
@@ -336,7 +365,7 @@ void main() {
   group('navigation', () {
     testWidgets('close button pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });
@@ -394,24 +423,23 @@ void main() {
       );
     });
 
-    testWidgets(
-      'a save that could not be persisted is not reported as saved',
-      (tester) async {
-        _writeError = PlatformException(code: 'keystore', message: 'locked');
-        await _pump(tester, pushed: true);
-        await tester.enterText(_fields.at(0), 'Jane Q. Tester');
-        await _saveAndSettle(tester);
-        expect(find.text(tr('profile_saved_on_device')), findsNothing);
-        expect(find.text(tr('success')), findsNothing);
-        expect(
-          find.descendant(
-            of: find.byType(SnackBar),
-            matching: find.text(tr('profile_save_failed')),
-          ),
-          findsOneWidget,
-        );
-      },
-    );
+    testWidgets('a save that could not be persisted is not reported as saved', (
+      tester,
+    ) async {
+      _writeError = PlatformException(code: 'keystore', message: 'locked');
+      await _pump(tester, pushed: true);
+      await tester.enterText(_fields.at(0), 'Jane Q. Tester');
+      await _saveAndSettle(tester);
+      expect(find.text(tr('profile_saved_on_device')), findsNothing);
+      expect(find.text(tr('success')), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text(tr('profile_save_failed')),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('a valid password change says "not available" — no fake '
         'success, nothing stored', (tester) async {
@@ -465,7 +493,7 @@ void main() {
     testWidgets('cancelling the photo picker changes nothing', (tester) async {
       _mockPicker(tester, (_) async => null);
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.camera_alt));
+      await tester.tap(find.byIcon(Icons.photo_camera_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('choose_from_gallery')));
       await tester.pumpAndSettle();
@@ -482,7 +510,7 @@ void main() {
         (_) async => throw PlatformException(code: 'camera_access_denied'),
       );
       await _pump(tester, locale: ar);
-      await tester.tap(find.byIcon(Icons.camera_alt));
+      await tester.tap(find.byIcon(Icons.photo_camera_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('take_photo', ar)));
       await tester.pumpAndSettle();

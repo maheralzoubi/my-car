@@ -16,15 +16,18 @@ import 'api_config.dart';
 class ApiClient {
   /// [baseUrl] defaults to [ApiConfig.baseUrl]; [httpClientAdapter] swaps
   /// the transport (tests pass a fake so nothing leaves the process).
-  ApiClient(this.session, {String? baseUrl, HttpClientAdapter? httpClientAdapter})
-      : dio = Dio(
-          BaseOptions(
-            baseUrl: baseUrl ?? ApiConfig.baseUrl,
-            connectTimeout: timeout,
-            sendTimeout: timeout,
-            receiveTimeout: timeout,
-          ),
-        ) {
+  ApiClient(
+    this.session, {
+    String? baseUrl,
+    HttpClientAdapter? httpClientAdapter,
+  }) : dio = Dio(
+         BaseOptions(
+           baseUrl: baseUrl ?? ApiConfig.baseUrl,
+           connectTimeout: timeout,
+           sendTimeout: timeout,
+           receiveTimeout: timeout,
+         ),
+       ) {
     if (httpClientAdapter != null) dio.httpClientAdapter = httpClientAdapter;
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -48,6 +51,8 @@ class ApiClient {
     final base = Uri.tryParse(options.baseUrl);
     if (base == null) return false;
     final target = options.uri;
-    return target.scheme == base.scheme && target.host == base.host && target.port == base.port;
+    return target.scheme == base.scheme &&
+        target.host == base.host &&
+        target.port == base.port;
   }
 }

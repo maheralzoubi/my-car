@@ -53,32 +53,33 @@ class MaintenanceItem {
     double? lastMileageKm,
     DateTime? lastServiceDate,
     String? notes,
-  }) =>
-      MaintenanceItem(
-        id: id,
-        name: name,
-        icon: icon,
-        intervalKm: intervalKm,
-        intervalDays: intervalDays,
-        lastMileageKm: lastMileageKm ?? this.lastMileageKm,
-        lastServiceDate: lastServiceDate ?? this.lastServiceDate,
-        notes: notes ?? this.notes,
-      );
+  }) => MaintenanceItem(
+    id: id,
+    name: name,
+    icon: icon,
+    intervalKm: intervalKm,
+    intervalDays: intervalDays,
+    lastMileageKm: lastMileageKm ?? this.lastMileageKm,
+    lastServiceDate: lastServiceDate ?? this.lastServiceDate,
+    notes: notes ?? this.notes,
+  );
 
   Map<String, dynamic> toJson() => {
-        'lastMileageKm': lastMileageKm,
-        'lastServiceDate': lastServiceDate?.toIso8601String(),
-        'notes': notes,
-      };
+    'lastMileageKm': lastMileageKm,
+    'lastServiceDate': lastServiceDate?.toIso8601String(),
+    'notes': notes,
+  };
 
-  static MaintenanceItem fromDefaults(MaintenanceItem defaults, Map<String, dynamic> json) =>
-      defaults.copyWith(
-        lastMileageKm: (json['lastMileageKm'] as num?)?.toDouble(),
-        lastServiceDate: json['lastServiceDate'] != null
-            ? DateTime.tryParse(json['lastServiceDate'] as String)
-            : null,
-        notes: json['notes'] as String? ?? '',
-      );
+  static MaintenanceItem fromDefaults(
+    MaintenanceItem defaults,
+    Map<String, dynamic> json,
+  ) => defaults.copyWith(
+    lastMileageKm: (json['lastMileageKm'] as num?)?.toDouble(),
+    lastServiceDate: json['lastServiceDate'] != null
+        ? DateTime.tryParse(json['lastServiceDate'] as String)
+        : null,
+    notes: json['notes'] as String? ?? '',
+  );
 }
 
 // ── Service ────────────────────────────────────────────────────────────────────
@@ -92,13 +93,55 @@ class MaintenanceService {
 
   // Default items — user logs actual service dates/mileage against these.
   static final List<MaintenanceItem> _defaults = [
-    const MaintenanceItem(id: 'oil',     name: 'Oil Change',       icon: '🛢️', intervalKm: 5000,  intervalDays: 180),
-    const MaintenanceItem(id: 'tires',   name: 'Tire Rotation',    icon: '🛞', intervalKm: 10000, intervalDays: 365),
-    const MaintenanceItem(id: 'air',     name: 'Air Filter',       icon: '💨', intervalKm: 20000, intervalDays: 730),
-    const MaintenanceItem(id: 'brakes',  name: 'Brake Inspection', icon: '🛑', intervalKm: 20000, intervalDays: 365),
-    const MaintenanceItem(id: 'coolant', name: 'Coolant Flush',    icon: '🌡️', intervalKm: 40000, intervalDays: 1095),
-    const MaintenanceItem(id: 'spark',   name: 'Spark Plugs',      icon: '⚡', intervalKm: 30000, intervalDays: 1095),
-    const MaintenanceItem(id: 'belt',    name: 'Timing Belt',      icon: '⚙️', intervalKm: 80000, intervalDays: 1825),
+    const MaintenanceItem(
+      id: 'oil',
+      name: 'Oil Change',
+      icon: '🛢️',
+      intervalKm: 5000,
+      intervalDays: 180,
+    ),
+    const MaintenanceItem(
+      id: 'tires',
+      name: 'Tire Rotation',
+      icon: '🛞',
+      intervalKm: 10000,
+      intervalDays: 365,
+    ),
+    const MaintenanceItem(
+      id: 'air',
+      name: 'Air Filter',
+      icon: '💨',
+      intervalKm: 20000,
+      intervalDays: 730,
+    ),
+    const MaintenanceItem(
+      id: 'brakes',
+      name: 'Brake Inspection',
+      icon: '🛑',
+      intervalKm: 20000,
+      intervalDays: 365,
+    ),
+    const MaintenanceItem(
+      id: 'coolant',
+      name: 'Coolant Flush',
+      icon: '🌡️',
+      intervalKm: 40000,
+      intervalDays: 1095,
+    ),
+    const MaintenanceItem(
+      id: 'spark',
+      name: 'Spark Plugs',
+      icon: '⚡',
+      intervalKm: 30000,
+      intervalDays: 1095,
+    ),
+    const MaintenanceItem(
+      id: 'belt',
+      name: 'Timing Belt',
+      icon: '⚙️',
+      intervalKm: 80000,
+      intervalDays: 1825,
+    ),
   ];
 
   List<MaintenanceItem> _items = List.from(_defaults);

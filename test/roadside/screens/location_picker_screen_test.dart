@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mycar/core/widgets/widgets.dart';
 import 'package:mycar/core/network/api_exception.dart';
 import 'package:mycar/modules/roadside/data/models/service_type.dart';
 import 'package:mycar/modules/roadside/presentation/bloc/roadside_bloc.dart';
@@ -28,9 +29,9 @@ void main() {
         bloc: bloc, screen: const LocationPickerScreen(), locale: locale);
   }
 
-  final confirmButton = find.byType(ElevatedButton);
-  ElevatedButton button(WidgetTester tester) =>
-      tester.widget<ElevatedButton>(confirmButton);
+  final confirmButton = find.byType(AppButton);
+  AppButton button(WidgetTester tester) =>
+      tester.widget<AppButton>(confirmButton);
   Finder buttonSpinner() => find.descendant(
       of: confirmButton, matching: find.byType(CircularProgressIndicator));
 
@@ -114,7 +115,7 @@ void main() {
     await pumpPicker(tester, locale: kAr);
 
     expect(tester.takeException(), isNull);
-    final back = find.byIcon(Icons.arrow_back_ios_new_rounded);
+    final back = find.byIcon(Icons.arrow_back_rounded);
     expect(directionAt(tester, back), TextDirection.rtl);
     expect(tester.getCenter(back).dx, greaterThan(kPhoneSize.width / 2));
     expect(tester.getCenter(find.text('Set Your Location')).dx,
@@ -124,7 +125,7 @@ void main() {
   testWidgets('back button returns to the previous screen', (tester) async {
     await pumpPicker(tester);
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await settle(tester);
 
     expect(find.byType(LocationPickerScreen), findsNothing);
@@ -147,7 +148,7 @@ void main() {
     // The "my location" button shows the lookup in progress.
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await settle(tester);
     expect(onRoot(), isTrue);
 

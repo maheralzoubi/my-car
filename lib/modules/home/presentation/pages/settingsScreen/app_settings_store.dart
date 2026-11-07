@@ -36,6 +36,19 @@ class AppSettingsStore {
   static const soundEffectsKey = 'pref_sound_effects';
   static const unitsKey = 'pref_units';
 
+  /// 'light' | 'dark' | 'system' — read and written by [ThemeController].
+  static const themeModeKey = 'pref_theme_mode';
+
+  Future<String?> readThemeMode() async {
+    try {
+      return await _storage.read(key: themeModeKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> writeThemeMode(String value) => _write(themeModeKey, value);
+
   Future<AppSettings> load() async {
     const d = AppSettings();
     try {

@@ -13,8 +13,7 @@ class DtcCodeInfo {
   static final RegExp _shape = RegExp(r'^[PCBU][0-3][0-9A-F]{3}$');
 
   // Manufacturer-controlled blocks: P1xxx, P3000–P33FF, B1/B2, C1/C2, U1/U2.
-  static final RegExp _manufacturer =
-      RegExp(r'^(?:P1|P3[0-3]|[BCU][12])');
+  static final RegExp _manufacturer = RegExp(r'^(?:P1|P3[0-3]|[BCU][12])');
 
   static String _normalize(String raw) {
     final s = raw.trim().toUpperCase();
@@ -34,8 +33,8 @@ class DtcCodeInfo {
   String? get typeKey => !isValid
       ? null
       : isManufacturerSpecific
-          ? 'dtc_type_manufacturer'
-          : 'dtc_type_generic';
+      ? 'dtc_type_manufacturer'
+      : 'dtc_type_generic';
 
   String? get subsystemKey {
     if (!isValid || isManufacturerSpecific) return null;
@@ -80,13 +79,13 @@ class DtcCodeInfo {
   /// General next steps that hold for this kind of code — nothing here is
   /// specific to a single code's root cause.
   List<String> nextStepKeys({bool isPending = false}) => [
-        'dtc_step_record',
-        if (isPending) 'dtc_step_pending',
-        if (typeKey != null)
-          isManufacturerSpecific ? 'dtc_step_manufacturer' : 'dtc_step_generic',
-        if (letter != null) 'dtc_step_${letter!.toLowerCase()}',
-        'dtc_step_bulletins',
-        'dtc_step_clear',
-        'dtc_step_stop',
-      ];
+    'dtc_step_record',
+    if (isPending) 'dtc_step_pending',
+    if (typeKey != null)
+      isManufacturerSpecific ? 'dtc_step_manufacturer' : 'dtc_step_generic',
+    if (letter != null) 'dtc_step_${letter!.toLowerCase()}',
+    'dtc_step_bulletins',
+    'dtc_step_clear',
+    'dtc_step_stop',
+  ];
 }

@@ -5,6 +5,10 @@ abstract final class AppRoutes {
   static const String splash = '/splash';
   static const String auth = '/auth';
   static const String home = '/home';
+
+  /// Signed-in app: bottom-navigation shell (Home · Diagnose · Roadside ·
+  /// History · Profile). Where splash and sign-in land.
+  static const String shell = '/main';
   static const String connectionscreen = '/connectionscreen';
   static const String dashboard = '/dashboard';
   static const String diagnosticCodes = '/diagnostic-codes';
@@ -20,9 +24,6 @@ abstract final class AppRoutes {
   static const String profile = '/profile';
   static const String editProfile = '/edit-profile';
   static const String dtcLookup = '/dtc-lookup';
-
-  // Mode selection hub
-  static const String modeSelection = '/mode-selection';
 
   // Roadside assistance
   static const String roadside = '/roadside';

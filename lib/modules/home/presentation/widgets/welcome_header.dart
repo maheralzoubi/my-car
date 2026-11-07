@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/constants/constants.dart';
+import '../../../../core/core.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/utils/app_extensions.dart';
 
 /// Header section for the home screen with title and subtitle.
 class WelcomeHeader extends StatelessWidget {
@@ -10,31 +10,20 @@ class WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.space24,
-        vertical: AppSizes.space16,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.tr('home_welcome'),
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: context.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: AppSizes.space8),
-          Text(
-            context.tr('home_subtitle'),
-            style: textTheme.bodyLarge?.copyWith(
-              color: context.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
+    final p = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.tr('home_welcome'),
+          style: AppTextStyles.headline.copyWith(color: p.text),
+        ),
+        SizedBox(height: AppSizes.space4.h),
+        Text(
+          context.tr('home_subtitle'),
+          style: AppTextStyles.body.copyWith(color: p.text2),
+        ),
+      ],
     );
   }
 }

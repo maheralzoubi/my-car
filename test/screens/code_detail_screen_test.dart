@@ -6,15 +6,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mycar/core/constants/app_routes.dart';
 import 'package:mycar/core/services/dtc_repository.dart';
 import 'package:mycar/core/services/obd_service.dart';
+import 'package:mycar/core/theme/app_palette.dart';
+import 'package:mycar/core/widgets/widgets.dart';
 import 'package:mycar/modules/home/presentation/pages/diagnosticCodesScreen/code_detail_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/diagnosticCodesScreen/diagnostic_codes_screen.dart';
 
 import '../helpers/fake_obd_adapter.dart';
 import 'helpers/screen_harness.dart';
 
-const _critical = Color(0xFFFF1744);
-const _warning = Color(0xFFFF6B35);
-const _info = Color(0xFFFFD600);
+/// The severity icon box in the code card (DTC severity uses the app-wide
+/// StatusLevel colours of the active theme).
+Color? _severityColor(WidgetTester tester) => tester
+    .widget<IconBox>(find.byKey(const ValueKey('dtc_severity_icon')))
+    .color;
+
+BuildContext _ctx(WidgetTester tester) =>
+    tester.element(find.byType(CodeDetailScreen));
 
 Map<String, dynamic> _code({
   String code = 'P0300',
@@ -155,7 +162,7 @@ void main() {
           final title = tester.widget<Text>(finder);
           expect(title.maxLines, 1);
           expect(title.overflow, TextOverflow.ellipsis);
-          final share = tester.getRect(find.byIcon(Icons.share));
+          final share = tester.getRect(find.byIcon(Icons.share_outlined));
           expect(share.left, greaterThanOrEqualTo(0));
           expect(share.right, lessThanOrEqualTo(320));
           expect(tester.getRect(finder).overlaps(share), isFalse);
@@ -185,15 +192,14 @@ void main() {
   });
 
   group('severity', () {
-    for (final (sev, color) in [
-      ('critical', _critical),
-      ('warning', _warning),
-      ('info', _info),
+    for (final (sev, level) in [
+      ('critical', StatusLevel.critical),
+      ('warning', StatusLevel.warning),
+      ('info', StatusLevel.info),
     ]) {
-      testWidgets('$sev colours the code chip', (tester) async {
+      testWidgets('$sev colours the code card', (tester) async {
         await pumpScreen(tester, CodeDetailScreen(code: _code(severity: sev)));
-        final chip = tester.widget<Text>(find.text('P0300'));
-        expect(chip.style?.color, color);
+        expect(_severityColor(tester), level.colorOf(_ctx(tester)));
       });
     }
 
@@ -201,8 +207,15 @@ void main() {
       tester,
     ) async {
       await pumpScreen(tester, CodeDetailScreen(code: _code(severity: 'x')));
-      final chip = tester.widget<Text>(find.text('P0300'));
-      expect(chip.style?.color, isNot(anyOf(_critical, _warning, _info)));
+      final ctx = _ctx(tester);
+      expect(
+        _severityColor(tester),
+        isNot(anyOf(
+          StatusLevel.critical.colorOf(ctx),
+          StatusLevel.warning.colorOf(ctx),
+        )),
+      );
+      expect(_severityColor(tester), ctx.colors.primary);
     });
   });
 
@@ -260,7 +273,7 @@ void main() {
         observer: observer,
       );
 
-      final button = find.byType(ElevatedButton);
+      final button = find.byType(AppButton);
       await tester.ensureVisible(button);
       await tester.pumpAndSettle();
       await tester.tap(button);
@@ -273,7 +286,7 @@ void main() {
 
     testWidgets('back arrow pops', (tester) async {
       await pumpScreen(tester, CodeDetailScreen(code: _code()), pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });
@@ -297,7 +310,7 @@ void main() {
         );
 
         await pumpScreen(tester, CodeDetailScreen(code: _code()));
-        await tester.tap(find.byIcon(Icons.share));
+        await tester.tap(find.byIcon(Icons.share_outlined));
         await tester.pumpAndSettle();
         expectNoException(tester);
         expect(calls, hasLength(1));

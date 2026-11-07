@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'dart:math' show cos, sin;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/app_services.dart';
-import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
+/// Brand splash: the blue car logo, the CARDIAG wordmark and a slim progress
+/// bar on the theme background. Routes to the shell (signed in) or sign-in
+/// after 5 s.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -18,104 +19,82 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _carController;
-  late AnimationController _titleController;
-  late AnimationController _loadingController;
-  late AnimationController _scanController;
-  late AnimationController _glowController;
+  late final AnimationController _logoController;
+  late final AnimationController _titleController;
 
-  late Animation<double> _carScale;
-  late Animation<double> _carOpacity;
-  late Animation<double> _carRotation;
-  late Animation<double> _carSlideX; // 1 = off-screen right, 0 = center
-  late Animation<Offset> _titleSlide;
-  late Animation<double> _titleOpacity;
-  late Animation<double> _scanPosition;
+  // Leaving the splash waits for the 5 s intro AND the saved session
+  // (main() no longer waits for it before drawing). If the session is still
+  // loading after the intro, wait at most 3 s more: a stuck storage read must
+  // never trap the user here. Both timers are cancelled in dispose().
+  Timer? _introTimer;
+  Timer? _capTimer;
+  bool _introDone = false;
+  bool _servicesReady = false;
+  bool _left = false;
+
+  late final Animation<double> _logoOpacity;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _titleOpacity;
+  late final Animation<Offset> _titleSlide;
 
   @override
   void initState() {
     super.initState();
 
-    // Car zoom animation
-    _carController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+    // Logo: a gentle fade + settle.
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
-
-    _carScale = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _carController,
-        curve: const Cubic(0.34, 1.56, 0.64, 1),
-      ),
+    _logoOpacity = CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.easeOut,
+    );
+    _logoScale = Tween<double>(begin: 0.9, end: 1).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeOutCubic),
     );
 
-    _carOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _carController, curve: const Interval(0.0, 0.6)),
-    );
-
-    _carRotation = Tween<double>(
-      begin: -0.15,
-      end: 0.0,
-    ).animate(CurvedAnimation(parent: _carController, curve: Curves.easeOut));
-
-    // Car slide in from right (off-screen → center)
-    _carSlideX = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _carController,
-        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    // Title animation
+    // Wordmark, tagline and progress.
     _titleController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _titleController, curve: Curves.easeOut));
-
-    _titleOpacity = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(_titleController);
-
-    // Loading animation
-    _loadingController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-
-    // Scan line animation
-    _scanController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-
-    _scanPosition = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _scanController, curve: Curves.easeInOut),
+    _titleOpacity = CurvedAnimation(
+      parent: _titleController,
+      curve: Curves.easeOut,
     );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _titleController, curve: Curves.easeOutCubic),
+        );
 
-    // Glow pulse
-    _glowController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    )..repeat();
-
-    // Start animations
     _startAnimations();
 
-    // Navigate after 5 seconds, skipping auth if already logged in
-    Timer(const Duration(seconds: 5), () {
-      if (!mounted) return;
-      final isLoggedIn = AppServices.instance.session.isLoggedIn;
-      Navigator.pushReplacementNamed(
-        context,
-        isLoggedIn ? AppRoutes.modeSelection : AppRoutes.auth,
-      );
+    // Only observe: main() starts the loading (AppServices.start).
+    AppServices.instance.session.loaded.then((_) {
+      _servicesReady = true;
+      if (_introDone) _leave();
     });
+    _introTimer = Timer(const Duration(seconds: 5), () {
+      _introDone = true;
+      if (_servicesReady || AppServices.instance.session.isLoaded) {
+        _leave();
+      } else {
+        _capTimer = Timer(const Duration(seconds: 3), _leave);
+      }
+    });
+  }
+
+  /// Goes to the app when already signed in, otherwise to sign-in.
+  void _leave() {
+    if (!mounted || _left) return;
+    _left = true;
+    _capTimer?.cancel();
+    final isLoggedIn = AppServices.instance.session.isLoggedIn;
+    Navigator.pushReplacementNamed(
+      context,
+      isLoggedIn ? AppRoutes.shell : AppRoutes.auth,
+    );
   }
 
   void _startAnimations() async {
@@ -123,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen>
     // and route replaced); a disposed controller throws on forward().
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    _carController.forward();
+    _logoController.forward();
 
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
@@ -132,211 +111,93 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _carController.dispose();
+    _introTimer?.cancel();
+    _capTimer?.cancel();
+    _logoController.dispose();
     _titleController.dispose();
-    _loadingController.dispose();
-    _scanController.dispose();
-    _glowController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = context.colors;
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Grid background
-            _buildGridBackground(),
-
-            // Glow pulse
-            _buildGlowPulse(),
-
-            // Main content — scaled down to fit when the screen is shorter
-            // than the portrait design (e.g. a phone in landscape).
-            Positioned.fill(
-              child: SafeArea(
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Car animation
-                        _buildCarAnimation(),
-                        SizedBox(height: 40.h),
-
-                        // Title
-                        _buildTitleAnimation(),
-                        SizedBox(height: 60.h),
-
-                        // Loading indicator
-                        _buildLoadingIndicator(),
-                      ],
-                    ),
-                  ),
-                ),
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: Center(
+          // Scaled down to fit when the screen is shorter than the portrait
+          // design (e.g. a phone in landscape).
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: EdgeInsets.all(AppSizes.space24.r),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLogo(context),
+                  SizedBox(height: AppSizes.space24.h),
+                  _buildTitle(context),
+                  SizedBox(height: AppSizes.space48.h),
+                  _buildProgress(context),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
-
-  Widget _buildGridBackground() {
-    return Positioned.fill(child: CustomPaint(painter: GridPainter()));
-  }
-
-  Widget _buildGlowPulse() {
-    return AnimatedBuilder(
-      animation: _glowController,
-      builder: (context, child) {
-        final scale = 0.8 + (_glowController.value * 0.4);
-        final opacity = (1 - _glowController.value) * 0.15;
-
-        return Center(
-          child: Transform.scale(
-            scale: scale,
-            child: Container(
-              width: 400.w,
-              height: 400.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.accentCyan.withValues(alpha: opacity),
-                    AppColors.transparent,
-                  ],
-                ),
-              ),
+  Widget _buildLogo(BuildContext context) {
+    final p = context.colors;
+    return FadeTransition(
+      opacity: _logoOpacity,
+      child: ScaleTransition(
+        scale: _logoScale,
+        child: ExcludeSemantics(
+          child: Container(
+            width: 80.r,
+            height: 80.r,
+            decoration: BoxDecoration(
+              color: p.primaryButton,
+              borderRadius: BorderRadius.circular(AppSizes.radiusXl.r),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.directions_car_rounded,
+              size: 42.r,
+              color: p.onPrimary,
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildCarAnimation() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    return AnimatedBuilder(
-      animation: _carController,
-      builder: (context, child) {
-        return Transform.translate(
-          // Car enters from right: start off-screen (slideX=1), end at center (slideX=0)
-          offset: Offset(screenWidth * _carSlideX.value, 0),
-          child: Transform.scale(
-            scale: _carScale.value,
-            child: Transform(
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.001)
-                ..rotateY(_carRotation.value),
-              alignment: Alignment.center,
-              child: Opacity(
-                opacity: _carOpacity.value,
-                child: SizedBox(
-                  width: 300.w,
-                  height: 200.h,
-                  child: Stack(
-                    children: [
-                      CustomPaint(
-                        size: Size(300.w, 200.h),
-                        painter: CarPainter(),
-                      ),
-                      _buildScanLine(),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildScanLine() {
-    return AnimatedBuilder(
-      animation: _scanPosition,
-      builder: (context, child) {
-        final opacity = _scanPosition.value < 0.1 || _scanPosition.value > 0.9
-            ? 0.0
-            : 0.7;
-
-        return Positioned(
-          top: _scanPosition.value * 200.h,
-          left: 0,
-          right: 0,
-          child: Opacity(
-            opacity: opacity,
-            child: Container(
-              height: 2.h,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppColors.transparent,
-                    AppColors.accentCyan,
-                    AppColors.transparent,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accentCyan.withValues(alpha: 0.7),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTitleAnimation() {
+  Widget _buildTitle(BuildContext context) {
+    final p = context.colors;
     return SlideTransition(
       position: _titleSlide,
       child: FadeTransition(
         opacity: _titleOpacity,
         child: Column(
           children: [
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppColors.accentCyan, AppColors.textLight],
-              ).createShader(bounds),
-              child: Text(
-                'CARDIAG',
-                style: TextStyle(
-                  fontSize: 56.sp,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 8,
-                  color: AppColors.white,
-                  shadows: const [
-                    Shadow(color: AppColors.accentCyan, blurRadius: 20),
-                    Shadow(color: AppColors.accentCyan, blurRadius: 40),
-                  ],
-                ),
+            Text(
+              // Latin brand wordmark in every locale.
+              'CARDIAG',
+              textDirection: TextDirection.ltr,
+              style: AppTextStyles.display.copyWith(
+                fontSize: 34.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+                color: p.text,
               ),
             ),
-            SizedBox(height: 10.h),
+            SizedBox(height: AppSizes.space4.h),
             Text(
               context.tr('splash_tagline'),
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w300,
-                // Letter spacing breaks Arabic glyph joining.
-                letterSpacing: _isArabic ? 0 : 4,
-                color: AppColors.accentCyan,
-              ),
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.copyWith(color: p.text2),
             ),
           ],
         ),
@@ -344,263 +205,34 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildLoadingIndicator() {
+  Widget _buildProgress(BuildContext context) {
+    final p = context.colors;
     return FadeTransition(
       opacity: _titleOpacity,
       child: Column(
         children: [
           SizedBox(
-            width: 300.w,
-            height: 4.h,
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: _loadingController,
-                  builder: (context, child) {
-                    return Align(
-                      alignment: Alignment(
-                        -1 + 2 * _loadingController.value,
-                        0,
-                      ),
-                      child: Container(
-                        width: 100.w,
-                        height: 4.h,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.accentOrange,
-                              AppColors.accentCyan,
-                              AppColors.accentOrange,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accentCyan.withValues(
-                                alpha: 0.5,
-                              ),
-                              blurRadius: 10,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+            width: 160.w,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+              child: LinearProgressIndicator(
+                minHeight: 4.h,
+                color: p.primary,
+                backgroundColor: p.track,
+              ),
             ),
           ),
-          SizedBox(height: 15.h),
+          SizedBox(height: AppSizes.space12.h),
           Text(
             context.tr('splash_initializing'),
-            style: TextStyle(
-              fontSize: 12.sp,
-              letterSpacing: _isArabic ? 0 : 2,
-              color: AppColors.textLight,
-              fontWeight: FontWeight.w300,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.label.copyWith(
+              fontWeight: FontWeight.w400,
+              color: p.muted,
             ),
           ),
         ],
       ),
     );
   }
-}
-
-// Grid Background Painter
-class GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.accentCyan.withValues(alpha: 0.03)
-      ..strokeWidth = 1;
-
-    const spacing = 50.0;
-
-    for (double i = 0; i < size.width; i += spacing) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-
-    for (double i = 0; i < size.height; i += spacing) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// Modern car side-view (sleek sedan / EV style)
-class CarPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 400;
-    final scaleY = size.height / 200;
-
-    final bodyPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: const [AppColors.accentCyan, AppColors.backgroundDarkBlue],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
-
-    final strokePaint = Paint()
-      ..color = AppColors.accentCyan
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    // Main body – low, long hood, fastback
-    final body = Path()
-      ..moveTo(50 * scaleX, 128 * scaleY)
-      ..lineTo(50 * scaleX, 108 * scaleY)
-      ..lineTo(85 * scaleX, 88 * scaleY)
-      ..lineTo(135 * scaleX, 75 * scaleY)
-      ..lineTo(170 * scaleX, 58 * scaleY)
-      ..lineTo(200 * scaleX, 48 * scaleY)
-      ..lineTo(270 * scaleX, 46 * scaleY)
-      ..lineTo(320 * scaleX, 62 * scaleY)
-      ..lineTo(355 * scaleX, 90 * scaleY)
-      ..lineTo(355 * scaleX, 112 * scaleY)
-      ..lineTo(335 * scaleX, 128 * scaleY)
-      ..lineTo(265 * scaleX, 128 * scaleY)
-      ..lineTo(135 * scaleX, 128 * scaleY)
-      ..lineTo(50 * scaleX, 128 * scaleY)
-      ..close();
-    canvas.drawPath(body, bodyPaint);
-    canvas.drawPath(body, strokePaint);
-
-    // Windshield
-    final windshield = Path()
-      ..moveTo(135 * scaleX, 75 * scaleY)
-      ..lineTo(170 * scaleX, 58 * scaleY)
-      ..lineTo(198 * scaleX, 52 * scaleY)
-      ..lineTo(192 * scaleX, 70 * scaleY)
-      ..lineTo(158 * scaleX, 82 * scaleY)
-      ..close();
-    canvas.drawPath(
-      windshield,
-      Paint()..color = AppColors.accentCyan.withValues(alpha: 0.35),
-    );
-    canvas.drawPath(windshield, strokePaint);
-
-    // Cabin / rear glass (fastback)
-    final cabin = Path()
-      ..moveTo(198 * scaleX, 52 * scaleY)
-      ..lineTo(270 * scaleX, 46 * scaleY)
-      ..lineTo(315 * scaleX, 60 * scaleY)
-      ..lineTo(308 * scaleX, 78 * scaleY)
-      ..lineTo(192 * scaleX, 70 * scaleY)
-      ..close();
-    canvas.drawPath(
-      cabin,
-      Paint()..color = AppColors.accentCyan.withValues(alpha: 0.3),
-    );
-    canvas.drawPath(cabin, strokePaint);
-
-    // Front LED strip
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(52 * scaleX, 100 * scaleY, 32 * scaleX, 4 * scaleY),
-        Radius.circular(2 * scaleX),
-      ),
-      Paint()..color = AppColors.accentOrange,
-    );
-
-    // Headlight (narrow LED)
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(48 * scaleX, 104 * scaleY, 14 * scaleX, 6 * scaleY),
-        Radius.circular(2 * scaleX),
-      ),
-      Paint()..color = AppColors.accentOrange.withValues(alpha: 0.9),
-    );
-
-    // Rear light
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(348 * scaleX, 96 * scaleY, 8 * scaleX, 14 * scaleY),
-        Radius.circular(2 * scaleX),
-      ),
-      Paint()..color = AppColors.accentOrange.withValues(alpha: 0.8),
-    );
-
-    // Side mirror
-    canvas.drawPath(
-      Path()
-        ..moveTo(165 * scaleX, 60 * scaleY)
-        ..lineTo(180 * scaleX, 56 * scaleY)
-        ..lineTo(180 * scaleX, 68 * scaleY)
-        ..lineTo(165 * scaleX, 68 * scaleY)
-        ..close(),
-      Paint()..color = AppColors.backgroundDarkBlue,
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(165 * scaleX, 60 * scaleY)
-        ..lineTo(180 * scaleX, 56 * scaleY)
-        ..lineTo(180 * scaleX, 68 * scaleY)
-        ..lineTo(165 * scaleX, 68 * scaleY)
-        ..close(),
-      strokePaint,
-    );
-
-    // Belt line
-    canvas.drawLine(
-      Offset(100 * scaleX, 92 * scaleY),
-      Offset(305 * scaleX, 92 * scaleY),
-      Paint()
-        ..color = AppColors.accentCyan.withValues(alpha: 0.5)
-        ..strokeWidth = 1,
-    );
-
-    // Alloy wheels
-    _drawWheel(canvas, Offset(115 * scaleX, 128 * scaleY), 22 * scaleX);
-    _drawWheel(canvas, Offset(285 * scaleX, 128 * scaleY), 22 * scaleX);
-  }
-
-  void _drawWheel(Canvas canvas, Offset center, double radius) {
-    canvas.drawCircle(center, radius, Paint()..color = AppColors.grayDark);
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = AppColors.accentCyan.withValues(alpha: 0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    canvas.drawCircle(center, radius * 0.7, Paint()..color = AppColors.grayMid);
-    canvas.drawCircle(
-      center,
-      radius * 0.45,
-      Paint()..color = AppColors.grayDarker,
-    );
-    // 5-spoke alloy
-    for (int i = 0; i < 5; i++) {
-      final angle = (i * 72) * 3.14159 / 180;
-      final dx = radius * 0.45 * cos(angle);
-      final dy = radius * 0.45 * sin(angle);
-      canvas.drawLine(
-        center,
-        center + Offset(dx, dy),
-        Paint()
-          ..color = AppColors.accentCyan.withValues(alpha: 0.5)
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke,
-      );
-    }
-    canvas.drawCircle(
-      center,
-      radius * 0.18,
-      Paint()..color = AppColors.accentOrange,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

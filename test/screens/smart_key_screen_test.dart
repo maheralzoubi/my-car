@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mycar/core/services/obd_service.dart';
+import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/smartKeyScreen/smart_key_screen.dart';
 
 import '../helpers/fake_obd_adapter.dart';
@@ -12,16 +13,20 @@ Future<void> _pump(
   Locale locale = en,
   Size size = phonePortrait,
   bool pushed = false,
+  ThemeData? theme,
 }) => pumpScreen(
   tester,
   const SmartKeyScreen(),
   locale: locale,
   size: size,
   pushed: pushed,
+  theme: theme,
 );
 
-Finder _lockIcons() => find.byIcon(Icons.lock);
-Finder _powerIcons() => find.byIcon(Icons.power_settings_new);
+// Redesign: the car's lock / engine state is shown by status badges in the
+// vehicle status card (was: icons overlaid on a car picture).
+Finder _lockIcons() => find.byIcon(Icons.lock_rounded);
+Finder _powerIcons() => find.byIcon(Icons.power_settings_new_rounded);
 
 void main() {
   late FakeOBDAdapter fake;
@@ -60,6 +65,20 @@ void main() {
       });
     }
 
+    for (final locale in [en, ar]) {
+      testWidgets('light theme renders (${locale.languageCode})', (
+        tester,
+      ) async {
+        await _pump(tester, locale: locale, theme: AppTheme.light);
+        expectNoException(tester);
+        await tapVisible(tester, find.text(tr('unlock', locale)));
+        await tapVisible(tester, find.text(tr('start_engine', locale)));
+        await tester.pump(const Duration(milliseconds: 300));
+        expectNoException(tester);
+        await unmount(tester);
+      });
+    }
+
     testWidgets('small phone, Arabic: no overflow', (tester) async {
       await _pump(tester, locale: ar, size: smallPhone);
       expectNoException(tester);
@@ -83,9 +102,10 @@ void main() {
   });
 
   group('lock / unlock / engine', () {
-    testWidgets('starts locked: car shows the lock overlay', (tester) async {
+    testWidgets('starts locked: status shows the lock', (tester) async {
       await _pump(tester);
-      // Car overlay + lock button.
+      expect(find.text(tr('locked')), findsOneWidget);
+      // Status badge + lock button.
       expect(_lockIcons(), findsNWidgets(2));
       // Engine button only, no running indicator.
       expect(_powerIcons(), findsOneWidget);
@@ -108,6 +128,7 @@ void main() {
       await tapVisible(tester, find.text(tr('unlock')));
       await tester.pump(const Duration(milliseconds: 300));
       expect(_lockIcons(), findsOneWidget); // lock button only
+      expect(find.text(tr('unlocked')), findsOneWidget);
       await unmount(tester);
     });
 
@@ -119,6 +140,7 @@ void main() {
 
       expect(find.text(tr('stop_engine')), findsOneWidget);
       expect(_powerIcons(), findsNWidgets(2)); // + running indicator
+      expect(find.text(tr('engine_on')), findsOneWidget);
 
       await tapVisible(tester, find.text(tr('stop_engine')));
       await tester.pump(const Duration(milliseconds: 300));
@@ -154,10 +176,10 @@ void main() {
   group('navigation', () {
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back));
-      // The pulse animation never settles; pump through the transition.
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+      // ScreenHeader's back button (was Icons.arrow_back; the redesign's
+      // header uses the rounded icon).
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
       expect(find.byType(SmartKeyScreen), findsNothing);
       expect(find.text(launcherText), findsOneWidget);
     });

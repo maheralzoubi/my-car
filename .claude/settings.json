@@ -23,7 +23,9 @@
       "Bash(ls -la /Users/maheralzoubi/Desktop/projects/my-car | head -30 && echo \"---rico---\" && ls -la /Users/maheralzoubi/Downloads/rico_app/server/rico-backend 2>/dev/null)",
       "Read(//Users/maheralzoubi/Downloads/rico_app/server/rico-backend/**)",
       "Bash(cd /Users/maheralzoubi/Downloads/rico_app/server/rico-backend && find . -maxdepth 1 -iname \"*render*\" -o -iname \"Dockerfile\" -maxdepth 1 2>/dev/null; echo \"---main.ts---\"; cat src/main.ts 2>/dev/null)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(git commit -m ' *)",
+      "Bash(GIT_CURL_VERBOSE=0 git push -v origin feature/diagnostics-advanced)"
     ],
     "additionalDirectories": [
       "/tmp"

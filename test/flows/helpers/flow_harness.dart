@@ -155,7 +155,7 @@ const _codec = StandardMethodCodec();
 
 /// Installs the platform fakes shared by every flow. Call from `setUp`.
 ///
-/// [loggedIn] seeds a session token so the splash routes to mode selection
+/// [loggedIn] seeds a session token so the splash routes to the app shell
 /// (instead of the auth screen), as on a returning user's device.
 Future<void> installPlatformFakes({bool loggedIn = true}) async {
   SharedPreferences.setMockInitialValues({});

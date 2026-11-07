@@ -3,13 +3,15 @@
 // the driver: found after 4 s, en route 2 s later, then 2 s movement ticks
 // until arrival, in progress 3 s later, completed 5 s after that):
 //
-//   mode selection → roadside home → pick service → location → estimate →
+//   app shell → Roadside tab → pick service → location → estimate →
 //   request → searching → driver found / en route → arrived → in progress →
-//   completed → rating → back to the hub, request saved with the rating.
+//   completed → rating → back on the Roadside tab, request saved with the
+//   rating.
 //
 // App wires the live ApiRoadsideRepository through AppServices with no seam,
 // so this harness mirrors App's widget stack (ScreenUtil, RoadsideBloc,
-// localizations, the mode-selection hub as first route, the roadside route).
+// localizations, the bottom-navigation AppShell as first route, the roadside
+// route).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,7 +21,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mycar/core/constants/app_routes.dart';
 import 'package:mycar/core/localization/app_localizations.dart';
 import 'package:mycar/core/theme/app_theme.dart';
-import 'package:mycar/modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
+import 'package:mycar/core/widgets/widgets.dart';
+import 'package:mycar/modules/home/presentation/pages/shell/app_shell.dart';
 import 'package:mycar/modules/roadside/data/models/service_request.dart';
 import 'package:mycar/modules/roadside/data/models/service_type.dart';
 import 'package:mycar/modules/roadside/data/repositories/mock_roadside_repository.dart';
@@ -33,6 +36,7 @@ import 'package:mycar/modules/roadside/presentation/pages/searching_driver_scree
 import 'package:mycar/modules/roadside/presentation/pages/tracking_screen.dart';
 
 import 'helpers/flow_harness.dart';
+import 'helpers/obd_steps.dart';
 
 Widget _roadsideApp(RoadsideBloc bloc, {Locale locale = const Locale('en')}) {
   return ScreenUtilInit(
@@ -48,7 +52,7 @@ Widget _roadsideApp(RoadsideBloc bloc, {Locale locale = const Locale('en')}) {
         theme: AppTheme.dark,
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.dark,
-        home: const ModeSelectionScreen(),
+        home: const AppShell(),
         routes: {AppRoutes.roadside: (_) => const RoadsideHomeScreen()},
       ),
     ),
@@ -67,18 +71,23 @@ void main() {
   late MockRoadsideRepository repo;
   late RoadsideBloc bloc;
 
+  // The shell opens on Home (the dashboard), which needs BLE and an OBD
+  // adapter even while disconnected.
+  setUpAll(FakeBlePlatform.install);
+
   setUp(installPlatformFakes);
 
   // Created inside each test body on purpose: a bloc built in setUp runs its
   // event handlers in the root zone, outside the test's fake-async zone, so
   // its state emissions would be delivered only after the test had moved on.
   void createBloc() {
+    newFakeAdapter();
     repo = MockRoadsideRepository();
     bloc = RoadsideBloc(repo);
     addTearDown(bloc.close);
   }
 
-  /// Drives the whole request from the hub to the rating screen (status by
+  /// Drives the whole request from the shell to the rating screen (status by
   /// status), then picks 4 stars.
   Future<void> driveToRating(
     WidgetTester tester,
@@ -86,11 +95,10 @@ void main() {
     Locale locale,
   ) async {
     await tester.pumpWidget(_roadsideApp(bloc, locale: locale));
-    await advance(tester, const Duration(seconds: 1)); // entrance anim
+    await advance(tester, const Duration(seconds: 1));
 
-    // ── Hub → roadside home ──────────────────────────────────────────
-    await tapOn(tester, findTr('request_help', lang));
-    await advance(tester, const Duration(milliseconds: 600));
+    // ── Shell → Roadside tab ─────────────────────────────────────────
+    await goToTab(tester, AppTab.roadside, lang: lang);
     expectOnScreen<RoadsideHomeScreen>();
     expect(findTr('select_service_needed', lang), findsOneWidget);
 
@@ -110,7 +118,7 @@ void main() {
       tester,
       find.descendant(
         of: find.byType(LocationPickerScreen),
-        matching: find.byType(ElevatedButton),
+        matching: find.byType(AppButton),
       ),
     );
     await advance(tester, const Duration(milliseconds: 800));
@@ -221,8 +229,7 @@ void main() {
       createBloc();
       await withKnownOverflows(() async {
         await driveToRating(tester, lang, locale);
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 1));
+        await unmountApp(tester);
       });
     });
   }
@@ -233,8 +240,8 @@ void main() {
       ('en', const Locale('en')),
       ('ar', const Locale('ar')),
     ]) {
-      testWidgets('[$lang] submitting the rating returns to the hub with the '
-          'rating saved', (tester) async {
+      testWidgets('[$lang] submitting the rating returns to the Roadside tab '
+          'with the rating saved', (tester) async {
         usePhoneSurface(tester);
         createBloc();
         await withKnownOverflows(() async {
@@ -243,14 +250,13 @@ void main() {
             tester,
             find.descendant(
               of: find.byType(RatingScreen),
-              matching: find.byType(ElevatedButton),
+              matching: find.byType(AppButton),
             ),
           );
           await advance(tester, const Duration(milliseconds: 800));
 
-          expectOnScreen<ModeSelectionScreen>();
-          _expectNoRoadsideRoutesLeft();
-          expect(findTr('request_help', lang), findsOneWidget);
+          _expectBackOnRoadsideTab(tester);
+          expect(findTr('select_service_needed', lang), findsOneWidget);
           expect(bloc.state.phase, RoadsidePhase.idle);
           expect(bloc.state.activeRequest, isNull);
 
@@ -261,20 +267,18 @@ void main() {
           expect(history.single.rating, 4);
           expect(history.single.serviceType, ServiceType.batteryJump);
 
-          await tester.pumpWidget(const SizedBox.shrink());
-          await tester.pump(const Duration(seconds: 1));
+          await unmountApp(tester);
         });
       });
 
       testWidgets('[$lang] cancelling while the driver is en route returns to '
-          'the hub', (tester) async {
+          'the Roadside tab', (tester) async {
         usePhoneSurface(tester);
         createBloc();
         await withKnownOverflows(() async {
           await tester.pumpWidget(_roadsideApp(bloc, locale: locale));
           await advance(tester, const Duration(seconds: 1));
-          await tapOn(tester, findTr('request_help', lang));
-          await advance(tester, const Duration(milliseconds: 600));
+          await goToTab(tester, AppTab.roadside, lang: lang);
           await tapOn(
             tester,
             find.byIcon(ServiceType.tireRepair.icon).hitTestable().first,
@@ -285,7 +289,7 @@ void main() {
             tester,
             find.descendant(
               of: find.byType(LocationPickerScreen),
-              matching: find.byType(ElevatedButton),
+              matching: find.byType(AppButton),
             ),
           );
           await advance(tester, const Duration(milliseconds: 800));
@@ -303,8 +307,7 @@ void main() {
           await tapOn(tester, findTr('cancel', lang));
           await advance(tester, const Duration(milliseconds: 800));
 
-          expectOnScreen<ModeSelectionScreen>();
-          _expectNoRoadsideRoutesLeft();
+          _expectBackOnRoadsideTab(tester);
           expect(bloc.state.phase, RoadsidePhase.idle);
           // (activeRequest after a cancel: see the skipped REGRESSION test.)
           final history = await _history(tester, repo);
@@ -320,17 +323,21 @@ void main() {
             (await _history(tester, repo)).single.status,
             RequestStatus.cancelled,
           );
-          expectOnScreen<ModeSelectionScreen>();
-          _expectNoRoadsideRoutesLeft();
+          _expectBackOnRoadsideTab(tester);
 
-          // A new request starts cleanly from the hub after the cancel.
-          await tapOn(tester, findTr('request_help', lang));
-          await advance(tester, const Duration(milliseconds: 600));
-          expectOnScreen<RoadsideHomeScreen>();
+          // A new request starts cleanly from the Roadside tab after the
+          // cancel.
           expect(bloc.state.phase, isNot(RoadsidePhase.tracking));
+          await tapOn(
+            tester,
+            find.byIcon(ServiceType.tireRepair.icon).hitTestable().first,
+            scroll: false,
+          );
+          await advance(tester, const Duration(milliseconds: 600));
+          expectOnScreen<LocationPickerScreen>();
+          expect(bloc.state.phase, RoadsidePhase.locationPicker);
 
-          await tester.pumpWidget(const SizedBox.shrink());
-          await tester.pump(const Duration(seconds: 1));
+          await unmountApp(tester);
         });
       });
     }
@@ -343,8 +350,7 @@ void main() {
       await withKnownOverflows(() async {
         await tester.pumpWidget(_roadsideApp(bloc));
         await advance(tester, const Duration(seconds: 1));
-        await tapOn(tester, findTr('request_help'));
-        await advance(tester, const Duration(milliseconds: 600));
+        await goToTab(tester, AppTab.roadside);
         await tapOn(
           tester,
           find.byIcon(ServiceType.tireRepair.icon).hitTestable().first,
@@ -355,7 +361,7 @@ void main() {
           tester,
           find.descendant(
             of: find.byType(LocationPickerScreen),
-            matching: find.byType(ElevatedButton),
+            matching: find.byType(AppButton),
           ),
         );
         await advance(tester, const Duration(milliseconds: 800));
@@ -368,20 +374,27 @@ void main() {
         await advance(tester, const Duration(milliseconds: 500));
         await tapOn(tester, findTr('cancel'));
         await advance(tester, const Duration(seconds: 2));
-        expectOnScreen<ModeSelectionScreen>();
+        _expectBackOnRoadsideTab(tester);
         expect(bloc.state.phase, RoadsidePhase.idle);
         expect(bloc.state.activeRequest, isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 1));
+        await unmountApp(tester);
       });
     });
   });
 }
 
-/// No roadside route (on- or offstage) is left under the hub.
-void _expectNoRoadsideRoutesLeft() {
+/// Back on the shell's Roadside tab: its root screen is showing and no pushed
+/// roadside route (on- or offstage) is left above the shell.
+void _expectBackOnRoadsideTab(WidgetTester tester) {
+  expectOnScreen<AppShell>();
+  expect(currentTab(tester), AppTab.roadside);
+  expectOnScreen<RoadsideHomeScreen>();
+  expect(
+    Navigator.of(tester.element(find.byType(AppShell))).canPop(),
+    isFalse,
+    reason: 'only the shell is left on the stack',
+  );
   for (final type in [
-    RoadsideHomeScreen,
     LocationPickerScreen,
     PriceEstimateScreen,
     SearchingDriverScreen,

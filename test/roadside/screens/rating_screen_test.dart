@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mycar/core/widgets/widgets.dart';
 import 'package:mycar/core/network/api_exception.dart';
 import 'package:mycar/modules/roadside/data/models/driver_model.dart';
 import 'package:mycar/modules/roadside/data/models/service_request.dart';
@@ -33,9 +34,9 @@ void main() {
         bloc: bloc, screen: const RatingScreen(), locale: locale);
   }
 
-  final submit = find.byType(ElevatedButton);
-  ElevatedButton submitButton(WidgetTester tester) =>
-      tester.widget<ElevatedButton>(submit);
+  final submit = find.byType(AppButton);
+  AppButton submitButton(WidgetTester tester) =>
+      tester.widget<AppButton>(submit);
   Finder star(int i) => find.byIcon(Icons.star_outline_rounded).at(i);
 
   Future<void> tapSubmit(WidgetTester tester) async {
@@ -51,7 +52,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Service Completed!'), findsOneWidget);
       expect(find.text('\$77.50'), findsOneWidget);
-      expect(find.text('✓ Paid'), findsOneWidget);
+      expect(find.text('Paid'), findsOneWidget);
       expect(find.text('Ahmed Al-Rashidi'), findsOneWidget);
       expect(find.text('How was your experience?'), findsOneWidget);
       expect(find.text('Skip & Done'), findsOneWidget);
