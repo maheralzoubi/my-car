@@ -49,10 +49,15 @@ class DtcHistoryService {
     if (raw == null) return;
     try {
       final list = jsonDecode(raw) as List;
-      _entries = list
-          .map((e) => DtcHistoryEntry.fromJson(e as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => b.scannedAt.compareTo(a.scannedAt));
+      // Skip unreadable entries one by one: dropping the whole list here
+      // would let the next record() overwrite every good entry on disk.
+      final parsed = <DtcHistoryEntry>[];
+      for (final e in list) {
+        try {
+          parsed.add(DtcHistoryEntry.fromJson(e as Map<String, dynamic>));
+        } catch (_) {}
+      }
+      _entries = parsed..sort((a, b) => b.scannedAt.compareTo(a.scannedAt));
     } catch (_) {}
   }
 
