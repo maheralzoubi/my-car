@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
@@ -17,9 +19,22 @@ import '../../../../../core/services/obd_service.dart';
 bool _isOBDDevice(String name) {
   final n = name.toLowerCase();
   const patterns = [
-    'obd', 'elm', 'vlink', 'v-link', 'obdlink', 'kiwi',
-    'vgate', 'icar', 'carista', 'veepeak', 'bluedriver',
-    'xtool', 'launch', 'autel', 'odb', 'scanmate',
+    'obd',
+    'elm',
+    'vlink',
+    'v-link',
+    'obdlink',
+    'kiwi',
+    'vgate',
+    'icar',
+    'carista',
+    'veepeak',
+    'bluedriver',
+    'xtool',
+    'launch',
+    'autel',
+    'odb',
+    'scanmate',
   ];
   return patterns.any(n.contains);
 }
@@ -35,7 +50,18 @@ enum _BtState {
   connecting,
   initFailed,
   connected,
+  connectionLost, // BLE link dropped mid-session
 }
+
+/// Localization key (title; subtitle = key + '_sub') per connect failure.
+const _failureKeys = {
+  OBDFailureReason.bleConnectFailed: 'obd_err_ble_failed',
+  OBDFailureReason.bleTimeout: 'obd_err_ble_timeout',
+  OBDFailureReason.noElmCharacteristic: 'obd_err_not_ble_elm',
+  OBDFailureReason.adapterNotResponding: 'obd_err_adapter_silent',
+  OBDFailureReason.ecuNotResponding: 'obd_err_ecu_silent',
+  OBDFailureReason.noStandardObdData: 'obd_err_no_std_obd',
+};
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -57,6 +83,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothAdapterState>? _adapterSub;
+  StreamSubscription<OBDConnectionState>? _obdStateSub;
 
   @override
   void initState() {
@@ -65,7 +92,27 @@ class _ConnectionScreenState extends State<ConnectionScreen>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat();
+    _obdStateSub = OBDService.instance.connectionStateStream.listen(
+      _onObdState,
+    );
     _initialize();
+  }
+
+  /// Follows the OBD link while this screen is up: a failed connect (also
+  /// one started elsewhere) and a mid-session BLE drop.
+  void _onObdState(OBDConnectionState state) {
+    if (!mounted) return;
+    if (state == OBDConnectionState.lost) {
+      setState(() {
+        _btState = _BtState.connectionLost;
+        _connectingDevice = null;
+      });
+    } else if (state == OBDConnectionState.failed) {
+      setState(() {
+        _btState = _BtState.initFailed;
+        _connectingDevice = null;
+      });
+    }
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -83,26 +130,39 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         return;
       }
 
+      // Opened after a mid-session drop: offer RECONNECT, not a rescan.
+      final obd = OBDService.instance;
+      if (obd.connectionState == OBDConnectionState.lost &&
+          obd.lastDevice != null) {
+        setState(() => _btState = _BtState.connectionLost);
+      } else if (obd.isInitialized && obd.lastDevice != null) {
+        // Opened from the connected dashboard to disconnect / switch: show the
+        // live adapter as connected instead of rescanning (tapping it in a
+        // fresh scan list would reconnect rather than disconnect).
+        setState(() {
+          _connectedDevice = obd.lastDevice;
+          _btState = _BtState.connected;
+        });
+      }
+
       // Set up adapter-state watcher only after permissions are confirmed.
       _adapterSub?.cancel();
-      _adapterSub = FlutterBluePlus.adapterState.listen(
-        (state) {
-          if (!mounted) return;
-          if (state == BluetoothAdapterState.on) {
-            if (_btState != _BtState.scanning &&
-                _btState != _BtState.connecting &&
-                _btState != _BtState.connected) {
-              _startScan();
-            }
-          } else if (state == BluetoothAdapterState.off) {
-            setState(() {
-              _btState = _BtState.btOff;
-              _scanResults.clear();
-            });
+      _adapterSub = FlutterBluePlus.adapterState.listen((state) {
+        if (!mounted) return;
+        if (state == BluetoothAdapterState.on) {
+          if (_btState != _BtState.scanning &&
+              _btState != _BtState.connecting &&
+              _btState != _BtState.connected &&
+              _btState != _BtState.connectionLost) {
+            _startScan();
           }
-        },
-        onError: (_) {},
-      );
+        } else if (state == BluetoothAdapterState.off) {
+          setState(() {
+            _btState = _BtState.btOff;
+            _scanResults.clear();
+          });
+        }
+      }, onError: (_) {});
       // The listener fires immediately when BT is ON, which calls _startScan().
       // If BT is OFF the listener sets btOff; user must enable BT then retry.
     } on UnsupportedError {
@@ -151,13 +211,10 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         _connectingDevice = null;
       });
 
-      _scanSub = FlutterBluePlus.onScanResults.listen(
-        (results) {
-          if (!mounted) return;
-          setState(() => _scanResults = results);
-        },
-        onError: (_) {},
-      );
+      _scanSub = FlutterBluePlus.onScanResults.listen((results) {
+        if (!mounted) return;
+        setState(() => _scanResults = results);
+      }, onError: (_) {});
 
       await FlutterBluePlus.startScan(
         timeout: const Duration(seconds: 15),
@@ -173,7 +230,10 @@ class _ConnectionScreenState extends State<ConnectionScreen>
   /// Passes the unconnected [device] straight to the obd2 adapter.
   /// [BluetoothAdapterOBD2.connect] handles BLE connect + ELM327 init.
   Future<void> _connectToDevice(BluetoothDevice device) async {
-    await FlutterBluePlus.stopScan();
+    try {
+      await FlutterBluePlus.stopScan();
+    } catch (_) {} // not scanning / BT unavailable: connect anyway
+    if (!mounted) return;
     setState(() {
       _btState = _BtState.connecting;
       _connectingDevice = device;
@@ -195,6 +255,43 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     }
   }
 
+  /// RETRY after a failed connect: the same adapter again (e.g. once the
+  /// ignition is on), unless it can never work — then rescan.
+  void _retry() {
+    final obd = OBDService.instance;
+    final device = obd.lastDevice;
+    if (device != null &&
+        obd.lastError?.reason != OBDFailureReason.noElmCharacteristic) {
+      _connectToDevice(device);
+    } else {
+      _startScan();
+    }
+  }
+
+  void _reconnect() {
+    final device = OBDService.instance.lastDevice;
+    device != null ? _connectToDevice(device) : _startScan();
+  }
+
+  Future<void> _copyLog() async {
+    await Clipboard.setData(
+      ClipboardData(text: OBDService.instance.diagnosticReport()),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.tr('diagnostic_log_copied'))),
+    );
+  }
+
+  Future<void> _shareLog() async {
+    try {
+      await Share.share(
+        OBDService.instance.diagnosticReport(),
+        subject: 'MyCar OBD diagnostic log',
+      );
+    } catch (_) {} // no share sheet available: Copy still works
+  }
+
   Future<void> _disconnect() async {
     await OBDService.instance.disconnect();
     if (!mounted) return;
@@ -210,6 +307,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     _pulseController.dispose();
     _scanSub?.cancel();
     _adapterSub?.cancel();
+    _obdStateSub?.cancel();
     FlutterBluePlus.stopScan();
     super.dispose();
   }
@@ -230,11 +328,12 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         return ctx.tr('searching_devices');
       case _BtState.connecting:
         final n = _connectingDevice?.platformName;
-        final name =
-            (n != null && n.isNotEmpty) ? n : ctx.tr('unknown_device');
+        final name = (n != null && n.isNotEmpty) ? n : ctx.tr('unknown_device');
         return '${ctx.tr('connecting_to')} $name...';
       case _BtState.initFailed:
-        return ctx.tr('obd_init_failed');
+        return ctx.tr(_failureKey);
+      case _BtState.connectionLost:
+        return ctx.tr('obd_connection_lost');
       case _BtState.connected:
         final n = _connectedDevice?.platformName;
         final name = (n != null && n.isNotEmpty)
@@ -258,11 +357,16 @@ class _ConnectionScreenState extends State<ConnectionScreen>
       case _BtState.scanning:
         return '${_scanResults.length} ${ctx.tr('devices_found_nearby')}';
       case _BtState.initFailed:
-        return ctx.tr('obd_init_failed_sub');
+        return ctx.tr('${_failureKey}_sub');
+      case _BtState.connectionLost:
+        return ctx.tr('obd_connection_lost_sub');
       case _BtState.connected:
         return ctx.tr('tap_scan_vehicle');
     }
   }
+
+  String get _failureKey =>
+      _failureKeys[OBDService.instance.lastError?.reason] ?? 'obd_init_failed';
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -296,6 +400,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                         if (_btState == _BtState.scanning ||
                             _btState == _BtState.connecting ||
                             _btState == _BtState.initFailed ||
+                            _btState == _BtState.connectionLost ||
                             _btState == _BtState.connected)
                           _buildDeviceList(context),
                         SizedBox(height: 24.h),
@@ -326,7 +431,9 @@ class _ConnectionScreenState extends State<ConnectionScreen>
             fontSize: 24.sp,
             fontWeight: FontWeight.w900,
             color: AppColors.accentCyan,
-            shadows: const [Shadow(color: AppColors.accentCyan, blurRadius: 20)],
+            shadows: const [
+              Shadow(color: AppColors.accentCyan, blurRadius: 20),
+            ],
           ),
         ),
         Container(
@@ -412,9 +519,76 @@ class _ConnectionScreenState extends State<ConnectionScreen>
               color: AppColors.textLight.withValues(alpha: 0.7),
             ),
           ),
+          ..._buildStatusExtras(context),
         ],
       ),
     );
+  }
+
+  /// Adapter details once connected; clone hint and diagnostic-log actions
+  /// when connecting failed or the link dropped.
+  List<Widget> _buildStatusExtras(BuildContext context) {
+    final obd = OBDService.instance;
+    if (_btState == _BtState.connected) {
+      final info = obd.adapterInfo;
+      final parts = [
+        if (info?.version != null) info!.version!,
+        if (info?.protocol != null) info!.protocol!,
+      ];
+      if (parts.isEmpty) return const [];
+      return [
+        SizedBox(height: 10.h),
+        Text(
+          parts.join(' · '),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12.sp,
+            color: AppColors.accentCyan.withValues(alpha: 0.7),
+          ),
+        ),
+      ];
+    }
+    if (_btState != _BtState.initFailed &&
+        _btState != _BtState.connectionLost) {
+      return const [];
+    }
+    final error = obd.lastError;
+    return [
+      if (_btState == _BtState.initFailed &&
+          (error?.suggestsCloneAdapter ?? false)) ...[
+        SizedBox(height: 12.h),
+        Text(
+          context
+              .tr('obd_clone_hint')
+              .replaceAll('{version}', error!.adapterVersion!),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13.sp, color: AppColors.accentOrange),
+        ),
+      ],
+      SizedBox(height: 12.h),
+      Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8.w,
+        children: [
+          TextButton.icon(
+            onPressed: _copyLog,
+            icon: Icon(Icons.copy, size: 16.r, color: AppColors.accentCyan),
+            label: Text(
+              context.tr('copy_diagnostic_log'),
+              style: TextStyle(fontSize: 13.sp, color: AppColors.accentCyan),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _shareLog,
+            icon: Icon(Icons.share, size: 16.r, color: AppColors.accentCyan),
+            label: Text(
+              context.tr('share_diagnostic_log'),
+              style: TextStyle(fontSize: 13.sp, color: AppColors.accentCyan),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 
   Color get _accentColor {
@@ -425,6 +599,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
       case _BtState.btOff:
       case _BtState.locationServicesOff:
       case _BtState.initFailed:
+      case _BtState.connectionLost:
         return Colors.redAccent;
       default:
         return AppColors.accentCyan;
@@ -446,7 +621,17 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         return _iconCircle(Icons.location_off, Colors.redAccent);
 
       case _BtState.initFailed:
-        return _iconCircle(Icons.bluetooth_disabled, Colors.redAccent);
+        // The adapter answered — it's the car that stayed silent (an EV that
+        // is on but shares no standard OBD-II data gets an EV icon).
+        final icon = switch (OBDService.instance.lastError?.reason) {
+          OBDFailureReason.ecuNotResponding => Icons.directions_car,
+          OBDFailureReason.noStandardObdData => Icons.electric_car,
+          _ => Icons.bluetooth_disabled,
+        };
+        return _iconCircle(icon, Colors.redAccent);
+
+      case _BtState.connectionLost:
+        return _iconCircle(Icons.link_off, Colors.redAccent);
 
       case _BtState.connecting:
         return SizedBox(
@@ -480,8 +665,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                 return AnimatedBuilder(
                   animation: _pulseController,
                   builder: (_, __) {
-                    final progress =
-                        (_pulseController.value + i * 0.33) % 1.0;
+                    final progress = (_pulseController.value + i * 0.33) % 1.0;
                     return Opacity(
                       opacity: 1.0 - progress,
                       child: Transform.scale(
@@ -490,7 +674,9 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: AppColors.accentCyan, width: 2),
+                              color: AppColors.accentCyan,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -505,8 +691,11 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                   shape: BoxShape.circle,
                   color: AppColors.accentCyan.withValues(alpha: 0.1),
                 ),
-                child: Icon(Icons.bluetooth_searching,
-                    size: 40.r, color: AppColors.accentCyan),
+                child: Icon(
+                  Icons.bluetooth_searching,
+                  size: 40.r,
+                  color: AppColors.accentCyan,
+                ),
               ),
             ],
           ),
@@ -544,16 +733,27 @@ class _ConnectionScreenState extends State<ConnectionScreen>
       );
     }
 
+    // Connected without a scan in this screen (opened from the dashboard):
+    // list the live adapter on its own so it can be tapped to disconnect.
+    final connected = _connectedDevice;
+    if (connected != null &&
+        !_scanResults.any((r) => r.device.remoteId == connected.remoteId)) {
+      return _buildDeviceItem(context, connected);
+    }
+
     if (_scanResults.isEmpty) return const SizedBox.shrink();
 
     // OBD/ELM327 devices float to the top of the list.
-    final sorted = [..._scanResults]..sort((a, b) {
+    final sorted = [..._scanResults]
+      ..sort((a, b) {
         final aObd = _isOBDDevice(a.device.platformName) ? 0 : 1;
         final bObd = _isOBDDevice(b.device.platformName) ? 0 : 1;
         return aObd.compareTo(bObd);
       });
 
-    final obdCount = sorted.where((r) => _isOBDDevice(r.device.platformName)).length;
+    final obdCount = sorted
+        .where((r) => _isOBDDevice(r.device.platformName))
+        .length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,13 +791,16 @@ class _ConnectionScreenState extends State<ConnectionScreen>
           ],
         ),
         SizedBox(height: 12.h),
-        ...sorted.map((r) => _buildDeviceItem(context, r)),
+        ...sorted.map((r) => _buildDeviceItem(context, r.device, rssi: r.rssi)),
       ],
     );
   }
 
-  Widget _buildDeviceItem(BuildContext context, ScanResult result) {
-    final device = result.device;
+  Widget _buildDeviceItem(
+    BuildContext context,
+    BluetoothDevice device, {
+    int? rssi,
+  }) {
     final name = device.platformName.isNotEmpty
         ? device.platformName
         : context.tr('unknown_device');
@@ -623,16 +826,16 @@ class _ConnectionScreenState extends State<ConnectionScreen>
           color: isConnected
               ? AppColors.accentOrange.withValues(alpha: 0.1)
               : isConnecting
-                  ? AppColors.accentCyan.withValues(alpha: 0.1)
-                  : isObd
-                      ? const Color(0xFF00E676).withValues(alpha: 0.05)
-                      : AppColors.white.withValues(alpha: 0.03),
+              ? AppColors.accentCyan.withValues(alpha: 0.1)
+              : isObd
+              ? const Color(0xFF00E676).withValues(alpha: 0.05)
+              : AppColors.white.withValues(alpha: 0.03),
           border: Border.all(
             color: isConnected
                 ? AppColors.accentOrange
                 : isConnecting
-                    ? AppColors.accentCyan
-                    : idleAccent,
+                ? AppColors.accentCyan
+                : idleAccent,
             width: isActive || isObd ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(15.r),
@@ -648,8 +851,8 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                   colors: isConnected
                       ? [AppColors.accentOrange, AppColors.backgroundDarkBlue]
                       : isObd
-                          ? [const Color(0xFF00E676), AppColors.backgroundDarkBlue]
-                          : [AppColors.accentCyan, AppColors.backgroundDarkBlue],
+                      ? [const Color(0xFF00E676), AppColors.backgroundDarkBlue]
+                      : [AppColors.accentCyan, AppColors.backgroundDarkBlue],
                 ),
                 borderRadius: BorderRadius.circular(12.r),
               ),
@@ -682,9 +885,13 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                         SizedBox(width: 6.w),
                         Container(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 6.w, vertical: 2.h),
+                            horizontal: 6.w,
+                            vertical: 2.h,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                            color: const Color(
+                              0xFF00E676,
+                            ).withValues(alpha: 0.15),
                             border: Border.all(color: const Color(0xFF00E676)),
                             borderRadius: BorderRadius.circular(6.r),
                           ),
@@ -711,21 +918,22 @@ class _ConnectionScreenState extends State<ConnectionScreen>
                 ],
               ),
             ),
-            // Signal bars
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildSignalBars(result.rssi),
-                SizedBox(height: 4.h),
-                Text(
-                  '${result.rssi} dBm',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.5),
+            // Signal bars (unknown for an adapter connected before this screen)
+            if (rssi != null)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _buildSignalBars(rssi),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '$rssi dBm',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: AppColors.textLight.withValues(alpha: 0.5),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
@@ -733,7 +941,11 @@ class _ConnectionScreenState extends State<ConnectionScreen>
   }
 
   Widget _buildSignalBars(int rssi) {
-    final strength = rssi >= -60 ? 3 : rssi >= -75 ? 2 : 1;
+    final strength = rssi >= -60
+        ? 3
+        : rssi >= -75
+        ? 2
+        : 1;
     return Row(
       children: List.generate(3, (i) {
         final heights = [8.0, 12.0, 16.0];
@@ -769,9 +981,16 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         break;
       case _BtState.btOff:
       case _BtState.locationServicesOff:
-      case _BtState.initFailed:
         label = context.tr('btn_retry');
         onPressed = _startScan;
+        break;
+      case _BtState.initFailed:
+        label = context.tr('btn_retry');
+        onPressed = _retry;
+        break;
+      case _BtState.connectionLost:
+        label = context.tr('btn_reconnect');
+        onPressed = _reconnect;
         break;
       case _BtState.scanning:
         label = context.tr('btn_scanning');
