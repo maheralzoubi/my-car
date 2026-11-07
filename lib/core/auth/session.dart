@@ -13,6 +13,7 @@ class Session {
   static const _nameKey = 'auth_name';
   static const _emailKey = 'auth_email';
   static const _phoneKey = 'auth_phone';
+  static const _locationKey = 'auth_location';
 
   String? _token;
   String? _userId;
@@ -20,6 +21,7 @@ class Session {
   String? _name;
   String? _email;
   String? _phone;
+  String? _location;
 
   String? get token => _token;
   String? get userId => _userId;
@@ -27,6 +29,10 @@ class Session {
   String? get name => _name;
   String? get email => _email;
   String? get phone => _phone;
+
+  /// Free-text location the user entered on the edit-profile screen. The
+  /// backend has no field for it, so it only ever lives on this device.
+  String? get location => _location;
   bool get isLoggedIn => _token != null;
 
   Future<void> load() async {
@@ -36,6 +42,7 @@ class Session {
     _name = await _storage.read(key: _nameKey);
     _email = await _storage.read(key: _emailKey);
     _phone = await _storage.read(key: _phoneKey);
+    _location = await _storage.read(key: _locationKey);
   }
 
   Future<void> save({
@@ -63,6 +70,41 @@ class Session {
     ]);
   }
 
+  /// Updates the locally cached profile fields of the logged-in user.
+  ///
+  /// The backend exposes no profile-update endpoint (only login/register),
+  /// so this changes what the app shows on this device only — the server
+  /// copy is untouched and the next login overwrites name/email/phone with
+  /// it. Memory is updated first; returns false (instead of throwing) if
+  /// secure storage could not persist the change, in which case it lasts
+  /// until the app restarts.
+  Future<bool> updateProfile({
+    required String name,
+    required String email,
+    required String phone,
+    String? location,
+  }) async {
+    _name = name;
+    _email = email;
+    _phone = phone;
+    _location = (location == null || location.trim().isEmpty) ? null : location;
+
+    try {
+      await Future.wait([
+        _storage.write(key: _nameKey, value: name),
+        _storage.write(key: _emailKey, value: email),
+        _storage.write(key: _phoneKey, value: phone),
+        if (_location == null)
+          _storage.delete(key: _locationKey)
+        else
+          _storage.write(key: _locationKey, value: _location),
+      ]);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> clear() async {
     _token = null;
     _userId = null;
@@ -70,6 +112,7 @@ class Session {
     _name = null;
     _email = null;
     _phone = null;
+    _location = null;
     await _storage.deleteAll();
   }
 }

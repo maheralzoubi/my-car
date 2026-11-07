@@ -1,9 +1,16 @@
+import 'package:flutter/foundation.dart';
+
 import 'obd_adapter.dart';
 
 /// Accumulates trip statistics and drive score by sampling live OBD data.
 class TripService {
   TripService._();
   static final TripService instance = TripService._();
+
+  /// Time source for trip timing and sample intervals. Tests replace it with
+  /// a fake clock so interval-dependent rules can be exercised exactly.
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
 
   bool      _running     = false;
   DateTime? _startTime;
@@ -16,9 +23,10 @@ class TripService {
 
   // ── Drive score tracking ──────────────────────────────────────────────────
   int    _hardAccelEvents  = 0;  // speed jumped > 15 km/h in one 3-s window
-  int    _overRevEvents    = 0;  // RPM > 5 500 for a sample
+  int    _overRevEvents    = 0;  // RPM > 5 500 on consecutive samples
   double _highSpeedSecs    = 0;  // seconds driven > 120 km/h
   double _prevSpeedKmh     = 0;
+  double _prevRpm          = 0;
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -28,7 +36,7 @@ class TripService {
 
   Duration get elapsed =>
       _running && _startTime != null
-          ? DateTime.now().difference(_startTime!)
+          ? clock().difference(_startTime!)
           : Duration.zero;
 
   double get avgSpeedKmh =>
@@ -60,8 +68,8 @@ class TripService {
 
   void start() {
     _running          = true;
-    _startTime        = DateTime.now();
-    _lastSample       = DateTime.now();
+    _startTime        = clock();
+    _lastSample       = _startTime;
     _distanceKm       = 0;
     _sumSpeedKmh      = 0;
     _movingSamples    = 0;
@@ -70,6 +78,7 @@ class TripService {
     _overRevEvents    = 0;
     _highSpeedSecs    = 0;
     _prevSpeedKmh     = 0;
+    _prevRpm          = 0;
   }
 
   void stop()  => _running = false;
@@ -83,8 +92,9 @@ class TripService {
     _overRevEvents    = 0;
     _highSpeedSecs    = 0;
     _prevSpeedKmh     = 0;
-    _startTime        = DateTime.now();
-    _lastSample       = DateTime.now();
+    _prevRpm          = 0;
+    _startTime        = clock();
+    _lastSample       = _startTime;
   }
 
   // ── Sample processing ─────────────────────────────────────────────────────
@@ -92,16 +102,25 @@ class TripService {
   void addSample(OBDLiveData data) {
     if (!_running) return;
 
-    final now  = DateTime.now();
+    final now  = clock();
     final dtSec = _lastSample != null
         ? now.difference(_lastSample!).inMilliseconds / 1000.0
         : 0.0;
     _lastSample = now;
 
-    if (dtSec <= 0 || dtSec > 10) return;
-
     final speed = data.speedKmh ?? 0;
     final rpm   = data.rpm ?? 0;
+
+    // An interval that can't be integrated (duplicate timestamp, or a gap
+    // > 10 s such as polling paused for a DTC read) adds nothing, but the
+    // reading still becomes the baseline for the next sample — otherwise the
+    // first poll after the gap is compared against a pre-gap reading and can
+    // score a phantom hard acceleration or "sustained" over-rev.
+    if (dtSec <= 0 || dtSec > 10) {
+      _prevSpeedKmh = speed;
+      _prevRpm      = rpm;
+      return;
+    }
     final load  = (data.engineLoad ?? 30) / 100.0;
 
     // Distance
@@ -113,8 +132,12 @@ class TripService {
       _movingSamples++;
     }
 
-    // Fuel estimate
-    if (speed > 0) {
+    // Fuel estimate — nothing burns when the ECU reports the engine stopped
+    // (ignition on / engine off, start-stop, hybrid EV mode).
+    final engineOff = data.rpm != null && data.rpm! <= 0;
+    if (engineOff) {
+      // Engine stopped — no fuel burned.
+    } else if (speed > 0) {
       final adjustedL100km = 8.0 * (0.4 + 0.6 * load);
       _estimatedFuelL += adjustedL100km * (speed * dtSec / 3600.0) / 100.0;
     } else if (load > 0.1) {
@@ -128,10 +151,12 @@ class TripService {
     }
     _prevSpeedKmh = speed;
 
-    // Over-rev: RPM above 5 500 (sustained, not just a blip)
-    if (rpm > 5500) {
+    // Over-rev: RPM above 5 500 (sustained, not just a blip) — a sample only
+    // counts when the previous one was over the limit too.
+    if (rpm > 5500 && _prevRpm > 5500) {
       _overRevEvents++;
     }
+    _prevRpm = rpm;
 
     // Sustained high speed: > 120 km/h
     if (speed > 120) {
