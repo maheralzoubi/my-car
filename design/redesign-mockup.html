@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARDIAG Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* ── Design tokens (same values as the Flutter AppPalette) ─────── */
+.light{--bg:#F5F7FA;--surface:#FFFFFF;--surface2:#F2F4F7;--border:#E4E7EC;--border-strong:#D0D5DD;--text:#101828;--text2:#475467;--muted:#667085;--primary:#2563EB;--primary-btn:#2563EB;--primary-soft:#EFF4FF;--ok:#067647;--ok-soft:#ECFDF3;--warn:#B54708;--warn-soft:#FFFAEB;--crit:#B42318;--crit-soft:#FEF3F2;--track:#E4E7EC;--scrim:rgba(16,24,40,.45);--map:#E8EEF5;--map-road:#FFFFFF;--map-block:#DCE4EE;--shadow:0 1px 2px rgba(16,24,40,.05)}
+.dark{--bg:#0B0F17;--surface:#131A26;--surface2:#1A2332;--border:#253044;--border-strong:#334058;--text:#F2F4F7;--text2:#A9B4C7;--muted:#7C889D;--primary:#6EA8FF;--primary-btn:#2563EB;--primary-soft:rgba(110,168,255,.14);--ok:#47CD89;--ok-soft:rgba(71,205,137,.14);--warn:#FDB022;--warn-soft:rgba(253,176,34,.14);--crit:#F97066;--crit-soft:rgba(249,112,102,.14);--track:#253044;--scrim:rgba(0,0,0,.6);--map:#111827;--map-road:#1F2937;--map-block:#162032;--shadow:none}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:#E9ECF1;color:#101828;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif}
+button{font:inherit}
+/* ── Page chrome ─────────────────────────────────────────────── */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(233,236,241,.94);backdrop-filter:blur(8px);border-bottom:1px solid #D0D5DD}
+.topbar-in{max-width:1500px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.brand{font-weight:700;font-size:18px;margin-inline-end:auto}
+.brand small{display:block;font-weight:400;font-size:13px;color:#475467}
+.seg-ui{display:flex;background:#fff;border:1px solid #D0D5DD;border-radius:10px;padding:3px;gap:3px}
+.seg-ui button{border:0;background:transparent;font-size:13px;font-weight:600;color:#475467;padding:6px 12px;border-radius:7px;cursor:pointer;min-height:34px}
+.seg-ui button[aria-pressed="true"]{background:#2563EB;color:#fff}
+.ctl{display:flex;align-items:center;gap:8px;font-size:13px;color:#475467}
+.layout{max-width:1500px;margin:0 auto;padding:24px 20px 60px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;justify-content:center}
+.side{flex:0 1 240px;min-width:200px;background:#fff;border:1px solid #E4E7EC;border-radius:16px;padding:10px;max-height:calc(100vh - 110px);overflow:auto;position:sticky;top:84px}
+.side h3{margin:6px 8px;font-size:12px;color:#667085;font-weight:600}
+.side button{display:block;width:100%;text-align:start;border:0;background:transparent;padding:7px 10px;border-radius:8px;font-size:14px;color:#344054;cursor:pointer}
+.side button:hover{background:#F2F4F7}
+.side button[aria-current="true"]{background:#EFF4FF;color:#2563EB;font-weight:600}
+.hint{flex:0 1 260px;min-width:220px;font-size:14px;line-height:1.65;color:#475467;background:#fff;border:1px solid #E4E7EC;border-radius:16px;padding:16px;position:sticky;top:84px}
+.hint b{color:#101828}
+.gallery{max-width:1700px;margin:0 auto;padding:24px 20px 60px;display:flex;flex-wrap:wrap;gap:40px 30px;justify-content:center}
+.gallery figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer}
+.gallery figcaption{font-size:13px;font-weight:600;color:#344054}
+.gallery .phone{pointer-events:none}
+.gallery figure:hover .phone{box-shadow:0 0 0 10px #2563EB,0 30px 60px rgba(16,24,40,.25)}
+
+/* ── Phone ───────────────────────────────────────────────────── */
+.phone{width:390px;height:844px;border-radius:44px;overflow:hidden;position:relative;background:var(--bg);color:var(--text);box-shadow:0 0 0 10px #101828,0 30px 60px rgba(16,24,40,.25);flex:none}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 20px 24px;display:flex;flex-direction:column;gap:20px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.scroll>*{flex-shrink:0}
+.safe-top{height:44px;flex:none}
+
+/* Type */
+.t-display{font-size:28px;line-height:36px;font-weight:600;margin:0}
+.t-title{font-size:22px;line-height:30px;font-weight:600;margin:0}
+.t-head{font-size:17px;line-height:24px;font-weight:600;margin:0}
+.t-body{font-size:15px;line-height:22px;margin:0}
+.t-small{font-size:13px;line-height:18px;margin:0;color:var(--text2)}
+.t-cap{font-size:11px;line-height:15px;margin:0;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .text2{color:var(--text2)}
+
+/* Components */
+.ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.hdr{display:flex;align-items:center;gap:8px;padding:8px 16px 8px 20px;flex:none}
+[dir="rtl"] .hdr{padding:8px 20px 8px 16px}
+.hdr.has-back{padding-inline-start:8px}
+.hdr .grow{flex:1;min-width:0}
+.hdr h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{width:44px;height:44px;border:0;background:transparent;border-radius:12px;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.back:hover{background:var(--surface2)}
+.hact{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
+.pad{padding:16px}
+.btn{height:52px;border-radius:12px;font-size:16px;font-weight:600;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:0 16px;white-space:nowrap}
+.btn.sm{height:44px;font-size:15px}
+.btn.auto{width:auto}
+.btn-primary{background:var(--primary-btn);color:#fff}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border-strong)}
+.btn-danger{background:var(--surface);color:var(--crit);border:1px solid var(--border-strong)}
+.btn-ghost{background:transparent;color:var(--primary);height:40px;width:auto;padding:0 8px;font-size:15px}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn.busy{opacity:1}
+.pill{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill .ico{width:14px;height:14px}
+.ok{background:var(--ok-soft);color:var(--ok)} .warn{background:var(--warn-soft);color:var(--warn)} .crit{background:var(--crit-soft);color:var(--crit)} .info{background:var(--primary-soft);color:var(--primary)} .neutral{background:var(--surface2);color:var(--text2)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.ibox{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none;background:var(--primary-soft);color:var(--primary)}
+.ibox.s{width:28px;height:28px;border-radius:8px} .ibox.s .ico{width:16px;height:16px}
+.ibox.n{width:32px;height:32px;border-radius:9px;background:var(--surface2);color:var(--text2)} .ibox.n .ico{width:18px;height:18px}
+.ibox.l{width:56px;height:56px;border-radius:16px} .ibox.l .ico{width:26px;height:26px}
+.sec{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:-8px}
+.link{color:var(--primary);font-size:14px;font-weight:500;background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:2px;min-height:36px;padding:0 4px}
+.link .ico{width:18px;height:18px}
+.glabel{font-size:13px;font-weight:600;color:var(--muted);margin:0 4px -12px}
+.list{overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 16px;width:100%;background:none;border:0;color:var(--text);text-align:start;font-size:15px}
+button.row,.row[data-act]{cursor:pointer}
+button.row:hover,.row[data-act]:hover{background:var(--surface2)}
+.row+.row{border-top:1px solid var(--border)}
+.row .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .val{color:var(--text2);font-size:14px}
+.row .chev{color:var(--muted)}
+.switch{width:48px;height:28px;border-radius:999px;background:var(--track);position:relative;flex:none;border:0;padding:0;cursor:pointer}
+.switch::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.25);transition:inset-inline-start .18s}
+.switch[aria-checked="true"]{background:var(--primary-btn)}
+.switch[aria-checked="true"]::after{inset-inline-start:23px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface2);border-radius:12px;padding:3px;gap:3px;width:100%}
+.seg button{height:36px;border:0;border-radius:9px;background:transparent;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.14)}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px}
+.chips::-webkit-scrollbar{display:none}
+.chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text2);font-size:13px;font-weight:500;white-space:nowrap;display:flex;align-items:center;gap:6px;cursor:pointer;flex:none}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chip .n{opacity:.7;font-variant-numeric:tabular-nums}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:500;color:var(--text2)}
+.input{min-height:48px;border:1px solid var(--border-strong);border-radius:12px;background:var(--surface);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted)}
+.input:focus-within{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft)}
+.input input,.input textarea{flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:15px;color:var(--text);padding:12px 0;resize:none}
+.input input::placeholder,.input textarea::placeholder{color:var(--muted)}
+.bar{height:8px;border-radius:999px;background:var(--track);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--ok)}
+.bar.indet i{width:35%;background:var(--primary);animation:indet 1.1s ease-in-out infinite}
+@keyframes indet{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
+[dir="rtl"] .bar.indet i{animation-name:indet-rtl}
+@keyframes indet-rtl{0%{transform:translateX(110%)}100%{transform:translateX(-320%)}}
+.spin{width:22px;height:22px;border-radius:50%;border:2.5px solid currentColor;border-top-color:transparent;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pulse{animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 var(--primary-soft)}100%{box-shadow:0 0 0 28px transparent}}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tile{padding:12px;display:flex;flex-direction:column;gap:8px}
+.tile-head{display:flex;align-items:center;gap:8px}
+.tile-val{font-size:22px;font-weight:600;line-height:28px;font-variant-numeric:tabular-nums;margin:0;white-space:nowrap}
+.tile-val small{font-size:13px;font-weight:500;color:var(--text2);margin-inline-start:4px}
+.svc{display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;color:var(--text);font-size:12px;font-weight:500;text-align:center;cursor:pointer;padding:0}
+.svc .box{width:56px;height:56px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.svc:hover .box{border-color:var(--primary);color:var(--primary)}
+.alert-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;font-size:14px;font-weight:500;border:0;width:100%;cursor:pointer;text-align:start}
+.alert-row .grow{flex:1}
+.ring{width:76px;height:76px;position:relative;flex:none}
+.ring svg{width:76px;height:76px;transform:rotate(-90deg)}
+.ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+.sevrow{display:flex;gap:12px;align-items:flex-start;padding:16px;width:100%;background:none;border:0;color:inherit;text-align:start;cursor:pointer}
+.sevrow+.sevrow{border-top:1px solid var(--border)}
+.sevrow:hover{background:var(--surface2)}
+.sevrow .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.code-id{font-size:16px;font-weight:600;letter-spacing:.3px;font-variant-numeric:tabular-nums}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.footer{padding:12px 20px 20px;border-top:1px solid var(--border);background:var(--surface);flex:none;display:flex;flex-direction:column;gap:10px}
+.nav{height:84px;flex:none;background:var(--surface);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding:8px 4px 20px}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:none;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer}
+.nav .iw{width:56px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center}
+.nav button[aria-current="page"]{color:var(--primary)}
+.nav button[aria-current="page"] .iw{background:var(--primary-soft)}
+.avatar{width:52px;height:52px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:18px;flex:none}
+.avatar.xl{width:88px;height:88px;font-size:30px}
+.overlay{position:absolute;inset:0;background:var(--scrim);display:flex;z-index:5;animation:fade .15s}
+.overlay.center{align-items:center;justify-content:center;padding:24px}
+.overlay.bottom{align-items:flex-end}
+@keyframes fade{from{opacity:0}}
+.dialog{background:var(--surface);border-radius:20px;padding:20px;width:100%;display:flex;flex-direction:column;gap:12px}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;padding:8px 0 28px;animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.handle{width:36px;height:4px;border-radius:9px;background:var(--border-strong);margin:4px auto 12px}
+.toast{position:absolute;inset-inline:16px;bottom:100px;z-index:6;background:var(--text);color:var(--bg);border-radius:12px;padding:12px 16px;font-size:14px;font-weight:500;animation:up .2s ease-out}
+.map{position:relative;background:var(--map);overflow:hidden}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);color:var(--primary-btn)}
+.pin .ico{width:40px;height:40px;fill:var(--primary-btn);stroke:#fff;stroke-width:1.5}
+.thumb{height:170px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);position:relative}
+.thumb .ico{width:40px;height:40px;stroke-width:1.6}
+.dur{position:absolute;bottom:10px;inset-inline-end:10px;background:rgba(16,24,40,.75);color:#fff;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px}
+.video{height:220px;background:#000;position:relative;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.video .playbtn{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);border:0;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.video .playbtn .ico{width:28px;height:28px;fill:#fff;stroke:none}
+.vbar{position:absolute;left:16px;right:16px;bottom:14px;height:4px;border-radius:9px;background:rgba(255,255,255,.3)}
+.vbar i{display:block;height:100%;width:28%;background:#fff;border-radius:9px}
+.stars{display:flex;gap:8px;justify-content:center}
+.star{background:none;border:0;cursor:pointer;color:var(--border-strong);padding:4px}
+.star .ico{width:36px;height:36px}
+.star.on{color:#F5B300}
+.star.on .ico{fill:#F5B300}
+.graph-box{height:200px;position:relative}
+.graph-box svg{width:100%;height:100%;display:block}
+.splash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg)}
+.logo{width:72px;height:72px;border-radius:20px;background:var(--primary-btn);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.logo .ico{width:38px;height:38px}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:6px 0}
+.kv span:first-child{color:var(--text2)}
+.kv.total{border-top:1px solid var(--border);padding-top:12px;margin-top:4px;font-weight:600;font-size:16px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:36px;height:36px;border-radius:10px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);cursor:pointer;font-size:18px}
+.badge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.badge{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text2);text-align:center}
+.badge.off{opacity:.45}
+.control{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 8px;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text);cursor:pointer;font-size:14px;font-weight:600}
+.control.active{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.control .ico{width:26px;height:26px}
+.car-hero{height:150px;border-radius:16px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--text2)}
+.car-hero .ico{width:96px;height:96px;stroke-width:1.2}
+.notice{display:flex;gap:10px;align-items:center;padding:14px 16px;border-radius:14px;font-size:13px;line-height:18px}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">CARDIAG — interactive prototype<small>Every screen of the redesign. Click anything inside the phone.</small></div>
+  <div class="ctl">View<div class="seg-ui" id="ctl-view"><button data-v="proto">Prototype</button><button data-v="all">All screens</button></div></div>
+  <div class="ctl">Theme<div class="seg-ui" id="ctl-theme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+  <div class="ctl">Language<div class="seg-ui" id="ctl-lang"><button data-v="en">English</button><button data-v="ar">العربية</button></div></div>
+  <div class="ctl">Car<div class="seg-ui" id="ctl-conn"><button data-v="1">Connected</button><button data-v="0">Not connected</button></div></div>
+</div></header>
+
+<main id="proto" class="layout">
+  <nav class="side" id="side" aria-label="Screens"></nav>
+  <div class="phone" id="phone"></div>
+  <aside class="hint">
+    <b>Try it</b><br>
+    • Bottom bar: Home · Diagnose · Roadside · History · Profile.<br>
+    • Home → <b>See graph</b> opens the live graph (values move every second).<br>
+    • <b>Run full scan</b> → scanning → fault codes → tap a code → <b>View solution</b>.<br>
+    • Set <b>Car: Not connected</b> → Home → <b>Connect</b> runs the adapter flow.<br>
+    • Roadside → service → location → estimate → driver search → tracking → rating.<br>
+    • Profile → Appearance switches light/dark live; Language switches to Arabic.<br>
+    • Log out → back to sign in.<br><br>
+    <b>All screens</b> (top) shows every page at once — click one to open it here.
+  </aside>
+</main>
+<main id="gallery" class="gallery" hidden></main>
+
+<script>
+/* ── Icons (stroke, 24×24) ──────────────────────────────────────── */
+const I={
+car:'M5 17H3a1 1 0 0 1-1-1v-3.2a2 2 0 0 1 .2-.9L4 8.3A2 2 0 0 1 5.8 7h9.9a2 2 0 0 1 1.5.7L20 11l1.2.4A1.2 1.2 0 0 1 22 12.6V16a1 1 0 0 1-1 1h-2M9 17h6M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 11h17',
+mail:'M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM22 7l-10 7L2 7',
+lock:'M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zM8 11V7a4 4 0 0 1 8 0v4',
+unlock:'M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zM8 11V7a4 4 0 0 1 7.5-2',
+eye:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+user:'M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
+phone:'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z',
+globe:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z',
+home:'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+pulse:'M22 12h-4l-3 9L9 3l-3 9H2',
+truck:'M2 6h12v10H2zM14 9h4l4 4v3h-8M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+back:'M19 12H5M12 19l-7-7 7-7', close:'M18 6 6 18M6 6l12 12', chev:'m9 18 6-6-6-6',
+bell:'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0',
+refresh:'M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5',
+gauge:'M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0', speed:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 12l4-3',
+thermo:'M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z', battery:'M3 7h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM22 11v2M6 10v4M10 10v4',
+fuel:'M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18M3 22h12M15 10h2a2 2 0 0 1 2 2v4a2 2 0 0 0 4 0V8l-3-3M7 7h4',
+wrench:'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z',
+key:'M7.5 20a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM11.4 10.6 20 2M16 6l3 3M18 4l3 3',
+play:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM10 8l6 4-6 4z', playSolid:'M8 5l12 7-12 7z', pause:'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
+alert:'M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
+alertCircle:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 8v4M12 16h.01',
+check:'M20 6 9 17l-5-5', checkCircle:'M22 11.1V12a10 10 0 1 1-5.9-9.1M22 4 12 14l-3-3',
+hourglass:'M6 2h12M6 22h12M7 2v4l5 6-5 6v4M17 2v4l-5 6 5 6v4',
+trash:'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14', bt:'m7 7 10 10-5 5V2l5 5L7 17',
+moon:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', ruler:'M3 15 15 3l6 6L9 21zM7 11l2 2M11 7l2 2',
+video:'M15 10l5-3v10l-5-3M3 6h12v12H3z', shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+help:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
+info:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01', file:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
+logout:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+search:'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3', plus:'M12 5v14M5 12h14',
+pin:'M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+target:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+star:'M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z',
+msg:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+power:'M18.4 6.6a9 9 0 1 1-12.8 0M12 2v10', zap:'M13 2 3 14h9l-1 8 10-12h-9z', bookmark:'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
+share:'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13', thumb:'M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 18.4 22H7V10l4.3-8.6A2 2 0 0 1 15 5.9z',
+upload:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12', camera:'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+mic:'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
+fence:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 7v10M7 12h10',
+tire:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', filter:'M22 3H2l8 9.5V19l4 2v-8.5z',
+oil:'M7 16a4 4 0 0 0 8 0c0-3-4-8-4-8s-4 5-4 8zM17 3l4 4', brake:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.9 4.9l2.8 2.8',
+award:'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM8.2 13.9 7 23l5-3 5 3-1.2-9.1',
+route:'M6 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM9 16h6a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6',
+sun:'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4'
+};
+const ico=(n,c='')=>`<svg class="ico ${c}" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[n]||''}"/></svg>`;
+
+/* ── Strings (EN + AR) ─────────────────────────────────────────── */
+const S={en:{
+nav_home:'Home',nav_diag:'Diagnose',nav_road:'Roadside',nav_hist:'History',nav_prof:'Profile',
+tagline:'Professional vehicle diagnostics',
+welcome:'Welcome back',welcomeSub:'Sign in to check on your car.',email:'Email',password:'Password',forgot:'Forgot password?',signIn:'Sign in',signedIn:'Signed in',newHere:'New to CARDIAG?',create:'Create an account',createTitle:'Create your account',createSub:'It takes less than a minute.',fullName:'Full name',phone:'Phone number',confirmPw:'Confirm password',haveAcc:'Already have an account?',
+greeting:'Good evening',vehicle:'Toyota Camry 2021',connected:'Connected',notConnected:'Not connected',health:'Vehicle health',good:'Good condition',attention:'2 codes need attention',runScan:'Run full scan',live:'Live data',seeGraph:'See graph',speed:'Speed',engine:'Engine',coolant:'Coolant',battery:'Battery',load:'Engine load',throttle:'Throttle',services:'Services',
+roadside:'Roadside',maintenance:'Maintenance',smartKey:'Smart key',tutorials:'Tutorials',parent:'Parent mode',lookup:'Code lookup',
+connectTitle:'Connect your car',connectSub:'Plug the OBD adapter into your car and turn the ignition on.',connect:'Connect',looking:'Looking for your adapter…',connecting:'Connecting…',detecting:'Detecting protocol',choose:'Choose your adapter',found:'3 devices found',devices:'Available devices',notSeen:'Don’t see it? Make sure the ignition is on.',toDash:'Go to dashboard',
+trip:'Last trip',tripVal:'18.4 km · 26 min · score 92',maintDue:'Oil change due in 500 km',
+codes:'Fault codes',codesSub:'Last scan · 2 min ago',scanning:'Scanning your car…',scanningSub:'Reading all control modules. Keep the engine running.',all:'All',critical:'Critical',warning:'Warning',pending:'Pending',
+p0301:'Cylinder 1 misfire detected',p0420:'Catalyst efficiency below threshold (bank 1)',p0171:'System too lean (bank 1)',readiness:'Emissions readiness',ready:'6 of 8 ready',clear:'Clear codes',scanAgain:'Scan again',
+clearQ:'Clear all codes?',clearMsg:'This turns off the check-engine light. Codes come back if the fault is still there.',cancel:'Cancel',cleared:'Codes cleared',noCodes:'No fault codes',noCodesSub:'Your car reported no problems in the last scan.',
+system:'System',ignition:'Ignition',sevLabel:'Severity',whatMeans:'What it means',causes:'Common causes',viewSolution:'View solution',share:'Share',
+p0301m:'The engine computer detected that cylinder 1 is not firing correctly. You may feel shaking or a loss of power.',c1:'Worn spark plug',c2:'Faulty ignition coil',c3:'Clogged fuel injector',
+solution:'How to fix',difficulty:'Difficulty',moderate:'Moderate',estCost:'Cost',estTime:'Time',step1:'Swap the coil of cylinder 1 with cylinder 2.',step2:'Clear the codes and drive for 10 minutes.',step3:'If the misfire moves to cylinder 2, replace the coil.',step4:'Otherwise replace the spark plug of cylinder 1.',watchTut:'Watch tutorial',findShop:'Find a workshop',
+lookupSub:'Search any fault code',lookupPh:'e.g. P0420',lookupBtn:'Look up',
+graph:'Live graph',graphSub:'Last 60 seconds',now:'now',min:'Min',max:'Max',avg:'Average',
+roadTitle:'Roadside assistance',roadSub:'Help arrives in about 25 min',towing:'Towing',jump:'Battery jump',flat:'Flat tire',fuelDel:'Fuel delivery',lockout:'Lockout',from:'From',myRequests:'My requests',seeAll:'See all',
+setLocation:'Set your location',locSub:'Drag the map to move the pin',useMyLoc:'Use my location',address:'Mecca St 112, Amman',confirmLoc:'Confirm location',
+estimate:'Price estimate',baseFee:'Base fee',distFee:'Distance (6.2 km)',platformFee:'Platform fee',total:'Total',notes:'Notes for the driver',notesPh:'e.g. White car next to the pharmacy',photos:'Photos',addPhoto:'Add photo',request:'Request',
+searching:'Finding a driver',searchingSub:'We’re contacting nearby drivers…',cancelReq:'Cancel request',
+tracking:'Driver on the way',eta:'Arrives in 12 min',driver:'Ahmad K.',driverCar:'Flatbed · 12-34567',call:'Call',message:'Message',simulate:'Mark as arrived',
+rateTitle:'How was your service?',rateSub:'Your rating helps other drivers.',reviewPh:'Add a comment (optional)',submit:'Submit rating',skip:'Skip',thanks:'Thanks for your feedback!',completed:'Completed',cancelled:'Cancelled',inProgress:'In progress',
+history:'History',histSub:'5 scans',scans:'Scans',confirmed:'With codes',clean:'Clean',codesFound:'codes',noIssues:'No issues',today:'Today',yesterday:'Yesterday',clearHist:'Clear history',
+settings:'Profile',yourName:'Your name',general:'General',notifications:'Notifications',autoScan:'Auto-scan on connect',appearance:'Appearance',light:'Light',dark:'Dark',sys:'System',prefs:'Preferences',language:'Language',langVal:'English',units:'Units',metric:'Metric',imperial:'Imperial',dashcam:'Dash cam',vehicleProfile:'Vehicle profile',privacy:'Privacy & data',about:'About',version:'Version',terms:'Terms of service',support:'Help & support',logout:'Log out',logoutQ:'Log out?',logoutMsg:'You’ll need to sign in again to use CARDIAG.',soon:'Coming soon',
+profile:'My profile',editProfile:'Edit profile',memberSince:'Member since 2024',personal:'Personal info',myVehicles:'My vehicles',achievements:'Achievements',scansCount:'Scans',tripsCount:'Trips',score:'Score',save:'Save changes',saved:'Profile updated',changePhoto:'Change photo',changePw:'Change password',location:'City',city:'Amman',
+b1:'First scan',b2:'100 km',b3:'Safe driver',b4:'Mechanic',
+dashcamSub:'Records while you drive',recording:'Recording',stopped:'Stopped',record:'Record while driving',audio:'Record audio',autoDelete:'Auto-delete after 7 days',quality:'Video quality',storage:'Storage',
+privacyIntro:'What CARDIAG keeps on this phone and what it sends.',pSecure:'Sign-in is encrypted',pSecureB:'Your session is stored in the phone’s secure storage.',pLocal:'Scans stay on your phone',pLocalB:'Scan history and maintenance stay on this device.',pServer:'Roadside requests',pServerB:'Location and request details are sent to dispatch a driver.',
+maintTitle:'Maintenance',oil:'Oil change',tires:'Tire rotation',brakes:'Brake pads',air:'Air filter',dueSoon:'Due soon',overdue:'Overdue',okStatus:'OK',lastDone:'Last',next:'Next',markDone:'Mark as done',done:'Saved',
+smartTitle:'Smart key',demo:'Demo',locked:'Locked',unlocked:'Unlocked',engineOff:'Engine off',engineOn:'Engine running',lockBtn:'Lock',unlockBtn:'Unlock',startBtn:'Start',stopBtn:'Stop',quick:'Quick actions',horn:'Horn & lights',climate:'Pre-heat cabin',findCar:'Find my car',
+parentTitle:'Parent mode',parentSub:'Sara’s car',driving:'Driving · 54 km/h',todayKm:'Today',topSpeed:'Top speed',alertsN:'Alerts',speedAlerts:'Speed alerts',geofence:'Area alerts',curfew:'Night curfew',speedLimit:'Speed limit',demoNotice:'Demo data — link a second car to use parent mode.',
+tutTitle:'Tutorials',tutSearch:'Search tutorials',catEngine:'Engine',catBrakes:'Brakes',catElec:'Electrical',catBasics:'Basics',beginner:'Beginner',intermediate:'Intermediate',advanced:'Advanced',noResults:'No tutorials found',
+v1:'Replace an ignition coil',v2:'Check your brake pads',v3:'Jump-start a battery',v4:'Change the engine oil',v5:'Read live OBD data',
+instructor:'Omar Mechanics',follow:'Follow',description:'Description',descText:'Step-by-step guide with the tools you need and common mistakes to avoid.',related:'Related videos',like:'Like',saveV:'Save',
+upload:'Upload tutorial',uploadNotice:'Uploading is coming soon — you can prepare your video now.',titleF:'Title',desc:'Description',pickVideo:'Choose a video',publish:'Publish'
+},ar:{
+nav_home:'الرئيسية',nav_diag:'التشخيص',nav_road:'الطريق',nav_hist:'السجل',nav_prof:'حسابي',
+tagline:'تشخيص احترافي للمركبات',
+welcome:'مرحباً بعودتك',welcomeSub:'سجّل الدخول لمتابعة حالة سيارتك.',email:'البريد الإلكتروني',password:'كلمة المرور',forgot:'نسيت كلمة المرور؟',signIn:'تسجيل الدخول',signedIn:'تم تسجيل الدخول',newHere:'جديد في CARDIAG؟',create:'إنشاء حساب',createTitle:'أنشئ حسابك',createSub:'يستغرق أقل من دقيقة.',fullName:'الاسم الكامل',phone:'رقم الهاتف',confirmPw:'تأكيد كلمة المرور',haveAcc:'لديك حساب بالفعل؟',
+greeting:'مساء الخير',vehicle:'تويوتا كامري 2021',connected:'متصل',notConnected:'غير متصل',health:'صحة المركبة',good:'حالة جيدة',attention:'رمزان يحتاجان إلى انتباه',runScan:'إجراء فحص كامل',live:'البيانات المباشرة',seeGraph:'عرض الرسم',speed:'السرعة',engine:'المحرك',coolant:'سائل التبريد',battery:'البطارية',load:'حمل المحرك',throttle:'دواسة الوقود',services:'الخدمات',
+roadside:'المساعدة',maintenance:'الصيانة',smartKey:'المفتاح الذكي',tutorials:'الشروحات',parent:'وضع الأهل',lookup:'بحث الرموز',
+connectTitle:'اربط سيارتك',connectSub:'ركّب قارئ OBD في السيارة وشغّل المفتاح.',connect:'اتصال',looking:'جارٍ البحث عن القارئ…',connecting:'جارٍ الاتصال…',detecting:'التعرّف على البروتوكول',choose:'اختر القارئ',found:'تم العثور على 3 أجهزة',devices:'الأجهزة المتاحة',notSeen:'لا ترى القارئ؟ تأكد أن المفتاح في وضع التشغيل.',toDash:'الذهاب إلى الرئيسية',
+trip:'آخر رحلة',tripVal:'18.4 كم · 26 دقيقة · التقييم 92',maintDue:'تغيير الزيت بعد 500 كم',
+codes:'رموز الأعطال',codesSub:'آخر فحص · قبل دقيقتين',scanning:'جارٍ فحص سيارتك…',scanningSub:'قراءة جميع وحدات التحكم. أبقِ المحرك يعمل.',all:'الكل',critical:'حرج',warning:'تحذير',pending:'معلّق',
+p0301:'خلل في إشعال الأسطوانة 1',p0420:'كفاءة المحوّل الحفاز أقل من الحد (الصف 1)',p0171:'خليط الوقود فقير جداً (الصف 1)',readiness:'جاهزية الانبعاثات',ready:'6 من 8 جاهزة',clear:'مسح الرموز',scanAgain:'فحص مجدداً',
+clearQ:'مسح جميع الرموز؟',clearMsg:'سيُطفأ ضوء فحص المحرك. تعود الرموز إذا بقي العطل.',cancel:'إلغاء',cleared:'تم مسح الرموز',noCodes:'لا توجد رموز أعطال',noCodesSub:'لم تُبلغ سيارتك عن أي مشكلة في آخر فحص.',
+system:'النظام',ignition:'الإشعال',sevLabel:'الخطورة',whatMeans:'ماذا يعني',causes:'الأسباب الشائعة',viewSolution:'عرض الحل',share:'مشاركة',
+p0301m:'اكتشف حاسوب المحرك أن الأسطوانة 1 لا تشتعل بشكل صحيح. قد تشعر باهتزاز أو ضعف في القوة.',c1:'شمعة إشعال تالفة',c2:'ملف إشعال معطّل',c3:'بخاخ وقود مسدود',
+solution:'طريقة الإصلاح',difficulty:'الصعوبة',moderate:'متوسطة',estCost:'التكلفة',estTime:'الوقت',step1:'بدّل ملف الأسطوانة 1 مع الأسطوانة 2.',step2:'امسح الرموز وقُد لمدة 10 دقائق.',step3:'إذا انتقل الخلل إلى الأسطوانة 2 فاستبدل الملف.',step4:'وإلا فاستبدل شمعة الأسطوانة 1.',watchTut:'شاهد الشرح',findShop:'ابحث عن ورشة',
+lookupSub:'ابحث عن أي رمز عطل',lookupPh:'مثال: P0420',lookupBtn:'بحث',
+graph:'الرسم المباشر',graphSub:'آخر 60 ثانية',now:'الآن',min:'الأدنى',max:'الأعلى',avg:'المتوسط',
+roadTitle:'المساعدة على الطريق',roadSub:'تصل المساعدة خلال 25 دقيقة تقريباً',towing:'سحب السيارة',jump:'شحن البطارية',flat:'إطار مثقوب',fuelDel:'توصيل وقود',lockout:'فتح السيارة',from:'من',myRequests:'طلباتي',seeAll:'عرض الكل',
+setLocation:'حدّد موقعك',locSub:'اسحب الخريطة لتحريك الدبوس',useMyLoc:'استخدم موقعي',address:'شارع مكة 112، عمّان',confirmLoc:'تأكيد الموقع',
+estimate:'تقدير السعر',baseFee:'الرسوم الأساسية',distFee:'المسافة (6.2 كم)',platformFee:'رسوم المنصة',total:'المجموع',notes:'ملاحظات للسائق',notesPh:'مثال: سيارة بيضاء بجانب الصيدلية',photos:'الصور',addPhoto:'إضافة صورة',request:'اطلب',
+searching:'جارٍ البحث عن سائق',searchingSub:'نتواصل مع السائقين القريبين…',cancelReq:'إلغاء الطلب',
+tracking:'السائق في الطريق',eta:'يصل خلال 12 دقيقة',driver:'أحمد ك.',driverCar:'ونش · 12-34567',call:'اتصال',message:'رسالة',simulate:'تأكيد الوصول',
+rateTitle:'كيف كانت الخدمة؟',rateSub:'تقييمك يساعد السائقين الآخرين.',reviewPh:'أضف تعليقاً (اختياري)',submit:'إرسال التقييم',skip:'تخطي',thanks:'شكراً على ملاحظاتك!',completed:'مكتمل',cancelled:'ملغى',inProgress:'قيد التنفيذ',
+history:'السجل',histSub:'5 فحوصات',scans:'الفحوصات',confirmed:'بها رموز',clean:'سليمة',codesFound:'رموز',noIssues:'لا مشاكل',today:'اليوم',yesterday:'أمس',clearHist:'مسح السجل',
+settings:'حسابي',yourName:'اسمك',general:'عام',notifications:'الإشعارات',autoScan:'فحص تلقائي عند الاتصال',appearance:'المظهر',light:'فاتح',dark:'داكن',sys:'النظام',prefs:'التفضيلات',language:'اللغة',langVal:'العربية',units:'الوحدات',metric:'متري',imperial:'إمبراطوري',dashcam:'كاميرا القيادة',vehicleProfile:'ملف المركبة',privacy:'الخصوصية والبيانات',about:'حول التطبيق',version:'الإصدار',terms:'شروط الخدمة',support:'المساعدة والدعم',logout:'تسجيل الخروج',logoutQ:'تسجيل الخروج؟',logoutMsg:'ستحتاج إلى تسجيل الدخول مجدداً لاستخدام CARDIAG.',soon:'قريباً',
+profile:'ملفي الشخصي',editProfile:'تعديل الملف',memberSince:'عضو منذ 2024',personal:'المعلومات الشخصية',myVehicles:'مركباتي',achievements:'الإنجازات',scansCount:'فحوصات',tripsCount:'رحلات',score:'التقييم',save:'حفظ التغييرات',saved:'تم تحديث الملف',changePhoto:'تغيير الصورة',changePw:'تغيير كلمة المرور',location:'المدينة',city:'عمّان',
+b1:'أول فحص',b2:'100 كم',b3:'سائق آمن',b4:'ميكانيكي',
+dashcamSub:'يسجّل أثناء القيادة',recording:'يسجّل',stopped:'متوقف',record:'التسجيل أثناء القيادة',audio:'تسجيل الصوت',autoDelete:'حذف تلقائي بعد 7 أيام',quality:'جودة الفيديو',storage:'التخزين',
+privacyIntro:'ما يحفظه CARDIAG على هاتفك وما يرسله.',pSecure:'تسجيل الدخول مشفّر',pSecureB:'تُحفظ جلستك في التخزين الآمن للهاتف.',pLocal:'الفحوصات تبقى على هاتفك',pLocalB:'سجل الفحوصات والصيانة يبقى على هذا الجهاز.',pServer:'طلبات المساعدة',pServerB:'يُرسل الموقع وتفاصيل الطلب لإرسال سائق.',
+maintTitle:'الصيانة',oil:'تغيير الزيت',tires:'تدوير الإطارات',brakes:'فحمات الفرامل',air:'فلتر الهواء',dueSoon:'قريباً',overdue:'متأخر',okStatus:'جيد',lastDone:'آخر مرة',next:'القادم',markDone:'تم الإنجاز',done:'تم الحفظ',
+smartTitle:'المفتاح الذكي',demo:'تجريبي',locked:'مقفلة',unlocked:'مفتوحة',engineOff:'المحرك متوقف',engineOn:'المحرك يعمل',lockBtn:'قفل',unlockBtn:'فتح',startBtn:'تشغيل',stopBtn:'إيقاف',quick:'إجراءات سريعة',horn:'البوق والأضواء',climate:'تدفئة المقصورة',findCar:'أين سيارتي',
+parentTitle:'وضع الأهل',parentSub:'سيارة سارة',driving:'تقود · 54 كم/س',todayKm:'اليوم',topSpeed:'أعلى سرعة',alertsN:'تنبيهات',speedAlerts:'تنبيهات السرعة',geofence:'تنبيهات المنطقة',curfew:'حظر ليلي',speedLimit:'حد السرعة',demoNotice:'بيانات تجريبية — اربط سيارة ثانية لاستخدام وضع الأهل.',
+tutTitle:'الشروحات',tutSearch:'ابحث في الشروحات',catEngine:'المحرك',catBrakes:'الفرامل',catElec:'الكهرباء',catBasics:'الأساسيات',beginner:'مبتدئ',intermediate:'متوسط',advanced:'متقدم',noResults:'لا توجد شروحات',
+v1:'استبدال ملف الإشعال',v2:'فحص فحمات الفرامل',v3:'تشغيل بطارية فارغة',v4:'تغيير زيت المحرك',v5:'قراءة بيانات OBD المباشرة',
+instructor:'عمر للميكانيك',follow:'متابعة',description:'الوصف',descText:'دليل خطوة بخطوة مع الأدوات اللازمة والأخطاء الشائعة.',related:'فيديوهات ذات صلة',like:'إعجاب',saveV:'حفظ',
+upload:'رفع شرح',uploadNotice:'الرفع قريباً — يمكنك تجهيز الفيديو الآن.',titleF:'العنوان',desc:'الوصف',pickVideo:'اختر فيديو',publish:'نشر'
+}};
+
+/* ── State ─────────────────────────────────────────────────────── */
+const st={theme:'light',themeChoice:'light',lang:'en',view:'proto',connected:true,stack:[{id:'home'}],scanning:false,codesCleared:false,connPhase:'scan',
+  set:{notif:true,auto:false,units:'metric'},codeFilter:'all',histFilter:'all',graphCh:'rpm',authTab:'login',
+  locked:true,engine:false,parent:{alerts:true,fence:true,curfew:false,limit:100},tutCat:'all',tutQuery:'',playing:false,
+  rating:0,maintDone:{},dash:{rec:true,audio:false,del:true,quality:'1080p'},overlay:null,toast:null,service:'towing',saving:false,diff:'beginner'};
+const t=k=>S[st.lang][k]??S.en[k]??k;
+const TABS=['home','codes','roadside','history','settings'];
+const PARENT={connect:'home',graph:'home',maintenance:'home',smartkey:'home',parent:'home',tutorials:'home',player:'home',upload:'home',lookup:'home',
+  codeDetail:'codes',solution:'codes',location:'roadside',estimate:'roadside',searching:'roadside',tracking:'roadside',rating:'roadside',requests:'roadside',
+  profile:'settings',editProfile:'settings',dashcam:'settings',privacy:'settings'};
+const topOf=()=>st.stack[st.stack.length-1];
+
+/* Live data (simulated OBD readings) */
+const CH={speed:{u:'km/h',min:0,max:140,v:64},rpm:{u:'rpm',min:700,max:4000,v:2150},coolant:{u:'°C',min:70,max:110,v:90},battery:{u:'V',min:11.5,max:14.8,v:14.1},load:{u:'%',min:0,max:100,v:38},throttle:{u:'%',min:0,max:100,v:22}};
+for(const k in CH)CH[k].h=Array.from({length:60},()=>CH[k].v);
+function tickLive(){for(const k in CH){const c=CH[k],span=c.max-c.min;let step=(Math.random()-.5)*span*.07;if(k==='coolant')step=(Math.random()-.5)*.8;if(k==='battery')step=(Math.random()-.5)*.08;c.v=Math.min(c.max,Math.max(c.min,c.v+step));c.h.push(c.v);c.h.shift()}}
+for(let n=0;n<60;n++)tickLive();   // start with a minute of natural-looking history
+const fmt=(k,v=CH[k].v)=>k==='battery'?v.toFixed(1):k==='rpm'?Math.round(v).toLocaleString('en-US'):String(Math.round(v));
+
+/* ── Building blocks (mirror the Flutter components) ───────────── */
+function navBar(){const items=[['home','home','nav_home'],['codes','pulse','nav_diag'],['roadside','truck','nav_road'],['history','clock','nav_hist'],['settings','user','nav_prof']];
+  const cur=st.stack[0].id;return `<nav class="nav">${items.map(([id,i,k])=>`<button data-tab="${id}" ${cur===id?'aria-current="page"':''}><span class="iw">${ico(i)}</span>${t(k)}</button>`).join('')}</nav>`}
+function hdr({title,sub,back,close,actions=''}){const canBack=back??st.stack.length>1;   // ScreenHeader: back only when it can pop
+  return `<div class="safe-top"></div><header class="hdr ${canBack?'has-back':''}">${canBack?`<button class="back" data-back aria-label="Back">${ico(close?'close':'back',close?'':'flip')}</button>`:''}
+  <div class="grow"><h1 class="t-title">${title}</h1>${sub?`<p class="t-small">${sub}</p>`:''}</div>${actions}</header>`}
+const hact=(i,label,attrs)=>`<button class="hact" aria-label="${label}" title="${label}" ${attrs}>${ico(i)}</button>`;
+const pill=(text,tone,i)=>`<span class="pill ${tone}">${i?ico(i):tone==='ok'?'<span class="dot"></span>':''}${text}</span>`;
+const ibox=(i,cls='',tone='')=>`<span class="ibox ${cls} ${tone}">${ico(i)}</span>`;
+const btn=(label,{v='primary',i,attrs='',sm=false,auto=false,dis=false}={})=>`<button class="btn btn-${v} ${sm?'sm':''} ${auto?'auto':''}" ${attrs} ${dis?'disabled':''}>${i?ico(i,i==='logout'?'flip':''):''}${label}</button>`;
+function row({i,label,sub,val,chev=true,attrs='',sw}){const isSw=sw!==undefined;const tag=isSw||!attrs?'div':'button';
+  return `<${tag} class="row" ${attrs}>${i?ibox(i,'n'):''}<span class="grow"><span>${label}</span>${sub?`<span class="t-small">${sub}</span>`:''}</span>${val?`<span class="val">${val}</span>`:''}${isSw?`<span class="switch" role="switch" aria-checked="${sw}" aria-label="${label}"></span>`:(chev&&attrs)?ico('chev','chev flip'):''}</${tag}>`}
+const group=(title,rows)=>`${title?`<p class="glabel">${title}</p>`:''}<div class="card list">${rows.join('')}</div>`;
+const tile=(i,label,k)=>`<div class="card tile"><div class="tile-head">${ibox(i,'s')}<p class="t-small">${label}</p></div><p class="tile-val"><span data-live="${k}">${fmt(k)}</span><small>${CH[k].u}</small></p></div>`;
+const statTile=(i,label,val,unit='')=>`<div class="card tile"><div class="tile-head">${ibox(i,'s')}<p class="t-small">${label}</p></div><p class="tile-val">${val}${unit?`<small>${unit}</small>`:''}</p></div>`;
+const empty=(i,title,msg,action='',tone='neutral')=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;padding:32px 12px"><span class="ibox l ${tone}" style="border-radius:50%;width:72px;height:72px">${ico(i)}</span><p class="t-head">${title}</p>${msg?`<p class="t-body text2">${msg}</p>`:''}${action}</div>`;
+const sec=(title,right='')=>`<div class="sec"><h2 class="t-head">${title}</h2>${right}</div>`;
+const link=(label,attrs)=>`<button class="link" ${attrs}>${label}${ico('chev','flip')}</button>`;
+const screen=(inner,{tabs=false,footer=''}={})=>`<div class="screen">${inner}${footer?`<div class="footer">${footer}</div>`:''}${tabs?navBar():''}</div>`;
+
+/* Sample data */
+const CODES=[{id:'P0301',sev:'crit',lvl:'critical',icon:'alertCircle',k:'p0301'},{id:'P0420',sev:'warn',lvl:'warning',icon:'alert',k:'p0420'},{id:'P0171',sev:'info',lvl:'pending',icon:'hourglass',k:'p0171'}];
+const SERVICES=[['towing','truck',45],['jump','battery',20],['flat','tire',25],['fuelDel','fuel',15],['lockout','key',30]];
+const TUTS=[{k:'v1',cat:'catEngine',d:'intermediate',dur:'12:40',r:'4.8',i:'zap'},{k:'v2',cat:'catBrakes',d:'beginner',dur:'8:15',r:'4.6',i:'brake'},{k:'v3',cat:'catElec',d:'beginner',dur:'6:02',r:'4.9',i:'battery'},{k:'v4',cat:'catBasics',d:'beginner',dur:'15:30',r:'4.7',i:'oil'},{k:'v5',cat:'catEngine',d:'advanced',dur:'10:05',r:'4.5',i:'pulse'}];
+const MAINT=[{k:'oil',i:'oil',st:'warn',last:'9,500 km',next:'500 km'},{k:'brakes',i:'brake',st:'crit',last:'38,000 km',next:'−1,200 km'},{k:'tires',i:'tire',st:'ok',last:'2 wk',next:'7,800 km'},{k:'air',i:'filter',st:'ok',last:'3 mo',next:'9,000 km'}];
+const HIST=[{d:'today',time:'09:12',n:3,lvl:'crit'},{d:'yesterday',time:'18:40',n:2,lvl:'warn'},{d:'3 Nov',time:'08:05',n:0},{d:'28 Oct',time:'17:22',n:1,lvl:'warn'},{d:'20 Oct',time:'10:10',n:0}];
+
+/* ── Screens ───────────────────────────────────────────────────── */
+const SCREENS={
+splash:{name:'Splash',r:()=>`<div class="splash"><span class="logo">${ico('car')}</span><p class="t-display" dir="ltr" style="letter-spacing:2px">CARDIAG</p><p class="t-small">${t('tagline')}</p><div class="bar indet" style="width:140px;margin-top:20px"><i></i></div></div>`},
+
+signin:{name:'Sign in / Sign up',r:()=>{const login=st.authTab==='login';
+  const f=(id,l,ic,type,ph,extra='')=>`<div class="field"><label for="${id}">${l}</label><div class="input">${ico(ic)}<input id="${id}" type="${type}" placeholder="${ph}">${extra}</div></div>`;
+  const eye=`<button class="back" style="width:40px;height:40px;margin-inline-end:-10px" aria-label="Show password">${ico('eye')}</button>`;
+  return screen(`<div class="scroll" style="padding:60px 24px 20px;gap:0">
+  <span class="logo" style="width:56px;height:56px;border-radius:16px">${ico('car')}</span>
+  <h1 class="t-display" style="margin-top:20px">${login?t('welcome'):t('createTitle')}</h1>
+  <p class="t-body text2" style="margin-top:6px">${login?t('welcomeSub'):t('createSub')}</p>
+  <form style="display:flex;flex-direction:column;gap:14px;margin-top:28px" onsubmit="return false">
+   ${login?'':f('n',t('fullName'),'user','text','')}
+   ${f('e',t('email'),'mail','email','you@example.com')}
+   ${login?'':f('ph',t('phone'),'phone','tel','07X XXX XXXX')}
+   ${f('p',t('password'),'lock','password','••••••••',eye)}
+   ${login?`<button type="button" class="link" style="align-self:flex-end" data-act="toast:soon">${t('forgot')}</button>`:f('p2',t('confirmPw'),'lock','password','••••••••')}
+   ${btn(login?t('signIn'):t('create'),{attrs:'type="button" data-act="signin"'})}
+  </form>
+  <div style="display:flex;align-items:center;gap:12px;margin:22px 0"><span style="flex:1;height:1px;background:var(--border)"></span><span class="t-small muted">${login?t('newHere'):t('haveAcc')}</span><span style="flex:1;height:1px;background:var(--border)"></span></div>
+  ${btn(login?t('create'):t('signIn'),{v:'secondary',attrs:`data-act="authTab:${login?'signup':'login'}"`})}
+  <div style="flex:1;min-height:16px"></div>
+  <button class="btn btn-ghost" style="align-self:center;color:var(--text2)" data-act="lang">${ico('globe')}${st.lang==='ar'?'English':'العربية'}</button></div>`)}},
+
+home:{name:'Home',r:()=>{const c=st.connected;
+  return screen(`<div class="safe-top"></div><div class="scroll" style="gap:16px;padding-top:8px">
+  <div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><p class="t-small">${t('greeting')}</p><h1 class="t-title">${t('vehicle')}</h1></div>${hact('bell',t('notifications'),'data-act="toast:soon"')}</div>
+  ${c?`<div class="card pad" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:16px"><div class="ring"><svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="32" fill="none" stroke="var(--track)" stroke-width="8"/><circle cx="38" cy="38" r="32" fill="none" stroke="var(--ok)" stroke-width="8" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="28"/></svg><span class="num">86</span></div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;align-items:flex-start"><p class="t-small">${t('health')}</p><p class="t-head">${t('good')}</p>${pill(t('connected')+' · ELM327','ok')}</div></div>
+    ${st.codesCleared?'':`<button class="alert-row warn" data-tab="codes">${ico('alert')}<span class="grow">${t('attention')}</span>${ico('chev','flip')}</button>`}
+    ${btn(t('runScan'),{i:'pulse',sm:true,attrs:'data-act="scan"'})}</div>`
+  :`<div class="card pad" style="display:flex;flex-direction:column;gap:14px;align-items:flex-start">${ibox('bt','l')}<div><p class="t-head">${t('connectTitle')}</p><p class="t-small" style="margin-top:4px">${t('connectSub')}</p></div>${btn(t('connect'),{i:'bt',sm:true,attrs:'data-act="openConnect"'})}</div>`}
+  ${sec(t('live'),link(t('seeGraph'),'data-go="graph"'))}
+  <div class="grid2">${tile('speed',t('speed'),'speed')}${tile('gauge',t('engine'),'rpm')}${tile('thermo',t('coolant'),'coolant')}${tile('battery',t('battery'),'battery')}</div>
+  ${sec(t('services'))}
+  <div class="grid4">${[['truck','roadside','tab','roadside'],['wrench','maintenance','go','maintenance'],['key','smartKey','go','smartkey'],['play','tutorials','go','tutorials']].map(([i,k,kind,dest])=>`<button class="svc" data-${kind}="${dest}"><span class="box">${ico(i)}</span>${t(k)}</button>`).join('')}</div>
+  <div class="card list">${row({i:'route',label:t('trip'),sub:t('tripVal'),attrs:'data-tab="history"'})}${row({i:'wrench',label:t('maintenance'),sub:t('maintDue'),attrs:'data-go="maintenance"'})}${row({i:'user',label:t('parent'),attrs:'data-go="parent"'})}${row({i:'search',label:t('lookup'),attrs:'data-go="lookup"'})}</div>
+  </div>`,{tabs:true})}},
+
+connect:{name:'Connect adapter',r:()=>{const ph=st.connPhase;
+  const devs=[['OBDII ELM327','-48',1],['Galaxy Buds','-62',0],['V-LINK','-70',1]];
+  const status=(boxHtml,title,sub)=>`<div class="card pad" style="display:flex;gap:14px;align-items:center">${boxHtml}<div style="flex:1;min-width:0"><p class="t-head">${title}</p><p class="t-small">${sub}</p></div></div>`;
+  const card=ph==='scan'?status(`<span class="ibox l pulse" style="border-radius:50%">${ico('bt')}</span>`,t('looking'),t('connectSub'))+'<div class="bar indet"><i></i></div>'
+   :ph==='connecting'?status(`<span class="ibox l" style="border-radius:50%"><span class="spin"></span></span>`,t('connecting'),'OBDII ELM327 · '+t('detecting'))+'<div class="bar indet"><i></i></div>'
+   :ph==='done'?status(ibox('checkCircle','l','ok'),t('connected'),'OBDII ELM327 · ISO 15765-4 CAN')
+   :status(ibox('bt','l'),t('choose'),t('found'));
+  return screen(`${hdr({title:t('connectTitle')})}<div class="scroll">${card}
+  ${ph==='list'?`${sec(t('devices'),`<button class="link" data-act="rescan">${t('scanAgain')}</button>`)}<div class="card list">${devs.map(([n,s,o])=>`<button class="row" data-act="pickDev">${ibox('bt','n')}<span class="grow"><span>${n}</span><span class="t-small num">${s} dBm</span></span>${o?pill('OBD','ok'):''}${ico('chev','chev flip')}</button>`).join('')}</div>`:''}
+  </div>`,{footer:ph==='done'?btn(t('toDash'),{attrs:'data-act="connDone"'}):ph==='list'?`<p class="t-small" style="text-align:center">${t('notSeen')}</p>`:btn(t('cancel'),{v:'secondary',attrs:'data-back'})})}},
+
+codes:{name:'Diagnose — fault codes',r:()=>{
+  if(st.scanning)return screen(`${hdr({title:t('codes'),back:false})}<div class="scroll">${empty('pulse',t('scanning'),t('scanningSub'),'<div class="bar indet" style="width:220px"><i></i></div>','info')}</div>`,{tabs:true});
+  if(!st.connected)return screen(`${hdr({title:t('codes'),back:false})}<div class="scroll">${empty('bt',t('notConnected'),t('connectSub'),btn(t('connect'),{i:'bt',auto:true,attrs:'data-act="openConnect"'}))}</div>`,{tabs:true});
+  if(st.codesCleared)return screen(`${hdr({title:t('codes'),sub:t('codesSub'),back:false,actions:hact('refresh',t('scanAgain'),'data-act="scan"')})}<div class="scroll">${empty('checkCircle',t('noCodes'),t('noCodesSub'),btn(t('scanAgain'),{v:'secondary',auto:true,i:'refresh',attrs:'data-act="scan"'}),'ok')}</div>`,{tabs:true});
+  const f=st.codeFilter,list=CODES.filter(c=>f==='all'||c.lvl===f);
+  const chip=(k,n)=>`<button class="chip" aria-pressed="${f===k}" data-act="codeFilter:${k}">${t(k)} <span class="n">${n}</span></button>`;
+  return screen(`${hdr({title:t('codes'),sub:t('codesSub'),back:false,actions:hact('refresh',t('scanAgain'),'data-act="scan"')})}<div class="scroll">
+  <div class="chips">${chip('all',3)}${chip('critical',1)}${chip('warning',1)}${chip('pending',1)}</div>
+  <div class="card list">${list.map(c=>`<button class="sevrow" data-go="codeDetail" data-p="${c.id}"><span class="ibox ${c.sev}">${ico(c.icon)}</span><span class="grow"><span style="display:flex;gap:8px;align-items:center"><span class="code-id">${c.id}</span>${pill(t(c.lvl),c.sev)}</span><span class="t-small">${t(c.k)}</span></span><span class="muted" style="margin-top:10px">${ico('chev','flip')}</span></button>`).join('')}</div>
+  <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><div class="sec" style="margin:0"><p class="t-body" style="font-weight:600">${t('readiness')}</p>${pill(t('ready'),'ok')}</div><div class="bar"><i style="width:75%"></i></div></div>
+  <div style="flex:1"></div><div class="actions">${btn(t('clear'),{v:'danger',sm:true,i:'trash',attrs:'data-act="askClear"'})}${btn(t('scanAgain'),{sm:true,i:'refresh',attrs:'data-act="scan"'})}</div>
+  </div>`,{tabs:true})}},
+
+codeDetail:{name:'Code detail',r:(p='P0301')=>{const c=CODES.find(x=>x.id===p)||CODES[0];
+  return screen(`${hdr({title:c.id,actions:hact('share',t('share'),'data-act="toast:soon"')})}<div class="scroll">
+  <div class="card pad" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:12px;align-items:center"><span class="ibox l ${c.sev}">${ico(c.icon)}</span><div style="flex:1;min-width:0"><p class="t-head">${t(c.k)}</p><div style="margin-top:6px">${pill(t(c.lvl),c.sev)}</div></div></div>
+  <div class="grid2" style="gap:8px"><div><p class="t-cap">${t('system')}</p><p class="t-body" style="font-weight:500">${t('ignition')}</p></div><div><p class="t-cap">${t('sevLabel')}</p><p class="t-body" style="font-weight:500">${t(c.lvl)}</p></div></div></div>
+  ${sec(t('whatMeans'))}<div class="card pad"><p class="t-body text2">${t('p0301m')}</p></div>
+  ${sec(t('causes'))}<div class="card list">${['c1','c2','c3'].map((k,n)=>row({i:['zap','bt','fuel'][n],label:t(k)})).join('')}</div>
+  </div>`,{footer:btn(t('viewSolution'),{i:'wrench',attrs:`data-go="solution" data-p="${c.id}"`})})}},
+
+solution:{name:'Solution',r:(p='P0301')=>screen(`${hdr({title:t('solution'),sub:p})}<div class="scroll">
+  <div class="grid3">${statTile('gauge',t('difficulty'),t('moderate'))}${statTile('clock',t('estTime'),'1','h')}${statTile('wrench',t('estCost'),'$40')}</div>
+  <div class="card list">${['step1','step2','step3','step4'].map((k,n)=>`<div class="row" style="align-items:flex-start"><span class="ibox s info" style="border-radius:50%;font-weight:700;font-size:13px">${n+1}</span><span class="grow"><span class="t-body">${t(k)}</span></span></div>`).join('')}</div>
+  <div class="card list">${row({i:'play',label:t('watchTut'),attrs:'data-go="player" data-p="v1"'})}${row({i:'pin',label:t('findShop'),attrs:'data-act="toast:soon"'})}</div></div>`)},
+
+lookup:{name:'Code lookup',r:()=>screen(`${hdr({title:t('lookup'),sub:t('lookupSub')})}<div class="scroll">
+  <div class="input">${ico('search')}<input placeholder="${t('lookupPh')}" value="P0420" aria-label="${t('lookup')}"></div>${btn(t('lookupBtn'),{attrs:'data-act="toast:P0420 ✓"'})}
+  <div class="card pad" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><div style="display:flex;gap:8px;align-items:center"><span class="code-id">P0420</span>${pill(t('warning'),'warn')}</div><p class="t-body text2">${t('p0420')}</p>${link(t('viewSolution'),'data-go="solution" data-p="P0420"')}</div></div>`)},
+
+graph:{name:'Live graph',r:()=>{const k=st.graphCh;const chs=[['speed','speed'],['rpm','engine'],['coolant','coolant'],['battery','battery'],['load','load'],['throttle','throttle']];
+  return screen(`${hdr({title:t('graph'),sub:t('graphSub')})}<div class="scroll">
+  <div class="chips">${chs.map(([c,l])=>`<button class="chip" aria-pressed="${k===c}" data-act="graphCh:${c}">${t(l)}</button>`).join('')}</div>
+  <div class="card pad" style="display:flex;flex-direction:column;gap:8px"><p class="t-small">${t(chs.find(x=>x[0]===k)[1])} · ${t('now')}</p><p class="t-display num"><span data-live="${k}">${fmt(k)}</span> <span class="t-body text2">${CH[k].u}</span></p><div class="graph-box" id="graph-box">${graphSvg(k)}</div></div>
+  <div class="grid3" id="graph-stats">${graphStats(k)}</div></div>`)}},
+
+roadside:{name:'Roadside',r:()=>screen(`${hdr({title:t('roadTitle'),sub:t('roadSub'),back:false})}<div class="scroll">
+  <div class="card list">${SERVICES.map(([k,i,p])=>`<button class="row" data-act="service:${k}">${ibox(i)}<span class="grow"><span style="font-weight:500">${t(k)}</span><span class="t-small">${t('from')} $${p}</span></span>${ico('chev','chev flip')}</button>`).join('')}</div>
+  ${sec(t('myRequests'),link(t('seeAll'),'data-go="requests"'))}
+  <div class="card list"><button class="row" data-go="requests">${ibox('truck','n')}<span class="grow"><span style="font-weight:500">${t('towing')}</span><span class="t-small num">2 Nov · $63</span></span>${pill(t('completed'),'ok')}</button></div>
+  </div>`,{tabs:true})},
+
+location:{name:'Roadside — location',r:()=>screen(`${hdr({title:t('setLocation'),sub:t(st.service)})}
+  <div class="map" style="flex:1">${mapSvg()}<span class="pin">${ico('pin')}</span>
+   <button class="hact" style="position:absolute;bottom:16px;inset-inline-end:16px" aria-label="${t('useMyLoc')}" data-act="toast:${t('address')}">${ico('target')}</button></div>`,
+  {footer:`<div style="display:flex;gap:12px;align-items:center">${ibox('pin','n')}<div style="flex:1"><p class="t-body" style="font-weight:500">${t('address')}</p><p class="t-small">${t('locSub')}</p></div></div>${btn(t('confirmLoc'),{attrs:'data-go="estimate"'})}`})},
+
+estimate:{name:'Roadside — estimate',r:()=>{const p=(SERVICES.find(s=>s[0]===st.service)||SERVICES[0])[2];const tot=p+18;
+  return screen(`${hdr({title:t('estimate'),sub:t(st.service)})}<div class="scroll">
+  <div class="card pad"><div class="kv"><span>${t('baseFee')}</span><span class="num">$${p}.00</span></div><div class="kv"><span>${t('distFee')}</span><span class="num">$12.00</span></div><div class="kv"><span>${t('platformFee')}</span><span class="num">$6.00</span></div><div class="kv total"><span style="color:var(--text)">${t('total')}</span><span class="num">$${tot}.00</span></div></div>
+  <div class="card list">${row({i:'pin',label:t('address'),sub:t('setLocation'),attrs:'data-back'})}</div>
+  <div class="field"><label for="nt">${t('notes')}</label><div class="input" style="align-items:flex-start"><textarea id="nt" rows="3" placeholder="${t('notesPh')}"></textarea></div></div>
+  ${sec(t('photos'))}<button class="card pad" style="border-style:dashed;display:flex;gap:10px;align-items:center;justify-content:center;color:var(--primary);cursor:pointer;font-weight:600" data-act="toast:soon">${ico('camera')}${t('addPhoto')}</button>
+  </div>`,{footer:btn(`${t('request')} · $${tot}`,{i:'truck',attrs:'data-act="request"'})})}},
+
+searching:{name:'Roadside — searching',r:()=>screen(`${hdr({title:t('searching'),back:false})}<div class="scroll">${empty('truck',t('searching'),t('searchingSub'),'<div class="bar indet" style="width:220px"><i></i></div>','info')}</div>`,{footer:btn(t('cancelReq'),{v:'danger',attrs:'data-act="cancelReq"'})})},
+
+tracking:{name:'Roadside — tracking',r:()=>screen(`${hdr({title:t('tracking'),back:false})}
+  <div class="map" style="flex:1">${mapSvg(true)}<span class="pin">${ico('pin')}</span></div>`,
+  {footer:`<div style="display:flex;justify-content:space-between;align-items:center">${pill(t('inProgress'),'info','truck')}<span class="t-body num" style="font-weight:600">${t('eta')}</span></div>
+  <div style="display:flex;gap:12px;align-items:center"><span class="avatar">AK</span><div style="flex:1"><p class="t-body" style="font-weight:600">${t('driver')}</p><p class="t-small">${t('driverCar')}</p></div>${hact('phone',t('call'),'data-act="toast:soon"')}${hact('msg',t('message'),'data-act="toast:soon"')}</div>
+  ${btn(t('simulate'),{v:'secondary',sm:true,attrs:'data-act="arrived"'})}`})},
+
+rating:{name:'Roadside — rating',r:()=>screen(`${hdr({title:t('completed'),back:false})}<div class="scroll">
+  <div class="card pad" style="display:flex;gap:12px;align-items:center">${ibox('checkCircle','l','ok')}<div><p class="t-head">${t(st.service)}</p><p class="t-small num">$63.00 · ${t('completed')}</p></div></div>
+  <div style="text-align:center;display:flex;flex-direction:column;gap:6px;margin-top:8px"><p class="t-title">${t('rateTitle')}</p><p class="t-small">${t('rateSub')}</p></div>
+  <div class="stars">${[1,2,3,4,5].map(n=>`<button class="star ${n<=st.rating?'on':''}" aria-label="${n}" data-act="rate:${n}">${ico('star')}</button>`).join('')}</div>
+  <div class="input" style="align-items:flex-start"><textarea rows="3" placeholder="${t('reviewPh')}" aria-label="${t('reviewPh')}"></textarea></div></div>`,
+  {footer:`${btn(t('submit'),{dis:!st.rating,attrs:'data-act="submitRating"'})}${btn(t('skip'),{v:'ghost',attrs:'style="align-self:center" data-act="submitRating"'})}`})},
+
+requests:{name:'Roadside — my requests',r:()=>screen(`${hdr({title:t('myRequests')})}<div class="scroll"><div class="card list">
+  ${[['towing','2 Nov','63','completed','ok'],['jump','18 Oct','20','completed','ok'],['flat','2 Oct','25','cancelled','crit']].map(([k,d,p,s,tone])=>`<div class="row">${ibox(SERVICES.find(x=>x[0]===k)[1],'n')}<span class="grow"><span style="font-weight:500">${t(k)}</span><span class="t-small num">${d} · $${p}</span></span>${pill(t(s),tone)}</div>`).join('')}</div></div>`)},
+
+history:{name:'History',r:()=>{const f=st.histFilter;const list=HIST.filter(h=>f==='all'||(f==='confirmed'?h.n>0:h.n===0));
+  return screen(`${hdr({title:t('history'),sub:t('histSub'),back:false,actions:hact('trash',t('clearHist'),'data-act="toast:soon"')})}<div class="scroll">
+  <div class="grid3">${statTile('pulse',t('scans'),'5')}${statTile('alert',t('confirmed'),'3')}${statTile('checkCircle',t('clean'),'2')}</div>
+  <div class="chips">${['all','confirmed','clean'].map(k=>`<button class="chip" aria-pressed="${f===k}" data-act="histFilter:${k}">${t(k)}</button>`).join('')}</div>
+  <div class="card list">${list.map(h=>`<${h.n?'button':'div'} class="row" ${h.n?'data-go="codeDetail" data-p="P0301"':''}>${ibox(h.n?'alert':'checkCircle','',h.n?h.lvl:'ok')}<span class="grow"><span style="font-weight:500">${t(h.d)} · <span class="num">${h.time}</span></span><span class="t-small">${t('vehicle')}</span></span>${h.n?pill(`${h.n} ${t('codesFound')}`,h.lvl):pill(t('noIssues'),'ok')}</${h.n?'button':'div'}>`).join('')}</div>
+  </div>`,{tabs:true})}},
+
+settings:{name:'Profile — settings',r:()=>screen(`${hdr({title:t('settings'),back:false})}<div class="scroll">
+  <button class="card row" style="border-radius:16px;padding:14px 16px" data-go="profile"><span class="avatar">YN</span><span class="grow"><span class="t-head">${t('yourName')}</span><span class="t-small">you@example.com</span></span>${ico('chev','chev flip')}</button>
+  ${group(t('general'),[row({i:'bell',label:t('notifications'),sw:st.set.notif,attrs:'data-act="toggle:notif"'}),row({i:'bt',label:t('autoScan'),sw:st.set.auto,attrs:'data-act="toggle:auto"'}),
+   `<div class="row" style="flex-wrap:wrap;gap:10px 12px">${ibox('moon','n')}<span class="grow"><span>${t('appearance')}</span></span><div class="seg">${[['light','light'],['dark','dark'],['system','sys']].map(([v,k])=>`<button aria-pressed="${st.themeChoice===v}" data-act="theme:${v}">${t(k)}</button>`).join('')}</div></div>`])}
+  ${group(t('prefs'),[row({i:'globe',label:t('language'),val:t('langVal'),attrs:'data-act="sheet:lang"'}),row({i:'ruler',label:t('units'),val:t(st.set.units),attrs:'data-act="sheet:units"'}),row({i:'video',label:t('dashcam'),attrs:'data-go="dashcam"'}),row({i:'search',label:t('lookup'),attrs:'data-go="lookup"'}),row({i:'car',label:t('vehicleProfile'),attrs:'data-act="toast:soon"'}),row({i:'shield',label:t('privacy'),attrs:'data-go="privacy"'})])}
+  ${group(t('about'),[row({i:'info',label:t('version'),val:'1.0.0'}),row({i:'file',label:t('terms'),attrs:'data-act="toast:soon"'}),row({i:'help',label:t('support'),attrs:'data-act="toast:soon"'})])}
+  ${btn(t('logout'),{v:'danger',i:'logout',attrs:'data-act="askLogout"'})}</div>`,{tabs:true})},
+
+profile:{name:'My profile',r:()=>screen(`${hdr({title:t('profile')})}<div class="scroll">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span class="avatar xl">YN</span><p class="t-title">${t('yourName')}</p><p class="t-small">${t('memberSince')}</p></div>
+  <div class="grid3">${statTile('pulse',t('scansCount'),'24')}${statTile('route',t('tripsCount'),'58')}${statTile('award',t('score'),'92')}</div>
+  ${group(t('personal'),[row({i:'mail',label:t('email'),val:'you@example.com'}),row({i:'phone',label:t('phone'),val:'079 000 0000'}),row({i:'pin',label:t('location'),val:t('city')})])}
+  ${group(t('myVehicles'),[row({i:'car',label:t('vehicle'),sub:'VIN 4T1B…3456',attrs:'data-act="toast:soon"'})])}
+  ${sec(t('achievements'))}<div class="card pad badge-grid">${[['zap','b1',1],['route','b2',1],['award','b3',1],['wrench','b4',0]].map(([i,l,on])=>`<div class="badge ${on?'':'off'}">${ibox(i,'',on?'':'neutral')}<span>${t(l)}</span></div>`).join('')}</div>
+  ${btn(t('editProfile'),{v:'secondary',i:'user',attrs:'data-go="editProfile"'})}</div>`)},
+
+editProfile:{name:'Edit profile',r:()=>{const f=(id,l,ic,v)=>`<div class="field"><label for="${id}">${l}</label><div class="input">${ico(ic)}<input id="${id}" value="${v}"></div></div>`;
+  return screen(`${hdr({title:t('editProfile'),close:true})}<div class="scroll">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span class="avatar xl">YN</span><button class="link" data-act="toast:soon">${ico('camera')}&nbsp;${t('changePhoto')}</button></div>
+  ${f('fn',t('fullName'),'user',t('yourName'))}${f('em',t('email'),'mail','you@example.com')}${f('pn',t('phone'),'phone','079 000 0000')}${f('ct',t('location'),'pin',t('city'))}
+  ${group('',[row({i:'lock',label:t('changePw'),attrs:'data-act="toast:soon"'})])}</div>`,
+  {footer:`<button class="btn btn-primary ${st.saving?'busy':''}" data-act="saveProfile" ${st.saving?'disabled':''}>${st.saving?'<span class="spin"></span>':t('save')}</button>`})}},
+
+dashcam:{name:'Dash cam',r:()=>screen(`${hdr({title:t('dashcam'),sub:t('dashcamSub')})}<div class="scroll">
+  <div class="card pad" style="display:flex;gap:12px;align-items:center">${ibox('video','l',st.dash.rec?'crit':'neutral')}<div style="flex:1"><p class="t-head">${st.dash.rec?t('recording'):t('stopped')}</p><p class="t-small num">${t('storage')}: 12.4 / 32 GB</p></div>${st.dash.rec?pill('REC','crit'):''}</div>
+  ${group(t('general'),[row({i:'video',label:t('record'),sw:st.dash.rec,attrs:'data-act="dash:rec"'}),row({i:'mic',label:t('audio'),sw:st.dash.audio,attrs:'data-act="dash:audio"'}),row({i:'trash',label:t('autoDelete'),sw:st.dash.del,attrs:'data-act="dash:del"'})])}
+  <p class="glabel">${t('quality')}</p><div class="seg">${['720p','1080p','4K'].map(q=>`<button aria-pressed="${st.dash.quality===q}" data-act="quality:${q}">${q}</button>`).join('')}</div></div>`)},
+
+privacy:{name:'Privacy & data',r:()=>screen(`${hdr({title:t('privacy')})}<div class="scroll"><p class="t-body text2">${t('privacyIntro')}</p>
+  ${[['lock','pSecure'],['file','pLocal'],['truck','pServer']].map(([i,k])=>`<div class="card pad" style="display:flex;gap:12px;align-items:flex-start">${ibox(i)}<div><p class="t-body" style="font-weight:600">${t(k)}</p><p class="t-small" style="margin-top:4px">${t(k+'B')}</p></div></div>`).join('')}</div>`)},
+
+maintenance:{name:'Maintenance',r:()=>screen(`${hdr({title:t('maintTitle'),sub:t('vehicle'),actions:hact('plus','Add','data-act="toast:soon"')})}<div class="scroll">
+  ${MAINT.map(m=>{const s=st.maintDone[m.k]?'ok':m.st;const lbl=s==='ok'?t('okStatus'):s==='warn'?t('dueSoon'):t('overdue');
+   return `<div class="card pad" style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:12px;align-items:center">${ibox(m.i,'',s==='ok'?'':s)}<div style="flex:1;min-width:0"><p class="t-body" style="font-weight:600">${t(m.k)}</p><p class="t-small num">${t('lastDone')}: ${st.maintDone[m.k]?t('today'):m.last} · ${t('next')}: ${st.maintDone[m.k]?'10,000 km':m.next}</p></div>${pill(lbl,s)}</div>
+   ${s!=='ok'?btn(t('markDone'),{v:'secondary',sm:true,i:'check',attrs:`data-act="maint:${m.k}"`}):''}</div>`}).join('')}</div>`)},
+
+smartkey:{name:'Smart key',r:()=>screen(`${hdr({title:t('smartTitle'),actions:pill(t('demo'),'neutral')})}<div class="scroll">
+  <div class="car-hero">${ico('car')}</div>
+  <div style="display:flex;gap:8px;justify-content:center">${pill(st.locked?t('locked'):t('unlocked'),st.locked?'ok':'warn',st.locked?'lock':'unlock')}${pill(st.engine?t('engineOn'):t('engineOff'),st.engine?'info':'neutral','power')}</div>
+  <div class="grid3"><button class="control ${st.locked?'active':''}" data-act="lock:1">${ico('lock')}${t('lockBtn')}</button><button class="control ${!st.locked?'active':''}" data-act="lock:0">${ico('unlock')}${t('unlockBtn')}</button><button class="control ${st.engine?'active':''}" data-act="engine">${ico('power')}${st.engine?t('stopBtn'):t('startBtn')}</button></div>
+  ${group(t('quick'),[row({i:'zap',label:t('horn'),attrs:'data-act="toast:soon"'}),row({i:'sun',label:t('climate'),attrs:'data-act="toast:soon"'}),row({i:'pin',label:t('findCar'),attrs:'data-act="toast:soon"'})])}</div>`)},
+
+parent:{name:'Parent mode',r:()=>screen(`${hdr({title:t('parentTitle'),sub:t('parentSub')})}<div class="scroll">
+  <div class="card" style="overflow:hidden"><div class="map" style="height:170px">${mapSvg(true)}<span class="pin">${ico('pin')}</span></div><div class="pad" style="display:flex;justify-content:space-between;align-items:center"><span class="t-body" style="font-weight:600">${t('driving')}</span>${pill(t('connected'),'ok')}</div></div>
+  <div class="grid3">${statTile('route',t('todayKm'),'42','km')}${statTile('speed',t('topSpeed'),'96','km/h')}${statTile('alert',t('alertsN'),'1')}</div>
+  ${group(t('general'),[row({i:'speed',label:t('speedAlerts'),sw:st.parent.alerts,attrs:'data-act="par:alerts"'}),row({i:'fence',label:t('geofence'),sw:st.parent.fence,attrs:'data-act="par:fence"'}),row({i:'moon',label:t('curfew'),sw:st.parent.curfew,attrs:'data-act="par:curfew"'}),
+   `<div class="row">${ibox('gauge','n')}<span class="grow"><span>${t('speedLimit')}</span></span><div class="stepper"><button data-act="limit:-10" aria-label="−10">−</button><span class="t-body num" style="font-weight:600;min-width:72px;text-align:center">${st.parent.limit} km/h</span><button data-act="limit:10" aria-label="+10">+</button></div></div>`])}
+  <div class="notice warn">${ico('info')}<span>${t('demoNotice')}</span></div></div>`)},
+
+tutorials:{name:'Tutorials',r:()=>{const c=st.tutCat,q=st.tutQuery.toLowerCase();const list=TUTS.filter(v=>(c==='all'||v.cat===c)&&t(v.k).toLowerCase().includes(q));
+  return screen(`${hdr({title:t('tutTitle'),actions:hact('upload',t('upload'),'data-go="upload"')})}<div class="scroll">
+  <div class="input">${ico('search')}<input id="tq" placeholder="${t('tutSearch')}" value="${st.tutQuery}" data-input="tut" aria-label="${t('tutSearch')}"></div>
+  <div class="chips">${['all','catEngine','catBrakes','catElec','catBasics'].map(k=>`<button class="chip" aria-pressed="${c===k}" data-act="tutCat:${k}">${t(k)}</button>`).join('')}</div>
+  ${list.length?list.map(v=>`<button class="card" style="padding:0;text-align:start;color:inherit;cursor:pointer;overflow:hidden" data-go="player" data-p="${v.k}"><div class="thumb">${ico(v.i)}<span class="dur num">${v.dur}</span></div><div class="pad" style="display:flex;flex-direction:column;gap:6px"><p class="t-head">${t(v.k)}</p><p class="t-small">${t(v.cat)} · ${t(v.d)} · ★ <span class="num">${v.r}</span></p></div></button>`).join(''):empty('search',t('noResults'),'')}
+  </div>`)}},
+
+player:{name:'Video player',r:(p='v1')=>{const v=TUTS.find(x=>x.k===p)||TUTS[0];
+  return `<div class="screen" style="background:var(--bg)"><div class="safe-top" style="background:#000"></div><div class="video"><button class="back" data-back style="position:absolute;top:4px;inset-inline-start:4px;color:#fff" aria-label="Back">${ico('back','flip')}</button><button class="playbtn" data-act="play" aria-label="Play">${ico(st.playing?'pause':'playSolid')}</button><div class="vbar"><i></i></div></div>
+  <div class="scroll"><div><p class="t-title">${t(v.k)}</p><p class="t-small" style="margin-top:4px">${t(v.cat)} · ${t(v.d)} · <span class="num">${v.dur}</span></p></div>
+  <div style="display:flex;gap:12px;align-items:center"><span class="avatar" style="width:44px;height:44px;font-size:15px">OM</span><div style="flex:1"><p class="t-body" style="font-weight:600">${t('instructor')}</p><p class="t-small">★ ${v.r}</p></div>${btn(t('follow'),{sm:true,auto:true,attrs:'data-act="toast:soon"'})}</div>
+  <div class="actions">${btn(t('like'),{v:'secondary',sm:true,i:'thumb',attrs:'data-act="toast:soon"'})}${btn(t('saveV'),{v:'secondary',sm:true,i:'bookmark',attrs:'data-act="toast:soon"'})}</div>
+  ${sec(t('description'))}<p class="t-body text2">${t('descText')}</p>
+  ${sec(t('related'))}<div class="card list">${TUTS.filter(x=>x.k!==v.k).slice(0,3).map(x=>`<button class="row" data-go="player" data-p="${x.k}">${ibox(x.i,'n')}<span class="grow"><span style="font-weight:500">${t(x.k)}</span><span class="t-small num">${x.dur}</span></span>${ico('chev','chev flip')}</button>`).join('')}</div></div></div>`}},
+
+upload:{name:'Upload tutorial',r:()=>screen(`${hdr({title:t('upload'),close:true})}<div class="scroll">
+  <div class="notice info">${ico('info')}<span>${t('uploadNotice')}</span></div>
+  <button class="card" style="height:160px;border-style:dashed;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;color:var(--primary);cursor:pointer;font-weight:600" data-act="toast:soon">${ibox('upload','l')}${t('pickVideo')}</button>
+  <div class="field"><label for="ut">${t('titleF')}</label><div class="input"><input id="ut" placeholder="${t('v1')}"></div></div>
+  <div class="field"><label for="ud">${t('desc')}</label><div class="input" style="align-items:flex-start"><textarea id="ud" rows="3"></textarea></div></div>
+  <div class="field"><label>${t('difficulty')}</label><div class="seg">${['beginner','intermediate','advanced'].map(d=>`<button aria-pressed="${st.diff===d}" data-act="diff:${d}">${t(d)}</button>`).join('')}</div></div></div>`,{footer:btn(t('publish'),{attrs:'data-act="toast:soon"'})})}
+};
+const GALLERY=[['splash'],['signin'],['home'],['connect'],['graph'],['codes'],['codeDetail','P0301'],['solution','P0301'],['lookup'],['roadside'],['location'],['estimate'],['searching'],['tracking'],['rating'],['requests'],['history'],['settings'],['profile'],['editProfile'],['dashcam'],['privacy'],['maintenance'],['smartkey'],['parent'],['tutorials'],['player','v1'],['upload']];
+
+/* Graph */
+function graphSvg(k){const c=CH[k],W=340,H=200,pad=8;const lo=Math.min(...c.h),hi=Math.max(...c.h);const span=Math.max(hi-lo,(c.max-c.min)*.05);const a=lo-span*.15,b=hi+span*.15;
+  const y=v=>H-pad-((v-a)/(b-a))*(H-pad*2);const pts=c.h.map((v,i)=>`${(i/(c.h.length-1)*W).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const grid=[.25,.5,.75].map(f=>`<line x1="0" x2="${W}" y1="${H*f}" y2="${H*f}" stroke="var(--border)" stroke-dasharray="3 4"/>`).join('');
+  const last=c.h[c.h.length-1];
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${t('graph')}">${grid}<polygon points="0,${H} ${pts} ${W},${H}" fill="var(--primary-soft)"/><polyline points="${pts}" fill="none" stroke="var(--primary)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/><circle cx="${W}" cy="${y(last).toFixed(1)}" r="4" fill="var(--primary)"/></svg>`}
+function graphStats(k){const h=CH[k].h;const mn=Math.min(...h),mx=Math.max(...h),av=h.reduce((s,v)=>s+v,0)/h.length;
+  return [['min',mn],['avg',av],['max',mx]].map(([l,v])=>`<div class="card tile"><p class="t-small">${t(l)}</p><p class="tile-val" style="font-size:18px">${fmt(k,v)}<small>${CH[k].u}</small></p></div>`).join('')}
+function mapSvg(route){return `<svg viewBox="0 0 390 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="390" height="600" fill="var(--map)"/>
+  ${[[20,30,140,110],[200,40,170,90],[30,190,110,150],[180,170,90,120],[290,180,80,160],[40,390,150,100],[230,380,140,120],[20,520,170,70],[220,530,150,60]].map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="var(--map-block)"/>`).join('')}
+  <path d="M0 160h390M0 360h390M170 0v600M280 0v600M0 500h390" stroke="var(--map-road)" stroke-width="14"/>
+  ${route?'<path d="M60 560 V500 H170 V360 H195" fill="none" stroke="var(--primary-btn)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="60" cy="560" r="9" fill="var(--primary-btn)" stroke="#fff" stroke-width="3"/>':''}</svg>`}
+
+/* ── Dialogs, sheets, toast ────────────────────────────────────── */
+function overlayHtml(){const o=st.overlay;if(!o)return'';
+  if(o==='logout'||o==='clear'){const L=o==='logout';return `<div class="overlay center" data-dismiss><div class="dialog" role="dialog" aria-modal="true"><p class="t-head">${L?t('logoutQ'):t('clearQ')}</p><p class="t-body text2">${L?t('logoutMsg'):t('clearMsg')}</p><div class="actions" style="margin-top:8px">${btn(t('cancel'),{v:'secondary',sm:true,attrs:'data-act="close"'})}<button class="btn sm" style="background:var(--crit);color:#fff" data-act="${L?'logout':'clearCodes'}">${L?t('logout'):t('clear')}</button></div></div></div>`}
+  const opts=o==='lang'?[['en','English',st.lang==='en'],['ar','العربية',st.lang==='ar']]:[['metric',t('metric'),st.set.units==='metric'],['imperial',t('imperial'),st.set.units==='imperial']];
+  return `<div class="overlay bottom" data-dismiss><div class="sheet" role="dialog" aria-modal="true"><div class="handle"></div><p class="t-head" style="padding:0 20px 8px">${o==='lang'?t('language'):t('units')}</p><div>${opts.map(([v,l,on])=>`<button class="row" data-act="${o==='lang'?'setLang':'setUnits'}:${v}"><span class="grow">${l}</span>${on?`<span style="color:var(--primary)">${ico('check')}</span>`:''}</button>`).join('')}</div></div></div>`}
+let toastTimer;function toast(msg){st.toast=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{st.toast=null;render()},1800);render()}
+
+/* ── Render ────────────────────────────────────────────────────── */
+const phone=document.getElementById('phone');
+const renderScreen=(id,p)=>SCREENS[id].r(p);
+function render(){const th=st.theme,dir=st.lang==='ar'?'rtl':'ltr';
+  const pressed={'ctl-view':st.view,'ctl-theme':th,'ctl-lang':st.lang,'ctl-conn':st.connected?'1':'0'};
+  document.querySelectorAll('.topbar .seg-ui').forEach(g=>g.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===pressed[g.id]))));
+  document.getElementById('proto').hidden=st.view!=='proto';document.getElementById('gallery').hidden=st.view!=='all';
+  if(st.view==='all'){document.getElementById('gallery').innerHTML=GALLERY.map(([id,p])=>`<figure data-open="${id}" data-p="${p||''}"><div class="phone ${th}" dir="${dir}" lang="${st.lang}">${renderScreen(id,p)}</div><figcaption>${SCREENS[id].name}</figcaption></figure>`).join('');return}
+  const top=topOf();const key=top.id+(top.p||'');const old=phone.querySelector('.scroll');const keep=old&&phone.dataset.cur===key?old.scrollTop:0;
+  phone.className=`phone ${th}`;phone.dir=dir;phone.lang=st.lang;phone.dataset.cur=key;
+  phone.innerHTML=renderScreen(top.id,top.p)+overlayHtml()+(st.toast?`<div class="toast" role="status">${st.toast}</div>`:'');
+  const sc=phone.querySelector('.scroll');if(sc)sc.scrollTop=keep;
+  document.getElementById('side').innerHTML='<h3>Screens — click to open</h3>'+GALLERY.map(([id,p])=>`<button data-open="${id}" data-p="${p||''}" aria-current="${top.id===id}">${SCREENS[id].name}</button>`).join('')}
+
+/* Navigation */
+function go(id,p){st.stack.push({id,p});render()}
+function back(){if(st.stack.length>1){st.stack.pop();render()}}
+function tab(id){st.stack=[{id}];render()}
+function open(id,p){st.view='proto';st.overlay=null;st.stack=PARENT[id]?[{id:PARENT[id]},{id,p}]:[{id,p}];
+  if(id==='connect'){st.connPhase='scan';startConnScan()}render()}
+function startConnScan(){setTimeout(()=>{if(topOf().id==='connect'&&st.connPhase==='scan'){st.connPhase='list';render()}},1500)}
+
+/* Actions */
+const ACT={
+  signin(){st.stack=[{id:'home'}];toast(t('signedIn'))},
+  authTab(v){st.authTab=v;render()},
+  lang(){st.lang=st.lang==='en'?'ar':'en';render()},
+  scan(){st.scanning=true;st.codesCleared=false;st.connected=true;st.codeFilter='all';st.stack=[{id:'codes'}];render();setTimeout(()=>{st.scanning=false;render()},2200)},
+  openConnect(){st.connPhase='scan';go('connect');startConnScan()},
+  codeFilter(v){st.codeFilter=v;render()}, histFilter(v){st.histFilter=v;render()}, graphCh(v){st.graphCh=v;render()},
+  askClear(){st.overlay='clear';render()}, askLogout(){st.overlay='logout';render()}, close(){st.overlay=null;render()},
+  clearCodes(){st.overlay=null;st.codesCleared=true;toast(t('cleared'))},
+  logout(){st.overlay=null;st.authTab='login';st.stack=[{id:'signin'}];render()},
+  toast(k){toast(k==='soon'?t('soon'):k)},
+  toggle(k){st.set[k]=!st.set[k];render()},
+  theme(v){st.themeChoice=v;st.theme=v==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):v;render()},
+  sheet(v){st.overlay=v;render()}, setLang(v){st.lang=v;st.overlay=null;render()}, setUnits(v){st.set.units=v;st.overlay=null;render()},
+  rescan(){st.connPhase='scan';render();startConnScan()},
+  pickDev(){st.connPhase='connecting';render();setTimeout(()=>{if(topOf().id==='connect'){st.connPhase='done';render()}},1600)},
+  connDone(){st.connected=true;st.codesCleared=false;st.connPhase='scan';st.stack=[{id:'home'}];toast(t('connected'))},
+  service(k){st.service=k;go('location')},
+  request(){go('searching');setTimeout(()=>{if(topOf().id==='searching'){st.stack[st.stack.length-1]={id:'tracking'};render()}},2800)},
+  cancelReq(){st.stack=[{id:'roadside'}];render()},
+  arrived(){st.rating=0;st.stack=[{id:'roadside'},{id:'rating'}];render()},
+  rate(n){st.rating=+n;render()}, submitRating(){st.rating=0;st.stack=[{id:'roadside'}];toast(t('thanks'))},
+  saveProfile(){if(st.saving)return;st.saving=true;render();setTimeout(()=>{st.saving=false;back();toast(t('saved'))},1000)},
+  dash(k){st.dash[k]=!st.dash[k];render()}, quality(q){st.dash.quality=q;render()},
+  maint(k){st.maintDone[k]=true;toast(t('done'))},
+  lock(v){st.locked=v==='1';toast(st.locked?t('locked'):t('unlocked'))}, engine(){st.engine=!st.engine;render()},
+  par(k){st.parent[k]=!st.parent[k];render()}, limit(d){st.parent.limit=Math.max(40,Math.min(180,st.parent.limit+Number(d)));render()},
+  tutCat(v){st.tutCat=v;render()}, play(){st.playing=!st.playing;render()}, diff(v){st.diff=v;render()}
+};
+phone.addEventListener('click',e=>{
+  if(e.target.matches('[data-dismiss]')){st.overlay=null;return render()}            // tap on the scrim closes dialogs/sheets
+  const el=e.target.closest('[data-act],[data-go],[data-back],[data-tab]');if(!el||!phone.contains(el))return;
+  e.preventDefault();
+  if(el.hasAttribute('data-back'))return back();
+  if(el.dataset.tab)return tab(el.dataset.tab);
+  if(el.dataset.go)return go(el.dataset.go,el.dataset.p||undefined);
+  const s=el.dataset.act,i=s.indexOf(':');const name=i<0?s:s.slice(0,i),arg=i<0?undefined:s.slice(i+1);ACT[name]?.(arg)});
+phone.addEventListener('input',e=>{if(e.target.dataset.input==='tut'){st.tutQuery=e.target.value;const pos=e.target.selectionStart;render();const inp=phone.querySelector('#tq');if(inp){inp.focus();inp.setSelectionRange(pos,pos)}}});
+document.addEventListener('click',e=>{const o=e.target.closest('[data-open]');if(o){open(o.dataset.open,o.dataset.p||undefined);window.scrollTo({top:0,behavior:'smooth'})}});
+document.querySelectorAll('.topbar .seg-ui').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;
+  if(g.id==='ctl-view')st.view=v;if(g.id==='ctl-theme'){st.theme=v;st.themeChoice=v}if(g.id==='ctl-lang')st.lang=v;if(g.id==='ctl-conn'){st.connected=v==='1';if(st.connected)st.codesCleared=false}render()}));
+
+/* Live tick: numbers and graph update without rebuilding the screen */
+setInterval(()=>{tickLive();if(st.view!=='proto')return;phone.querySelectorAll('[data-live]').forEach(el=>el.textContent=fmt(el.dataset.live));
+  const g=phone.querySelector('#graph-box');if(g){g.innerHTML=graphSvg(st.graphCh);const s=phone.querySelector('#graph-stats');if(s)s.innerHTML=graphStats(st.graphCh)}},1000);
+
+/* Start: splash → sign in. URL options: ?screen=graph&theme=dark&lang=ar&view=all */
+const q=new URLSearchParams(location.search);if(q.get('lang')==='ar')st.lang='ar';if(q.get('theme')==='dark'){st.theme='dark';st.themeChoice='dark'}if(q.get('view')==='all')st.view='all';
+if(q.get('screen'))open(q.get('screen'),q.get('p')||undefined);else{st.stack=[{id:'splash'}];render();setTimeout(()=>{if(topOf().id==='splash'){st.stack=[{id:'signin'}];render()}},1800)}
+</script>
+</body>
+</html>
