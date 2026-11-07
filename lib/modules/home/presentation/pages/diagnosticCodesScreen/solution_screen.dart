@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class SolutionScreen extends StatelessWidget {
   const SolutionScreen({super.key, required this.code});
@@ -10,7 +11,10 @@ class SolutionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = code['title'] as String? ?? 'Diagnostic Code';
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final title = (isArabic ? code['title_ar'] ?? code['title'] : code['title'])
+            as String? ??
+        context.tr('diagnostic_code_fallback');
     final codeStr = code['code'] as String? ?? '—';
 
     return Scaffold(
@@ -41,7 +45,7 @@ class SolutionScreen extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                     ),
                     Text(
-                      'Solution',
+                      context.tr('solution'),
                       style: TextStyle(
                         fontSize: 24.sp,
                         fontWeight: FontWeight.w700,
@@ -92,7 +96,7 @@ class SolutionScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 24.h),
                       Text(
-                        'Solution details',
+                        context.tr('solution_details'),
                         style: TextStyle(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w700,
@@ -101,7 +105,9 @@ class SolutionScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 12.h),
                       Text(
-                        'Replace this section with step-by-step repair instructions, recommended parts, or links to guides for ${code['code']}.',
+                        context
+                            .tr('solution_coming_soon')
+                            .replaceAll('{code}', codeStr),
                         style: TextStyle(
                           fontSize: 15.sp,
                           color: AppColors.textLight.withValues(alpha: 0.8),

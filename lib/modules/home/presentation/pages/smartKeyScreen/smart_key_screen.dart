@@ -89,20 +89,30 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
             icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          Text(
-            context.tr('smart_key_title'),
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
+          Expanded(
+            child: Text(
+              context.tr('smart_key_title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
           ),
-          const Spacer(),
+          SizedBox(width: 8.w),
+          // No remote-key link exists (OBD-II cannot lock doors or start the
+          // engine, and there is no BLE key integration), so the controls
+          // below only animate locally. Say so instead of claiming
+          // "Connected".
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: _successGreen.withValues(alpha: 0.1),
-              border: Border.all(color: _successGreen),
+              color: AppColors.white.withValues(alpha: 0.05),
+              border: Border.all(
+                color: AppColors.textLight.withValues(alpha: 0.4),
+              ),
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
@@ -111,17 +121,17 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                 Container(
                   width: 8.w,
                   height: 8.h,
-                  decoration: const BoxDecoration(
-                    color: _successGreen,
+                  decoration: BoxDecoration(
+                    color: AppColors.textLight.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                 ),
                 SizedBox(width: 6.w),
                 Text(
-                  context.tr('connected'),
+                  context.tr('smart_key_demo'),
                   style: TextStyle(
                     fontSize: 12.sp,
-                    color: _successGreen,
+                    color: AppColors.textLight.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -171,9 +181,9 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
                     ),
                   ),
                 if (engineRunning)
-                  Positioned(
+                  PositionedDirectional(
                     top: 20,
-                    right: 20,
+                    end: 20,
                     child: Container(
                       padding: EdgeInsets.all(10.r),
                       decoration: BoxDecoration(
@@ -379,7 +389,7 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Actions',
+          context.tr('quick_actions'),
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w700,
@@ -389,13 +399,31 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
         SizedBox(height: 15.h),
         Row(
           children: [
-            _buildQuickAction(Icons.ac_unit, 'Climate', () {}),
+            _buildQuickAction(
+              Icons.ac_unit,
+              context.tr('climate'),
+              _showUnavailable,
+            ),
             SizedBox(width: 15.w),
-            _buildQuickAction(Icons.local_parking, 'Find Car', () {}),
+            _buildQuickAction(
+              Icons.local_parking,
+              context.tr('find_car'),
+              _showUnavailable,
+            ),
           ],
         ),
       ],
     );
+  }
+
+  /// The screen is a demo with no link to a vehicle, so these actions say so
+  /// instead of doing nothing.
+  void _showUnavailable() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(context.tr('smart_key_action_unavailable'))),
+      );
   }
 
   Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {

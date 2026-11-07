@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 /// Screen for uploading a tutorial video with metadata and optional tools list.
+///
+/// There is no tutorial backend (no upload or catalogue endpoint), so the
+/// form validates — including that a video was actually picked — but
+/// publishing tells the user it is not available yet instead of faking an
+/// upload.
 class UploadVideoScreen extends StatefulWidget {
   const UploadVideoScreen({super.key});
 
@@ -20,8 +26,13 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
   String selectedCode = 'P0420';
   String selectedDifficulty = 'Intermediate';
   String selectedCost = 'Low (\$0-\$100)';
-  bool isUploading = false;
-  double uploadProgress = 0.0;
+
+  final ImagePicker _picker = ImagePicker();
+  XFile? _video;
+  XFile? _thumbnail;
+
+  /// Set when publish was attempted without a video, to flag the picker.
+  bool _videoMissing = false;
 
   final List<String> codes = [
     'P0420',
@@ -31,11 +42,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     'U0100',
     'Other',
   ];
-  final List<String> difficulties = [
-    'Beginner',
-    'Intermediate',
-    'Advanced',
-  ];
+  final List<String> difficulties = ['Beginner', 'Intermediate', 'Advanced'];
   final List<String> costRanges = [
     'Free',
     'Low (\$0-\$100)',
@@ -58,10 +65,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
+            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
           ),
         ),
         child: SafeArea(
@@ -76,6 +80,8 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildUnavailableNotice(),
+                        SizedBox(height: 20.h),
                         _buildVideoUploadSection(),
                         SizedBox(height: 25.h),
                         _buildThumbnailSection(),
@@ -116,7 +122,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            'Upload Tutorial',
+            context.tr('upload_tutorial'),
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
@@ -128,21 +134,80 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     );
   }
 
+  Widget _buildUnavailableNotice() {
+    return Container(
+      padding: EdgeInsets.all(12.r),
+      decoration: BoxDecoration(
+        color: AppColors.accentOrange.withValues(alpha: 0.1),
+        border: Border.all(
+          color: AppColors.accentOrange.withValues(alpha: 0.4),
+        ),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: AppColors.accentOrange, size: 20.r),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Text(
+              context.tr('tutorial_upload_unavailable'),
+              style: TextStyle(fontSize: 13.sp, color: AppColors.textLight),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickVideo() async {
+    final file = await _pick(
+      () => _picker.pickVideo(source: ImageSource.gallery),
+    );
+    if (file == null || !mounted) return;
+    setState(() {
+      _video = file;
+      _videoMissing = false;
+    });
+  }
+
+  Future<void> _pickThumbnail() async {
+    final file = await _pick(
+      () => _picker.pickImage(source: ImageSource.gallery, maxWidth: 1280),
+    );
+    if (file == null || !mounted) return;
+    setState(() => _thumbnail = file);
+  }
+
+  /// Runs a picker call; null when cancelled or when the picker failed
+  /// (permission denied, plugin unavailable — reported in a snackbar).
+  Future<XFile?> _pick(Future<XFile?> Function() pick) async {
+    try {
+      return await pick();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('media_pick_failed'))),
+        );
+      }
+      return null;
+    }
+  }
+
   Widget _buildVideoUploadSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Video File'),
+        _buildSectionTitle(context.tr('video_file')),
         GestureDetector(
-          onTap: () {
-            // Pick video file
-          },
+          onTap: _pickVideo,
           child: Container(
             height: 180.h,
             decoration: BoxDecoration(
               color: AppColors.white.withValues(alpha: 0.05),
               border: Border.all(
-                color: AppColors.accentCyan.withValues(alpha: 0.3),
+                color: _videoMissing
+                    ? const Color(0xFFFF1744)
+                    : AppColors.accentCyan.withValues(alpha: 0.3),
                 width: 2,
                 style: BorderStyle.solid,
               ),
@@ -152,25 +217,34 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.cloud_upload,
+                  _video == null ? Icons.cloud_upload : Icons.movie,
                   size: 60.r,
                   color: AppColors.accentCyan.withValues(alpha: 0.7),
                 ),
                 SizedBox(height: 15.h),
-                Text(
-                  'Tap to select video',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accentCyan,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    _video?.name ?? context.tr('tap_select_video'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accentCyan,
+                    ),
                   ),
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  'Max 500MB • MP4, MOV, AVI',
+                  _videoMissing
+                      ? context.tr('video_required')
+                      : context.tr('video_constraints'),
                   style: TextStyle(
                     fontSize: 13.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.6),
+                    color: _videoMissing
+                        ? const Color(0xFFFF1744)
+                        : AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -185,11 +259,9 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Thumbnail'),
+        _buildSectionTitle(context.tr('thumbnail')),
         GestureDetector(
-          onTap: () {
-            // Pick thumbnail
-          },
+          onTap: _pickThumbnail,
           child: Container(
             height: 120.h,
             decoration: BoxDecoration(
@@ -208,12 +280,16 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                   color: AppColors.accentCyan.withValues(alpha: 0.7),
                 ),
                 SizedBox(width: 15.w),
-                Text(
-                  'Select thumbnail image',
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accentCyan,
+                Flexible(
+                  child: Text(
+                    _thumbnail?.name ?? context.tr('select_thumbnail'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accentCyan,
+                    ),
                   ),
                 ),
               ],
@@ -228,12 +304,12 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Title'),
+        _buildSectionTitle(context.tr('tutorial_title_label')),
         TextFormField(
           controller: _titleController,
           style: const TextStyle(color: AppColors.textLight),
           decoration: InputDecoration(
-            hintText: 'Enter tutorial title...',
+            hintText: context.tr('tutorial_title_hint'),
             hintStyle: TextStyle(
               color: AppColors.textLight.withValues(alpha: 0.5),
             ),
@@ -261,7 +337,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter a title';
+              return context.tr('tutorial_title_required');
             }
             return null;
           },
@@ -274,13 +350,13 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Description'),
+        _buildSectionTitle(context.tr('description_label')),
         TextFormField(
           controller: _descriptionController,
           style: const TextStyle(color: AppColors.textLight),
           maxLines: 5,
           decoration: InputDecoration(
-            hintText: 'Describe what viewers will learn...',
+            hintText: context.tr('tutorial_desc_hint'),
             hintStyle: TextStyle(
               color: AppColors.textLight.withValues(alpha: 0.5),
             ),
@@ -308,7 +384,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter a description';
+              return context.tr('tutorial_desc_required');
             }
             return null;
           },
@@ -321,7 +397,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Related Code'),
+        _buildSectionTitle(context.tr('related_code')),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -334,10 +410,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                 });
               },
               child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 10.h,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   gradient: isSelected
                       ? const LinearGradient(
@@ -347,7 +420,9 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                           ],
                         )
                       : null,
-                  color: isSelected ? null : AppColors.white.withValues(alpha: 0.05),
+                  color: isSelected
+                      ? null
+                      : AppColors.white.withValues(alpha: 0.05),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.transparent
@@ -356,13 +431,11 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
-                  code,
+                  code == 'Other' ? context.tr('code_other') : code,
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.accentCyan,
+                    color: isSelected ? AppColors.white : AppColors.accentCyan,
                   ),
                 ),
               ),
@@ -377,7 +450,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Difficulty Level'),
+        _buildSectionTitle(context.tr('difficulty_level')),
         Row(
           children: difficulties.map((difficulty) {
             final isSelected = selectedDifficulty == difficulty;
@@ -389,7 +462,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                   });
                 },
                 child: Container(
-                  margin: EdgeInsets.only(right: 10.w),
+                  margin: EdgeInsetsDirectional.only(end: 10.w),
                   padding: EdgeInsets.symmetric(vertical: 12.h),
                   decoration: BoxDecoration(
                     gradient: isSelected
@@ -400,7 +473,9 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                             ],
                           )
                         : null,
-                    color: isSelected ? null : AppColors.white.withValues(alpha: 0.05),
+                    color: isSelected
+                        ? null
+                        : AppColors.white.withValues(alpha: 0.05),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.transparent
@@ -410,7 +485,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      difficulty,
+                      context.tr('difficulty_${difficulty.toLowerCase()}'),
                       style: TextStyle(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
@@ -433,7 +508,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Estimated Cost'),
+        _buildSectionTitle(context.tr('estimated_cost')),
         ...costRanges.map((cost) {
           final isSelected = selectedCost == cost;
           return GestureDetector(
@@ -468,7 +543,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                   ),
                   SizedBox(width: 15.w),
                   Text(
-                    cost,
+                    _costLabel(cost),
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
@@ -490,7 +565,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Tools & Parts (Optional)'),
+        _buildSectionTitle(context.tr('tools_parts_optional')),
         Container(
           padding: EdgeInsets.all(15.r),
           decoration: BoxDecoration(
@@ -505,7 +580,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
               const Icon(Icons.add_circle_outline, color: AppColors.accentCyan),
               SizedBox(width: 15.w),
               Text(
-                'Add tools and parts list',
+                context.tr('add_tools_list'),
                 style: TextStyle(
                   fontSize: 15.sp,
                   color: AppColors.accentCyan,
@@ -537,7 +612,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
         ],
       ),
       child: ElevatedButton(
-        onPressed: isUploading ? null : _handleUpload,
+        onPressed: _handleUpload,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.transparent,
           shadowColor: AppColors.transparent,
@@ -545,40 +620,34 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
             borderRadius: BorderRadius.circular(15.r),
           ),
         ),
-        child: isUploading
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: const CircularProgressIndicator(
-                      color: AppColors.white,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                  SizedBox(width: 15.w),
-                  Text(
-                    '${(uploadProgress * 100).toInt()}% Uploading...',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ],
-              )
-            : Text(
-                'PUBLISH TUTORIAL',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                  color: AppColors.white,
-                ),
-              ),
+        child: Text(
+          context.tr('publish_tutorial'),
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w700,
+            letterSpacing: _isArabic ? 0 : 2,
+            color: AppColors.white,
+          ),
+        ),
       ),
     );
+  }
+
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
+  String _costLabel(String cost) {
+    switch (costRanges.indexOf(cost)) {
+      case 0:
+        return context.tr('cost_free');
+      case 1:
+        return context.tr('cost_low');
+      case 2:
+        return context.tr('cost_medium');
+      case 3:
+        return context.tr('cost_high');
+      default:
+        return cost;
+    }
   }
 
   Widget _buildSectionTitle(String title) {
@@ -596,62 +665,39 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
   }
 
   void _handleUpload() {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        isUploading = true;
-      });
+    final formValid = _formKey.currentState!.validate();
+    setState(() => _videoMissing = _video == null);
+    if (!formValid || _video == null) return;
 
-      Future.delayed(const Duration(seconds: 1), () {
-        if (!mounted) return;
-        setState(() {
-          uploadProgress = 0.3;
-        });
-      });
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!mounted) return;
-        setState(() {
-          uploadProgress = 0.6;
-        });
-      });
-      Future.delayed(const Duration(seconds: 3), () {
-        if (!mounted) return;
-        setState(() {
-          uploadProgress = 1.0;
-        });
-
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppColors.surfaceDark,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            title: const Text(
-              'Success!',
-              style: TextStyle(color: AppColors.textLight),
-            ),
-            content: const Text(
-              'Your tutorial has been uploaded successfully!',
-              style: TextStyle(color: AppColors.textLight),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentCyan,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                ),
-                child: Text(context.tr('done')),
+    // Nothing to upload to: say so instead of simulating a publish.
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: Text(
+          context.tr('tutorial_upload_unavailable_title'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
+        content: Text(
+          context.tr('tutorial_upload_unavailable'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
               ),
-            ],
+            ),
+            child: Text(context.tr('ok')),
           ),
-        );
-      });
-    }
+        ],
+      ),
+    );
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../../core/app_services.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -118,10 +119,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startAnimations() async {
+    // The screen can be disposed during either delay (e.g. app backgrounded
+    // and route replaced); a disposed controller throws on forward().
     await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
     _carController.forward();
 
     await Future.delayed(const Duration(milliseconds: 1800));
+    if (!mounted) return;
     _titleController.forward();
   }
 
@@ -154,22 +159,30 @@ class _SplashScreenState extends State<SplashScreen>
             // Glow pulse
             _buildGlowPulse(),
 
-            // Main content
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Car animation
-                  _buildCarAnimation(),
-                  SizedBox(height: 40.h),
+            // Main content — scaled down to fit when the screen is shorter
+            // than the portrait design (e.g. a phone in landscape).
+            Positioned.fill(
+              child: SafeArea(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Car animation
+                        _buildCarAnimation(),
+                        SizedBox(height: 40.h),
 
-                  // Title
-                  _buildTitleAnimation(),
-                  SizedBox(height: 60.h),
+                        // Title
+                        _buildTitleAnimation(),
+                        SizedBox(height: 60.h),
 
-                  // Loading indicator
-                  _buildLoadingIndicator(),
-                ],
+                        // Loading indicator
+                        _buildLoadingIndicator(),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -177,6 +190,8 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
+
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
   Widget _buildGridBackground() {
     return Positioned.fill(child: CustomPaint(painter: GridPainter()));
@@ -314,11 +329,12 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             SizedBox(height: 10.h),
             Text(
-              'PROFESSIONAL DIAGNOSTICS',
+              context.tr('splash_tagline'),
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w300,
-                letterSpacing: 4,
+                // Letter spacing breaks Arabic glyph joining.
+                letterSpacing: _isArabic ? 0 : 4,
                 color: AppColors.accentCyan,
               ),
             ),
@@ -382,10 +398,10 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           SizedBox(height: 15.h),
           Text(
-            'INITIALIZING SYSTEM...',
+            context.tr('splash_initializing'),
             style: TextStyle(
               fontSize: 12.sp,
-              letterSpacing: 2,
+              letterSpacing: _isArabic ? 0 : 2,
               color: AppColors.textLight,
               fontWeight: FontWeight.w300,
             ),

@@ -1,6 +1,7 @@
 import 'dart:math' show cos, sin, pi;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
@@ -123,8 +124,12 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final shouldExit = await _onWillPop();
-        if (shouldExit && context.mounted) {
-          Navigator.of(context).pop();
+        if (shouldExit) {
+          // This is the root route (reached via pushReplacementNamed), so
+          // Navigator.pop() would be a no-op: close the app instead. iOS
+          // ignores this by design (apps may not quit themselves), and there
+          // is no system back gesture on a root route there anyway.
+          await SystemNavigator.pop();
         }
       },
       child: Scaffold(
@@ -386,162 +391,180 @@ class _ModeCardState extends State<_ModeCard>
           ),
           child: Padding(
             padding: EdgeInsets.all(20.r),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top row: icon + tag
-                Row(
-                  children: [
-                    Container(
-                      width: 52.r,
-                      height: 52.r,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            color.withValues(alpha: 0.3),
-                            color.withValues(alpha: 0.1),
+            // Scrolls instead of overflowing when the card is shorter than
+            // its content (small phones, large text, taller Arabic glyphs).
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Top row: icon + tag
+                        Row(
+                          children: [
+                            Container(
+                              width: 52.r,
+                              height: 52.r,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    color.withValues(alpha: 0.3),
+                                    color.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(14.r),
+                                border: Border.all(color: color.withValues(alpha: 0.5)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.2),
+                                    blurRadius: 12,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(widget.icon, color: color, size: 26.r),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 5.h),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20.r),
+                                border: Border.all(color: color.withValues(alpha: 0.35)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(widget.tagIcon, color: color, size: 12.r),
+                                  SizedBox(width: 5.w),
+                                  Text(
+                                    widget.tag,
+                                    style: TextStyle(
+                                      color: color,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: color.withValues(alpha: 0.5)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                          ),
-                        ],
-                      ),
-                      child: Icon(widget.icon, color: color, size: 26.r),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 10.w, vertical: 5.h),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(color: color.withValues(alpha: 0.35)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(widget.tagIcon, color: color, size: 12.r),
-                          SizedBox(width: 5.w),
-                          Text(
-                            widget.tag,
-                            style: TextStyle(
-                              color: color,
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
 
-                SizedBox(height: 14.h),
+                        SizedBox(height: 14.h),
 
-                // Title
-                Text(
-                  widget.title,
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-
-                SizedBox(height: 6.h),
-
-                // Subtitle
-                Text(
-                  widget.subtitle,
-                  style: TextStyle(
-                    color: AppColors.textLight.withValues(alpha: 0.55),
-                    fontSize: 12.sp,
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const Spacer(),
-
-                // Feature bullets
-                ...widget.features.map(
-                  (f) => Padding(
-                    padding: EdgeInsets.only(bottom: 5.h),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 5.r,
-                          height: 5.r,
-                          margin: EdgeInsets.only(right: 8.w),
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
+                        // Title
+                        Text(
+                          widget.title,
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
                           ),
                         ),
+
+                        SizedBox(height: 6.h),
+
+                        // Subtitle
                         Text(
-                          f,
+                          widget.subtitle,
                           style: TextStyle(
-                            color: AppColors.textLight.withValues(alpha: 0.7),
-                            fontSize: 11.sp,
+                            color: AppColors.textLight.withValues(alpha: 0.55),
+                            fontSize: 12.sp,
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        const Spacer(),
+
+                        // Feature bullets
+                        ...widget.features.map(
+                          (f) => Padding(
+                            padding: EdgeInsets.only(bottom: 5.h),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 5.r,
+                                  height: 5.r,
+                                  margin: EdgeInsetsDirectional.only(end: 8.w),
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                // Flexible: long Arabic bullets wrap instead
+                                // of overflowing the card (~57 px before).
+                                Flexible(
+                                  child: Text(
+                                    f,
+                                    style: TextStyle(
+                                      color: AppColors.textLight
+                                          .withValues(alpha: 0.7),
+                                      fontSize: 11.sp,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 14.h),
+
+                        // Action button
+                        Container(
+                          width: double.infinity,
+                          height: 46.h,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [color, color.withValues(alpha: 0.7)],
+                            ),
+                            borderRadius: BorderRadius.circular(14.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.35),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(widget.buttonIcon,
+                                  color: AppColors.white, size: 18.r),
+                              SizedBox(width: 8.w),
+                              Text(
+                                widget.buttonLabel,
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Icon(Icons.arrow_forward_rounded,
+                                  color: AppColors.white.withValues(alpha: 0.8),
+                                  size: 16.r),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-
-                SizedBox(height: 14.h),
-
-                // Action button
-                Container(
-                  width: double.infinity,
-                  height: 46.h,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [color, color.withValues(alpha: 0.7)],
-                    ),
-                    borderRadius: BorderRadius.circular(14.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(widget.buttonIcon,
-                          color: AppColors.white, size: 18.r),
-                      SizedBox(width: 8.w),
-                      Text(
-                        widget.buttonLabel,
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Icon(Icons.arrow_forward_rounded,
-                          color: AppColors.white.withValues(alpha: 0.8),
-                          size: 16.r),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

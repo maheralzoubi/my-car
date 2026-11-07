@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class VideoTutorialsScreen extends StatefulWidget {
   const VideoTutorialsScreen({super.key});
@@ -14,11 +15,23 @@ class VideoTutorialsScreen extends StatefulWidget {
 class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
   String selectedFilter = 'All';
   String selectedDifficulty = 'All';
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
 
   static const Color _successGreen = Color(0xFF00E676);
   static const Color _ratingYellow = Color(0xFFFFD600);
 
+  /// Built-in SAMPLE catalogue: there is no tutorial backend (no endpoint
+  /// lists or serves videos), so these entries are placeholders and the
+  /// screen labels them as such. Titles/costs are localization keys; the
+  /// view/rating figures are illustrative only.
   late List<Map<String, dynamic>> _tutorials;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -26,86 +39,94 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
     _tutorials = [
       {
         'id': '1',
-        'title': 'How to Replace Oxygen Sensor',
+        'titleKey': 'tut_title_o2_sensor',
         'code': 'P0420',
         'duration': '15 min',
         'difficulty': 'Intermediate',
         'views': '125K',
         'rating': 4.8,
         'thumbnail': '🔧',
-        'instructor': 'Mike Johnson',
-        'cost': 'Low (\$50-\$150)',
+        'costKey': 'cost_low',
         'bookmarked': false,
-        'uploadedBy': 'CarRepairPro',
       },
       {
         'id': '2',
-        'title': 'Fix Engine Misfire - Complete Guide',
+        'titleKey': 'tut_title_misfire',
         'code': 'P0301',
         'duration': '22 min',
         'difficulty': 'Advanced',
         'views': '89K',
         'rating': 4.9,
         'thumbnail': '⚡',
-        'instructor': 'Sarah Miller',
-        'cost': 'Medium (\$200-\$500)',
+        'costKey': 'cost_medium',
         'bookmarked': true,
-        'uploadedBy': 'AutoTechTV',
       },
       {
         'id': '3',
-        'title': 'Check Engine Light Diagnosis',
+        'titleKey': 'tut_title_check_engine',
         'code': 'General',
         'duration': '8 min',
         'difficulty': 'Beginner',
         'views': '250K',
         'rating': 4.7,
         'thumbnail': '💡',
-        'instructor': 'John Smith',
-        'cost': 'Free',
+        'costKey': 'cost_free',
         'bookmarked': false,
-        'uploadedBy': 'DIYCar',
       },
       {
         'id': '4',
-        'title': 'ABS System Troubleshooting',
+        'titleKey': 'tut_title_abs',
         'code': 'C1201',
         'duration': '18 min',
         'difficulty': 'Intermediate',
         'views': '67K',
         'rating': 4.6,
         'thumbnail': '🛞',
-        'instructor': 'David Lee',
-        'cost': 'Medium (\$300-\$600)',
+        'costKey': 'cost_medium',
         'bookmarked': false,
-        'uploadedBy': 'AutoRepairHub',
       },
       {
         'id': '5',
-        'title': 'How to Clean MAF Sensor',
+        'titleKey': 'tut_title_maf',
         'code': 'P0100',
         'duration': '10 min',
         'difficulty': 'Beginner',
         'views': '180K',
         'rating': 4.9,
         'thumbnail': '🌊',
-        'instructor': 'Chris Anderson',
-        'cost': 'Low (\$10-\$30)',
+        'costKey': 'cost_low',
         'bookmarked': true,
-        'uploadedBy': 'QuickFix',
       },
     ];
   }
 
+  String _title(Map<String, dynamic> t) => context.tr(t['titleKey'] as String);
+
   List<Map<String, dynamic>> get filteredTutorials {
+    final query = _query.trim().toLowerCase();
     return _tutorials.where((tutorial) {
       final matchesFilter = selectedFilter == 'All' ||
           tutorial['code'].toString().contains(selectedFilter);
       final matchesDifficulty = selectedDifficulty == 'All' ||
           tutorial['difficulty'] == selectedDifficulty;
-      return matchesFilter && matchesDifficulty;
+      final matchesQuery = query.isEmpty ||
+          _title(tutorial).toLowerCase().contains(query) ||
+          tutorial['code'].toString().toLowerCase().contains(query);
+      return matchesFilter && matchesDifficulty && matchesQuery;
     }).toList();
   }
+
+  /// Route arguments for the player: the entry with its display strings
+  /// resolved for the current locale.
+  Map<String, dynamic> _playerArgs(Map<String, dynamic> t) => {
+        ...t,
+        'title': _title(t),
+        if (t['code'] == 'General') 'code': context.tr('tutorial_filter_general'),
+        'instructor': context.tr('tutorial_sample_author'),
+        'uploadedBy': context.tr('tutorial_sample_badge'),
+        'cost': context.tr(t['costKey'] as String),
+        'duration': _durationLabel(t['duration'] as String?),
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +148,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
               _buildHeader(),
               _buildSearchBar(),
               _buildFilterChips(),
+              _buildSampleNotice(),
               Expanded(
                 child: _buildTutorialsList(),
               ),
@@ -148,7 +170,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            'Video Tutorials',
+            context.tr('video_tutorials'),
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
@@ -177,15 +199,42 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
         borderRadius: BorderRadius.circular(15.r),
       ),
       child: TextField(
+        controller: _searchController,
+        onChanged: (v) => setState(() => _query = v),
         style: const TextStyle(color: AppColors.textLight),
         decoration: InputDecoration(
-          hintText: 'Search tutorials...',
+          hintText: context.tr('search_tutorials'),
           hintStyle: TextStyle(
             color: AppColors.textLight.withValues(alpha: 0.5),
           ),
           border: InputBorder.none,
           icon: const Icon(Icons.search, color: AppColors.accentCyan),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSampleNotice() {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20.w, 4.h, 20.w, 0),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 16.r,
+            color: AppColors.accentOrange,
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Text(
+              context.tr('tutorial_sample_notice'),
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: AppColors.textLight.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -199,7 +248,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
             children: [
-              _buildFilterChip('All', selectedFilter == 'All', () {
+              _buildFilterChip(context.tr('all'), selectedFilter == 'All', () {
                 setState(() => selectedFilter = 'All');
               }),
               _buildFilterChip('P0420', selectedFilter == 'P0420', () {
@@ -208,7 +257,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
               _buildFilterChip('P0301', selectedFilter == 'P0301', () {
                 setState(() => selectedFilter = 'P0301');
               }),
-              _buildFilterChip('General', selectedFilter == 'General', () {
+              _buildFilterChip(context.tr('tutorial_filter_general'), selectedFilter == 'General', () {
                 setState(() => selectedFilter = 'General');
               }),
             ],
@@ -220,18 +269,18 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
             children: [
-              _buildFilterChip('All Levels', selectedDifficulty == 'All', () {
+              _buildFilterChip(context.tr('all_levels'), selectedDifficulty == 'All', () {
                 setState(() => selectedDifficulty = 'All');
               }),
-              _buildFilterChip('Beginner', selectedDifficulty == 'Beginner', () {
+              _buildFilterChip(_difficultyLabel('Beginner'), selectedDifficulty == 'Beginner', () {
                 setState(() => selectedDifficulty = 'Beginner');
               }),
               _buildFilterChip(
-                'Intermediate',
+                _difficultyLabel('Intermediate'),
                 selectedDifficulty == 'Intermediate',
                 () => setState(() => selectedDifficulty = 'Intermediate'),
               ),
-              _buildFilterChip('Advanced', selectedDifficulty == 'Advanced', () {
+              _buildFilterChip(_difficultyLabel('Advanced'), selectedDifficulty == 'Advanced', () {
                 setState(() => selectedDifficulty = 'Advanced');
               }),
             ],
@@ -245,7 +294,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(right: 10.w),
+        margin: EdgeInsetsDirectional.only(end: 10.w),
         padding: EdgeInsets.symmetric(horizontal: 20.w),
         decoration: BoxDecoration(
           gradient: isSelected
@@ -290,7 +339,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
             ),
             SizedBox(height: 20.h),
             Text(
-              'No tutorials found',
+              context.tr('no_tutorials_found'),
               style: TextStyle(
                 fontSize: 18.sp,
                 color: AppColors.textLight,
@@ -330,7 +379,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
           Navigator.pushNamed(
             context,
             AppRoutes.videoPlayer,
-            arguments: tutorial,
+            arguments: _playerArgs(tutorial),
           );
         },
         child: Container(
@@ -369,9 +418,9 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
+                  PositionedDirectional(
                     bottom: 10,
-                    right: 10,
+                    end: 10,
                     child: Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 10.w,
@@ -382,7 +431,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
-                        tutorial['duration'] as String? ?? '—',
+                        _durationLabel(tutorial['duration'] as String?),
                         style: TextStyle(
                           fontSize: 12.sp,
                           color: AppColors.white,
@@ -391,9 +440,9 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
+                  PositionedDirectional(
                     top: 10,
-                    right: 10,
+                    end: 10,
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
@@ -438,7 +487,9 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
-                            tutorial['code'] as String? ?? '—',
+                            tutorial['code'] == 'General'
+                                ? context.tr('tutorial_filter_general')
+                                : tutorial['code'] as String? ?? '—',
                             style: TextStyle(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w700,
@@ -458,7 +509,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
-                            difficulty,
+                            _difficultyLabel(difficulty),
                             style: TextStyle(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w600,
@@ -470,7 +521,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                     ),
                     SizedBox(height: 10.h),
                     Text(
-                      tutorial['title'] as String? ?? '—',
+                      _title(tutorial),
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
@@ -481,7 +532,8 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      'By ${tutorial['instructor'] ?? '—'}',
+                      context.tr('tutorial_by').replaceAll(
+                          '{name}', context.tr('tutorial_sample_author')),
                       style: TextStyle(
                         fontSize: 13.sp,
                         color: AppColors.textLight.withValues(alpha: 0.7),
@@ -520,7 +572,7 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
                         ),
                         const Spacer(),
                         Text(
-                          tutorial['cost'] as String? ?? '—',
+                          context.tr(tutorial['costKey'] as String),
                           style: TextStyle(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
@@ -537,6 +589,28 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
         ),
       ),
     );
+  }
+
+  String _difficultyLabel(String difficulty) {
+    switch (difficulty) {
+      case 'Beginner':
+        return context.tr('difficulty_beginner');
+      case 'Intermediate':
+        return context.tr('difficulty_intermediate');
+      case 'Advanced':
+        return context.tr('difficulty_advanced');
+      default:
+        return difficulty;
+    }
+  }
+
+  /// Localizes mock durations such as "15 min".
+  String _durationLabel(String? duration) {
+    if (duration == null) return '—';
+    final m = RegExp(r'^(\d+) min$').firstMatch(duration);
+    return m == null
+        ? duration
+        : context.tr('minutes_n').replaceAll('{n}', m.group(1)!);
   }
 
   Color _getDifficultyColor(String difficulty) {
@@ -559,9 +633,9 @@ class _VideoTutorialsScreenState extends State<VideoTutorialsScreen> {
       },
       backgroundColor: AppColors.accentOrange,
       icon: const Icon(Icons.upload),
-      label: const Text(
-        'Upload',
-        style: TextStyle(fontWeight: FontWeight.w700),
+      label: Text(
+        context.tr('upload'),
+        style: const TextStyle(fontWeight: FontWeight.w700),
       ),
     );
   }

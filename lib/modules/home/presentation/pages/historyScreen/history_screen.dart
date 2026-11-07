@@ -82,14 +82,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
             icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          Text(
-            context.tr('history_title'),
-            style: TextStyle(
-              fontSize: 24.sp, fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
+          Expanded(
+            child: Text(
+              context.tr('history_title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 24.sp, fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
           ),
-          const Spacer(),
           if (DtcHistoryService.instance.entries.isNotEmpty)
             IconButton(
               icon: Icon(Icons.delete_outline, color: AppColors.accentOrange),
@@ -147,7 +150,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           return GestureDetector(
             onTap: () => setState(() => _filter = f),
             child: Container(
-              margin: EdgeInsets.only(right: 10.w),
+              margin: EdgeInsetsDirectional.only(end: 10.w),
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               decoration: BoxDecoration(
                 gradient: sel ? const LinearGradient(
@@ -246,7 +249,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       SizedBox(height: 2.h),
                       Text(
-                        '${entry.mileageKm.toStringAsFixed(0)} km',
+                        '${entry.mileageKm.toStringAsFixed(0)} ${context.tr('unit_km')}',
                         style: TextStyle(
                             fontSize: 11.sp,
                             color: AppColors.textLight.withValues(alpha: 0.5)),
@@ -263,7 +266,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   child: Text(
                     hasCode
-                        ? '${entry.codes.length} code${entry.codes.length > 1 ? 's' : ''}'
+                        ? (entry.codes.length == 1
+                            ? context.tr('history_code_one')
+                            : context.tr('history_codes_n')
+                                .replaceAll('{n}', '${entry.codes.length}'))
                         : context.tr('clean_scan'),
                     style: TextStyle(
                         fontSize: 11.sp, fontWeight: FontWeight.w700,
@@ -277,9 +283,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
               SizedBox(height: 10.h),
               Row(
                 children: [
-                  if (confirmed > 0) _pill('$confirmed confirmed', _colCritical),
+                  if (confirmed > 0)
+                    _pill(context.tr('history_confirmed_n')
+                        .replaceAll('{n}', '$confirmed'), _colCritical),
                   if (confirmed > 0 && pending > 0) SizedBox(width: 6.w),
-                  if (pending > 0)   _pill('$pending pending',   const Color(0xFFFFD600)),
+                  if (pending > 0)
+                    _pill(context.tr('history_pending_n')
+                        .replaceAll('{n}', '$pending'), const Color(0xFFFFD600)),
                 ],
               ),
             ],
@@ -334,9 +344,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final now = DateTime.now();
     final diff = now.difference(d);
     if (diff.inDays == 0) {
-      return 'Today  ${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+      return '${context.tr('history_today')}  ${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
     } else if (diff.inDays == 1) {
-      return 'Yesterday  ${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+      return '${context.tr('history_yesterday')}  ${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
     }
     return '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}  '
         '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';

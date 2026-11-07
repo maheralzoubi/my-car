@@ -43,8 +43,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   OBDAlert? _activeAlert;
   StreamSubscription<OBDAlert>? _alertSub;
 
+  // Link state: a mid-session Bluetooth drop must flip the header to the
+  // "not connected" banner instead of leaving stale live data on screen.
+  StreamSubscription<OBDConnectionState>? _connSub;
+
+  // Bumped on every successful (re)connect, so returning from the adapter
+  // screen can tell a new link (restart the session) from the same one.
+  int _connectEpoch = 0;
+
+  // Fault codes from the last scan: confirmed (mode 03) and pending (mode
+  // 07, '~'-prefixed). The health card counts codes, not lit lamps.
+  int _confirmedDtcs = 0;
+  int _pendingDtcs = 0;
+
   // MIL (Check Engine Lamp) hardware status from mode-01 readiness monitors.
   bool _milOn = false;
+
+  // Compression-ignition engine (readiness PID 0101): diesels have no
+  // throttle plate, timing advance, fuel trims or narrow-band O2, so the
+  // live grid shows pedal / rail pressure instead of tiles stuck at '--'.
+  bool _isDiesel = false;
 
   // Tracks how many km of the current trip have already been committed to
   // MaintenanceService — prevents double-counting across commits.
@@ -81,6 +99,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     MaintenanceService.instance.load();
     _startPollingIfConnected();
+    _connSub = OBDService.instance.connectionStateStream.listen((s) {
+      if (s == OBDConnectionState.connected) _connectEpoch++;
+      if (mounted) setState(() {});
+    });
+  }
+
+  /// Opens the adapter screen (connect / switch / disconnect) and re-syncs
+  /// the dashboard with whatever link the user left behind.
+  void _openConnectionScreen() {
+    final wasConnected = OBDService.instance.isInitialized;
+    final epoch = _connectEpoch;
+    Navigator.pushNamed(context, AppRoutes.connectionscreen).then((_) {
+      if (!mounted) return;
+      final connected = OBDService.instance.isInitialized;
+      if (connected && (!wasConnected || epoch != _connectEpoch)) {
+        // New link (first connect, reconnect or another adapter): start a
+        // fresh session — polling, DTC/readiness scan, VIN, trip, alerts.
+        _startPollingIfConnected();
+      } else if (connected) {
+        // Same link: just make sure live polling is running.
+        OBDService.instance.startPolling();
+      }
+      setState(() {});
+    });
+  }
+
+  // The dashboard's route animation for "covered by another route". When
+  // the route on top is popped it settles back to dismissed, and the
+  // dashboard rebuilds so whatever that screen changed (maintenance items →
+  // the due banner and service lamp) shows even with no live data arriving
+  // to trigger a rebuild — however that screen was opened.
+  Animation<double>? _coverAnimation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final cover = ModalRoute.of(context)?.secondaryAnimation;
+    if (cover != _coverAnimation) {
+      _coverAnimation?.removeStatusListener(_onCoverStatus);
+      _coverAnimation = cover?..addStatusListener(_onCoverStatus);
+    }
+  }
+
+  void _onCoverStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed && mounted) setState(() {});
   }
 
   void _startPollingIfConnected() {
@@ -192,11 +255,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Fetch MIL (Check Engine Lamp) hardware state from mode-01 readiness byte.
     final readiness = await OBDService.instance.getReadinessMonitors();
     if (!mounted) return;
-    setState(() => _milOn = readiness.milOn);
+    setState(() {
+      _milOn = readiness.milOn;
+      _isDiesel = readiness.compressionIgnition;
+    });
 
     // Strip the '~' pending prefix so matching works the same for both
     // confirmed (mode 03) and pending (mode 07) codes.
     final codes = rawCodes.map((c) => c.startsWith('~') ? c.substring(1) : c).toList();
+    final pendingCount = rawCodes.where((c) => c.startsWith('~')).length;
 
     List<String> codesFor(bool Function(String) test) =>
         codes.where(test).toList();
@@ -221,14 +288,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isSpecific(String c) =>
         _matchPrefix(c, specificPrefixes) || c.startsWith('U');
 
-    // C-code helpers: split by SAE sub-range prefix.
-    // C00xx = ABS / brake wheel-speed, C01xx = traction/ESC, C02xx+ = steering/suspension.
+    // C-code helpers. Only SAE-generic chassis codes (C0xxx) have a fixed
+    // meaning; C1xxx/C2xxx are manufacturer-specific (Chery C1201 is an ABS
+    // valve, others use C12xx for anything), so they light no subsystem lamp
+    // — they still count as fault codes on the health card.
+    //   C00xx          ABS / wheel-speed
+    //   C01xx          traction / ESC (except the steering-angle codes)
+    //   C0190–C0195    steering-angle sensor (C0196–C0199 are yaw rate → ESC)
+    //   C0350–C0377    EPS solenoid, steering position / torque, EPS motor
+    //                  (C0379 is a drive-shaft speed sensor)
+    //   C0450          steering-assist actuator (C0455–C0478 are brake
+    //                  fluid / pad wear / suspension / roll control)
+    //   C0710          steering position signal
+    // Ranges follow the bundled DTC descriptions the user reads, so the lamp
+    // never contradicts the code's own text.
+    bool isSteeringCode(String c) {
+      if (c.length != 5 || !c.startsWith('C0')) return false;
+      final n = int.tryParse(c.substring(2), radix: 16);
+      if (n == null) return false;
+      return (n >= 0x190 && n <= 0x195) ||
+          (n >= 0x350 && n <= 0x377) ||
+          n == 0x450 ||
+          n == 0x710;
+    }
     bool isAbsCode(String c)      => c.startsWith('C00');
-    bool isTractionCode(String c) => c.startsWith('C01');
-    bool isSteeringCode(String c) => c.startsWith('C') && !isAbsCode(c) && !isTractionCode(c);
+    bool isTractionCode(String c) => c.startsWith('C01') && !isSteeringCode(c);
 
     setState(() {
       _scanningDtcs = false;
+      _confirmedDtcs = codes.length - pendingCount;
+      _pendingDtcs = pendingCount;
       warningLights = [
         // Check engine: residual P-codes not shown under any dedicated light.
         {'icon': '⚠️', 'label': 'check_engine',
@@ -320,13 +409,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _liveWarningSub?.cancel();
     _tripSub?.cancel();
     _alertSub?.cancel();
+    _connSub?.cancel();
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // The service hub pushes the dashboard ("You can switch between services
+    // anytime"), so Back returns there — and disposing the dashboard stops
+    // live polling while keeping the adapter link. Only when the dashboard
+    // is the root route does Back mean "exit the app" (double-press).
     return PopScope(
-      canPop: false,
+      canPop: Navigator.canPop(context),
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         final now = DateTime.now();
@@ -379,6 +474,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       SizedBox(height: 30.h),
                       _buildQuickScanButton(),
                       SizedBox(height: 20.h),
+                      _buildMaintenanceCard(),
+                      SizedBox(height: 20.h),
                       _buildVideoTutorialsCard(),
                       SizedBox(height: 30.h),
                       _buildRecentScansSection(),
@@ -409,83 +506,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // The whole header (adapter name, "Connected" pill, chevron) opens the
+  // adapter screen, the only place to disconnect or switch adapters.
   Widget _buildConnectedHeader() {
-    return Row(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              Container(
-                width: 40.w,
-                height: 40.h,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _openConnectionScreen,
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.h,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+                    ),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
-                  borderRadius: BorderRadius.circular(10.r),
+                  child: Icon(Icons.directions_car, color: Colors.white, size: 24.r),
                 ),
-                child: Icon(Icons.directions_car, color: Colors.white, size: 24.r),
-              ),
-              SizedBox(width: 12.w),
-              Flexible(
-                child: Text(
-                  OBDService.instance.connectedDeviceName ?? 'OBD-II Adapter',
-                  overflow: TextOverflow.ellipsis,
+                SizedBox(width: 12.w),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        OBDService.instance.connectedDeviceName ??
+                            context.tr('dash_adapter'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFE8EAED),
+                        ),
+                      ),
+                      Text(
+                        context.tr('dash_manage_adapter'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: const Color(0xFFE8EAED).withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E676).withValues(alpha: 0.1),
+              border: Border.all(color: const Color(0xFF00E676)),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8.w,
+                  height: 8.h,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00E676),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  context.tr('connected'),
                   style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFE8EAED),
+                    fontSize: 12.sp,
+                    color: const Color(0xFF00E676),
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-          decoration: BoxDecoration(
-            color: const Color(0xFF00E676).withValues(alpha: 0.1),
-            border: Border.all(color: const Color(0xFF00E676)),
-            borderRadius: BorderRadius.circular(20.r),
+          SizedBox(width: 6.w),
+          Icon(
+            Icons.arrow_forward_ios,
+            color: const Color(0xFF00E676).withValues(alpha: 0.7),
+            size: 14.r,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8.w,
-                height: 8.h,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF00E676),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: 6.w),
-              Text(
-                context.tr('connected'),
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: const Color(0xFF00E676),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildDisconnectedBanner() {
     return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, AppRoutes.connectionscreen).then((_) {
-          if (mounted) {
-            _startPollingIfConnected();
-            setState(() {});
-            _fetchDtcsAndUpdateLights();
-          }
-        });
-      },
+      onTap: _openConnectionScreen,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
@@ -529,9 +648,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ── Health score helpers ──────────────────────────────────────────────────
 
-  /// 0–100 score derived from active DTC count.
+  /// 0–100 score from the number of problems: lit DTC lamps or confirmed
+  /// codes, whichever is larger (manufacturer-specific codes light no lamp
+  /// but are still faults).
   int get _healthScore {
-    final active = warningLights.where((l) => l['active'] == true).length;
+    final lamps = warningLights.where((l) => l['active'] == true).length;
+    final active = lamps > _confirmedDtcs ? lamps : _confirmedDtcs;
     if (active == 0) return 100;
     if (active == 1) return 80;
     if (active == 2) return 60;
@@ -541,11 +663,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String get _healthLabel {
     final s = _healthScore;
-    if (s >= 90) return 'Excellent';
-    if (s >= 70) return 'Good';
-    if (s >= 50) return 'Fair';
-    if (s >= 30) return 'Poor';
-    return 'Critical';
+    if (s >= 90) return context.tr('dash_health_excellent');
+    if (s >= 70) return context.tr('dash_health_good');
+    if (s >= 50) return context.tr('dash_health_fair');
+    if (s >= 30) return context.tr('dash_health_poor');
+    return context.tr('dash_health_critical');
   }
 
   Color get _healthColor {
@@ -616,9 +738,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ── VIN card ──────────────────────────────────────────────────────────────
 
   Widget _buildVinCard() {
-    final manufacturer = _vinInfo['manufacturer'] ?? '';
-    final year         = _vinInfo['year'] ?? '';
-    final country      = _vinInfo['country'] ?? '';
+    // VinDecoder reports undeterminable fields as VinDecoder.unknown.
+    String field(String key, String unknownKey) {
+      final value = _vinInfo[key] ?? '';
+      return value == VinDecoder.unknown ? context.tr(unknownKey) : value;
+    }
+    final manufacturer = field('manufacturer', 'vin_unknown');
+    final year         = field('year', 'vin_year_unknown');
+    final country      = _localizedCountry(field('country', 'vin_unknown'));
     return Container(
       padding: EdgeInsets.all(14.r),
       decoration: BoxDecoration(
@@ -659,6 +786,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// VinDecoder's English country name, in Arabic when the UI is Arabic
+  /// (falls back to the English name for countries not listed).
+  String _localizedCountry(String country) {
+    if (Localizations.localeOf(context).languageCode != 'ar') return country;
+    return _arCountryNames[country] ?? country;
+  }
+
   // ── Maintenance alert ─────────────────────────────────────────────────────
 
   Widget _buildMaintenanceAlert() {
@@ -678,7 +812,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             SizedBox(width: 10.w),
             Expanded(
               child: Text(
-                '$count maintenance item${count == 1 ? '' : 's'} due — tap to review',
+                context
+                    .tr(count == 1
+                        ? 'dash_maintenance_due_one'
+                        : 'dash_maintenance_due_many')
+                    .replaceAll('{n}', '$count'),
                 style: TextStyle(
                   fontSize: 13.sp,
                   color: const Color(0xFFFFD600),
@@ -717,19 +855,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Icon(Icons.route, color: const Color(0xFF00E676), size: 18.r),
               SizedBox(width: 8.w),
-              Text(
-                'Trip Computer',
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFE8EAED),
+              Expanded(
+                child: Text(
+                  context.tr('dash_trip_computer'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE8EAED),
+                  ),
                 ),
               ),
-              const Spacer(),
+              SizedBox(width: 8.w),
               GestureDetector(
                 onTap: () => setState(() => trip.reset()),
                 child: Text(
-                  'Reset',
+                  context.tr('dash_reset'),
                   style: TextStyle(
                     fontSize: 12.sp,
                     color: const Color(0xFF00E676).withValues(alpha: 0.8),
@@ -741,17 +883,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SizedBox(height: 14.h),
           Row(
             children: [
-              _tripStat('Distance', '${trip.distanceKm.toStringAsFixed(1)} km', const Color(0xFF00D9FF)),
-              _tripStat('Time', timeStr, const Color(0xFF00E676)),
-              _tripStat('Avg Speed', '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h', const Color(0xFFFFD600)),
+              _tripStat(context.tr('dash_distance'), '${trip.distanceKm.toStringAsFixed(1)} km', const Color(0xFF00D9FF)),
+              _tripStat(context.tr('dash_time'), timeStr, const Color(0xFF00E676)),
+              _tripStat(context.tr('dash_avg_speed'), '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h', const Color(0xFFFFD600)),
             ],
           ),
           SizedBox(height: 10.h),
           Row(
             children: [
-              _tripStat('Fuel Used', '${trip.fuelUsedL.toStringAsFixed(2)} L', const Color(0xFFFF6B35)),
+              _tripStat(context.tr('dash_fuel_used'), '${trip.fuelUsedL.toStringAsFixed(2)} L', const Color(0xFFFF6B35)),
               _tripStat(
-                'Efficiency',
+                context.tr('dash_efficiency'),
                 trip.fuelEfficiencyL100km > 0
                     ? '${trip.fuelEfficiencyL100km.toStringAsFixed(1)} L/100km'
                     : '--',
@@ -770,23 +912,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: _driveScoreColor(trip.driveScore).withValues(alpha: 0.4)),
               borderRadius: BorderRadius.circular(12.r),
             ),
+            // Label column takes the free space (and ellipsizes); the score
+            // keeps its natural width, so the row never overflows the card.
             child: Row(
               children: [
                 Text('🏎️', style: TextStyle(fontSize: 20.sp)),
                 SizedBox(width: 10.w),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Drive Score',
-                        style: TextStyle(fontSize: 10.sp,
-                            color: const Color(0xFFE8EAED).withValues(alpha: 0.55))),
-                    Text(trip.driveScoreLabel,
-                        style: TextStyle(fontSize: 13.sp,
-                            fontWeight: FontWeight.w700,
-                            color: _driveScoreColor(trip.driveScore))),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.tr('drive_score'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 10.sp,
+                              color: const Color(0xFFE8EAED).withValues(alpha: 0.55))),
+                      Text(_driveScoreLabel(trip.driveScore),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _driveScoreColor(trip.driveScore))),
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                SizedBox(width: 8.w),
                 Text('${trip.driveScore}',
                     style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.w900,
                         color: _driveScoreColor(trip.driveScore))),
@@ -799,6 +949,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  // Same bands as TripService.driveScoreLabel, localized.
+  String _driveScoreLabel(int score) {
+    if (score >= 85) return context.tr('dash_drive_eco');
+    if (score >= 65) return context.tr('dash_drive_normal');
+    if (score >= 45) return context.tr('dash_drive_sporty');
+    return context.tr('dash_drive_aggressive');
   }
 
   Color _driveScoreColor(int score) {
@@ -862,7 +1020,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final score   = _healthScore;
         final label   = _healthLabel;
         final hColor  = _healthColor;
-        final activeDtcs = warningLights.where((l) => l['active'] == true).length;
+        final confirmed = _confirmedDtcs;
+        final pending   = _pendingDtcs;
 
         final rpmStr     = d.rpm != null          ? d.rpm!.toStringAsFixed(0)               : '--';
         final speedStr   = d.speedKmh != null     ? '${d.speedKmh!.toStringAsFixed(0)} km/h' : '--';
@@ -876,12 +1035,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  context.tr('vehicle_health'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFE8EAED),
+                Flexible(
+                  child: Text(
+                    context.tr('vehicle_health'),
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE8EAED),
+                    ),
                   ),
                 ),
                 // Score badge
@@ -923,7 +1085,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             // ── DTC alert ───────────────────────────────────────────────────
-            if (activeDtcs > 0) ...[
+            if (confirmed > 0 || pending > 0) ...[
               SizedBox(height: 10.h),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
@@ -939,14 +1101,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icon(Icons.warning_amber_rounded,
                         color: const Color(0xFFFF6B35), size: 14.r),
                     SizedBox(width: 6.w),
-                    Text(
-                      '$activeDtcs active fault ${activeDtcs == 1 ? 'code' : 'codes'} detected',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: const Color(0xFFFF6B35),
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        context
+                            .tr(confirmed == 0
+                                ? (pending == 1
+                                    ? 'dash_pending_only_one'
+                                    : 'dash_pending_only_many')
+                                : confirmed == 1
+                                    ? 'dash_fault_code_n'
+                                    : 'dash_fault_codes_n')
+                            .replaceAll('{n}', '${confirmed == 0 ? pending : confirmed}'),
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: const Color(0xFFFF6B35),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
+                    // Pending (mode 07) codes: not confirmed faults yet.
+                    if (confirmed > 0 && pending > 0) ...[
+                      SizedBox(width: 6.w),
+                      Text(
+                        context
+                            .tr('dash_pending_codes_n')
+                            .replaceAll('{n}', '$pending'),
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: const Color(0xFFFFD600),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -958,15 +1144,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 _buildMetricTile(Icons.speed,        'RPM',     rpmStr,     const Color(0xFF00D9FF)),
                 SizedBox(width: 10.w),
-                _buildMetricTile(Icons.directions_car,'Speed',  speedStr,   const Color(0xFF00E676)),
+                _buildMetricTile(Icons.directions_car, context.tr('dash_speed'),  speedStr,   const Color(0xFF00E676)),
               ],
             ),
             SizedBox(height: 10.h),
             Row(
               children: [
-                _buildMetricTile(Icons.thermostat,   'Coolant', coolantStr, const Color(0xFFFFD600)),
+                _buildMetricTile(Icons.thermostat,   context.tr('dash_coolant'), coolantStr, const Color(0xFFFFD600)),
                 SizedBox(width: 10.w),
-                _buildMetricTile(Icons.local_gas_station,'Fuel', fuelStr,   const Color(0xFFFF6B35)),
+                _buildMetricTile(Icons.local_gas_station, context.tr('fuel'), fuelStr,   const Color(0xFFFF6B35)),
               ],
             ),
           ],
@@ -1008,7 +1194,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Connect your OBD-II adapter to see live vehicle health data.',
+                    context.tr('dash_connect_for_health'),
                     style: TextStyle(
                       fontSize: 12.sp,
                       color: const Color(0xFFE8EAED).withValues(alpha: 0.5),
@@ -1026,15 +1212,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _buildMetricTile(Icons.speed,        'RPM',     '--', Colors.white24),
             SizedBox(width: 10.w),
-            _buildMetricTile(Icons.directions_car,'Speed',  '--', Colors.white24),
+            _buildMetricTile(Icons.directions_car, context.tr('dash_speed'),  '--', Colors.white24),
           ],
         ),
         SizedBox(height: 10.h),
         Row(
           children: [
-            _buildMetricTile(Icons.thermostat,   'Coolant', '--', Colors.white24),
+            _buildMetricTile(Icons.thermostat,   context.tr('dash_coolant'), '--', Colors.white24),
             SizedBox(width: 10.w),
-            _buildMetricTile(Icons.local_gas_station,'Fuel','--', Colors.white24),
+            _buildMetricTile(Icons.local_gas_station, context.tr('fuel'), '--', Colors.white24),
           ],
         ),
         SizedBox(height: 8.h),
@@ -1109,15 +1295,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Icon(Icons.speed, color: Color(0xFF00D9FF), size: 20.r),
                   SizedBox(width: 8.w),
-                  Text(
-                    context.tr('live_data'),
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFE8EAED),
+                  Expanded(
+                    child: Text(
+                      context.tr('live_data'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFE8EAED),
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   if (OBDService.instance.isInitialized) ...[
                     GestureDetector(
                       onTap: () => Navigator.pushNamed(context, AppRoutes.liveGraph),
@@ -1166,7 +1355,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: OBDGauge(
                       value: d.speedKmh,
                       max: 240,
-                      label: 'Speed',
+                      label: context.tr('dash_speed'),
                       unit: 'km/h',
                       color: const Color(0xFF00E676),
                     ),
@@ -1178,7 +1367,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Row(
                 children: [
                   _buildLiveTile(
-                    'Coolant',
+                    context.tr('dash_coolant'),
                     d.coolantTempC != null ? d.coolantTempC!.toStringAsFixed(0) : '--',
                     '°C',
                     Icons.thermostat,
@@ -1188,7 +1377,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   SizedBox(width: 10.w),
                   _buildLiveTile(
-                    'Air Temp',
+                    context.tr('dash_air_temp'),
                     d.intakeAirTempC != null ? '${d.intakeAirTempC!.toStringAsFixed(0)}°C' : '--',
                     '',
                     Icons.air,
@@ -1198,7 +1387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   SizedBox(width: 10.w),
                   _buildLiveTile(
-                    'Battery',
+                    context.tr('battery'),
                     d.batteryVoltage != null ? '${d.batteryVoltage!.toStringAsFixed(1)}V' : '--',
                     '',
                     Icons.battery_charging_full,
@@ -1211,16 +1400,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SizedBox(height: 10.h),
               Row(
                 children: [
-                  _buildLiveTile(
-                    'Throttle',
-                    d.throttlePct != null ? d.throttlePct!.toStringAsFixed(1) : '--',
-                    '%',
-                    Icons.tune,
-                    const Color(0xFFFF6B35),
-                  ),
+                  // Diesels (and some petrol cars) report the pedal, not a
+                  // throttle plate.
+                  if (_isDiesel ||
+                      (d.throttlePct == null && d.acceleratorPedalPct != null))
+                    _buildLiveTile(
+                      context.tr('accel_pedal'),
+                      d.acceleratorPedalPct != null
+                          ? d.acceleratorPedalPct!.toStringAsFixed(1)
+                          : '--',
+                      '%',
+                      Icons.tune,
+                      const Color(0xFFFF6B35),
+                    )
+                  else
+                    _buildLiveTile(
+                      context.tr('throttle'),
+                      d.throttlePct != null ? d.throttlePct!.toStringAsFixed(1) : '--',
+                      '%',
+                      Icons.tune,
+                      const Color(0xFFFF6B35),
+                    ),
                   SizedBox(width: 10.w),
                   _buildLiveTile(
-                    'Fuel',
+                    context.tr('fuel'),
                     d.fuelLevelPct != null ? d.fuelLevelPct!.toStringAsFixed(1) : '--',
                     '%',
                     Icons.local_gas_station,
@@ -1228,7 +1431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   SizedBox(width: 10.w),
                   _buildLiveTile(
-                    'Engine Load',
+                    context.tr('dash_engine_load'),
                     d.engineLoad != null ? d.engineLoad!.toStringAsFixed(1) : '--',
                     '%',
                     Icons.settings,
@@ -1238,41 +1441,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               SizedBox(height: 10.h),
               SizedBox(height: 10.h),
-              // ── MAP + Timing advance ─────────────────────────────────────
+              // ── MAP + Timing advance (diesel: rail pressure + oil temp) ──
               Row(
                 children: [
                   _buildLiveTile(
-                    'MAP',
+                    context.tr('dash_map'),
                     d.mapKpa != null ? '${d.mapKpa!.toStringAsFixed(0)} kPa' : '--',
                     '',
                     Icons.compress,
                     const Color(0xFF00BCD4),
                   ),
                   SizedBox(width: 10.w),
-                  _buildTimingTile(d.timingAdvanceDeg),
-                  SizedBox(width: 10.w),
-                  Expanded(child: SizedBox()),
+                  if (_isDiesel) ...[
+                    _buildRailPressureTile(d.fuelRailPressureKpa),
+                    SizedBox(width: 10.w),
+                    _buildOilTempTile(d.oilTempC),
+                  ] else ...[
+                    _buildTimingTile(d.timingAdvanceDeg),
+                    SizedBox(width: 10.w),
+                    // GDI petrol engines may report rail pressure too.
+                    if (d.fuelRailPressureKpa != null)
+                      _buildRailPressureTile(d.fuelRailPressureKpa)
+                    else
+                      Expanded(child: SizedBox()),
+                  ],
                 ],
               ),
-              SizedBox(height: 10.h),
-              // ── Fuel trim Bank 1 + oil temp ──────────────────────────────
-              Row(
-                children: [
-                  _buildFuelTrimTile('STFT B1', d.fuelTrimShortPct, ''),
-                  SizedBox(width: 10.w),
-                  _buildFuelTrimTile('LTFT B1', d.fuelTrimLongPct, ''),
-                  SizedBox(width: 10.w),
-                  _buildLiveTile(
-                    'Oil Temp',
-                    d.oilTempC != null ? '${d.oilTempC!.toStringAsFixed(0)}°C' : '--',
-                    '',
-                    Icons.oil_barrel,
-                    d.oilTempC != null && d.oilTempC! > 130
-                        ? const Color(0xFFFF1744)
-                        : const Color(0xFF00E676),
-                  ),
-                ],
-              ),
+              // ── Fuel trim Bank 1 + oil temp (petrol only) ────────────────
+              if (!_isDiesel) ...[
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    _buildFuelTrimTile('STFT B1', d.fuelTrimShortPct, ''),
+                    SizedBox(width: 10.w),
+                    _buildFuelTrimTile('LTFT B1', d.fuelTrimLongPct, ''),
+                    SizedBox(width: 10.w),
+                    _buildOilTempTile(d.oilTempC),
+                  ],
+                ),
+              ],
               // ── Fuel trim Bank 2 (V6/V8) ─────────────────────────────────
               if (d.fuelTrimShortB2 != null || d.fuelTrimLongB2 != null) ...[
                 SizedBox(height: 10.h),
@@ -1286,17 +1493,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ],
-              SizedBox(height: 10.h),
-              // ── O2 sensor voltages ───────────────────────────────────────
-              Row(
-                children: [
-                  _buildO2Tile('O2 B1S1', d.o2B1S1Voltage),
-                  SizedBox(width: 10.w),
-                  _buildO2Tile('O2 B1S2', d.o2B1S2Voltage),
-                  SizedBox(width: 10.w),
-                  _buildO2Tile('O2 B2S1', d.o2B2S1Voltage),
-                ],
-              ),
+              // ── O2 sensor voltages (diesel: only if it reports any) ──────
+              if (!_isDiesel ||
+                  d.o2B1S1Voltage != null ||
+                  d.lambdaB1S1 != null ||
+                  d.o2B1S2Voltage != null) ...[
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    // Wide-band upstream sensors report λ instead of volts.
+                    if (d.o2B1S1Voltage == null && d.lambdaB1S1 != null)
+                      _buildLambdaTile('O2 B1S1', d.lambdaB1S1!)
+                    else
+                      _buildO2Tile('O2 B1S1', d.o2B1S1Voltage),
+                    SizedBox(width: 10.w),
+                    _buildO2Tile('O2 B1S2', d.o2B1S2Voltage),
+                    SizedBox(width: 10.w),
+                    _buildO2Tile('O2 B2S1', d.o2B2S1Voltage),
+                  ],
+                ),
+              ],
             ],
           ),
         );
@@ -1498,6 +1714,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildOilTempTile(double? oilTempC) {
+    return _buildLiveTile(
+      context.tr('dash_oil_temp'),
+      oilTempC != null ? '${oilTempC.toStringAsFixed(0)}°C' : '--',
+      '',
+      Icons.oil_barrel,
+      oilTempC != null && oilTempC > 130
+          ? const Color(0xFFFF1744)
+          : const Color(0xFF00E676),
+    );
+  }
+
+  // Fuel rail gauge pressure, shown in MPa (common-rail diesel: ~25–35 MPa
+  // at idle, up to ~200 MPa under load; GDI petrol: ~4–20 MPa).
+  Widget _buildRailPressureTile(double? kpa) {
+    return _buildLiveTile(
+      context.tr('rail_pressure'),
+      kpa != null ? (kpa / 1000).toStringAsFixed(1) : '--',
+      'MPa',
+      Icons.water_drop,
+      const Color(0xFF00BCD4),
+    );
+  }
+
+  Widget _buildLambdaTile(String label, double lambda) {
+    // Wide-band sensor equivalence ratio: 1.00 = stoichiometric.
+    // Petrol closed loop holds ~0.97–1.03; outside that it runs rich (< 1)
+    // or lean (> 1). Diesels run lean (λ well above 1) by design.
+    final Color color;
+    if (_isDiesel || (lambda - 1).abs() <= 0.03) {
+      color = const Color(0xFF00E676);
+    } else if (lambda < 1) {
+      color = const Color(0xFFFF6B35); // rich
+    } else {
+      color = const Color(0xFFFFD600); // lean
+    }
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.sensors, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'λ ${lambda.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildWarningLightsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1558,8 +1843,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildWarningLight(String icon, String label, bool dtcActive, List<String> codes) {
     // Light activates from a DTC match OR from a live sensor threshold.
+    // The service light follows the maintenance tracker directly, so it
+    // stays current after the user logs a service.
     final sensorActive = _sensorWarnings[label] ?? false;
-    final active = dtcActive || sensorActive;
+    final active = label == 'service'
+        ? MaintenanceService.instance.dueCount > 0
+        : dtcActive || sensorActive;
     return GestureDetector(
       onTap: active && codes.isNotEmpty
           ? () => _showDtcBottomSheet(context, icon, label, codes)
@@ -1759,6 +2048,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // Permanent entry to the maintenance tracker — the due banner only shows
+  // once a logged service falls due, which needs the tracker first.
+  Widget _buildMaintenanceCard() {
+    const accent = Color(0xFFFFD600);
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.maintenance),
+      child: Container(
+        padding: EdgeInsets.all(20.r),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          border: Border.all(color: accent.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50.w,
+              height: 50.h,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.car_repair, color: accent, size: 28.r),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('maintenance_tracker'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE8EAED),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    context.tr('dash_maintenance_sub'),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: const Color(0xFFE8EAED).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: accent, size: 16.r),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildVideoTutorialsCard() {
     return GestureDetector(
       onTap: () {
@@ -1828,19 +2174,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Icon(Icons.history, color: Color(0xFF00D9FF), size: 20.r),
-                SizedBox(width: 10.w),
-                Text(
-                  context.tr('recent_scans'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFE8EAED),
+            Flexible(
+              child: Row(
+                children: [
+                  Icon(Icons.history, color: Color(0xFF00D9FF), size: 20.r),
+                  SizedBox(width: 10.w),
+                  Flexible(
+                    child: Text(
+                      context.tr('recent_scans'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFE8EAED),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -1905,28 +2257,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedIndex = index;
+        // Home is this screen; the other tabs are pushed on top of it.
+        final route = switch (index) {
+          1 => AppRoutes.diagnosticCodes,
+          2 => AppRoutes.smartKey,
+          3 => AppRoutes.history,
+          4 => AppRoutes.settings,
+          _ => null,
+        };
+        setState(() => _selectedIndex = index);
+        if (route == null) return;
+        // Highlight the tab while its screen is up, then give the highlight
+        // back to Home when the user returns to the dashboard.
+        Navigator.pushNamed(context, route).then((_) {
+          if (mounted) setState(() => _selectedIndex = 0);
         });
-
-        // Navigate based on index
-        switch (index) {
-          case 0:
-            // Already on home (dashboard)
-            break;
-          case 1:
-            Navigator.pushNamed(context, AppRoutes.diagnosticCodes);
-            break;
-          case 2:
-            Navigator.pushNamed(context, AppRoutes.smartKey);
-            break;
-          case 3:
-            Navigator.pushNamed(context, AppRoutes.history);
-            break;
-          case 4:
-            Navigator.pushNamed(context, AppRoutes.settings);
-            break;
-        }
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 8.h),
@@ -2119,3 +2464,77 @@ class _DtcDetailCardState extends State<_DtcDetailCard> {
     );
   }
 }
+
+/// Arabic names for the countries [VinDecoder] reports (keyed by its English
+/// name). Countries not listed fall back to the English name.
+const Map<String, String> _arCountryNames = {
+  'China': 'الصين',
+  'Japan': 'اليابان',
+  'South Korea': 'كوريا الجنوبية',
+  'United States': 'الولايات المتحدة',
+  'Canada': 'كندا',
+  'Mexico': 'المكسيك',
+  'Germany': 'ألمانيا',
+  'United Kingdom': 'المملكة المتحدة',
+  'France': 'فرنسا',
+  'Italy': 'إيطاليا',
+  'Spain': 'إسبانيا',
+  'Portugal': 'البرتغال',
+  'Netherlands': 'هولندا',
+  'Belgium': 'بلجيكا',
+  'Luxembourg': 'لوكسمبورغ',
+  'Switzerland': 'سويسرا',
+  'Austria': 'النمسا',
+  'Czech Republic': 'التشيك',
+  'Slovakia': 'سلوفاكيا',
+  'Slovenia': 'سلوفينيا',
+  'Hungary': 'المجر',
+  'Poland': 'بولندا',
+  'Romania': 'رومانيا',
+  'Bulgaria': 'بلغاريا',
+  'Serbia': 'صربيا',
+  'Croatia': 'كرواتيا',
+  'Greece': 'اليونان',
+  'Russia': 'روسيا',
+  'Belarus': 'بيلاروسيا',
+  'Ukraine': 'أوكرانيا',
+  'Sweden': 'السويد',
+  'Norway': 'النرويج',
+  'Finland': 'فنلندا',
+  'Denmark': 'الدنمارك',
+  'Ireland': 'أيرلندا',
+  'Turkey': 'تركيا',
+  'India': 'الهند',
+  'Pakistan': 'باكستان',
+  'Bangladesh': 'بنغلاديش',
+  'Thailand': 'تايلاند',
+  'Malaysia': 'ماليزيا',
+  'Indonesia': 'إندونيسيا',
+  'Philippines': 'الفلبين',
+  'Vietnam': 'فيتنام',
+  'Singapore': 'سنغافورة',
+  'Taiwan': 'تايوان',
+  'Hong Kong': 'هونغ كونغ',
+  'Iran': 'إيران',
+  'Iraq': 'العراق',
+  'Israel': 'إسرائيل',
+  'Jordan': 'الأردن',
+  'Saudi Arabia': 'السعودية',
+  'United Arab Emirates': 'الإمارات العربية المتحدة',
+  'Uzbekistan': 'أوزبكستان',
+  'Kazakhstan': 'كازاخستان',
+  'Egypt': 'مصر',
+  'Morocco': 'المغرب',
+  'Algeria': 'الجزائر',
+  'Tunisia': 'تونس',
+  'Libya': 'ليبيا',
+  'South Africa': 'جنوب أفريقيا',
+  'Nigeria': 'نيجيريا',
+  'Kenya': 'كينيا',
+  'Australia': 'أستراليا',
+  'New Zealand': 'نيوزيلندا',
+  'Brazil': 'البرازيل',
+  'Argentina': 'الأرجنتين',
+  'Chile': 'تشيلي',
+  'Colombia': 'كولومبيا',
+};
