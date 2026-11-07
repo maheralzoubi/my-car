@@ -5,15 +5,31 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 
-    <!-- Bluetooth (Android 12+) -->
+    <!-- Bluetooth (Android 12+)
+         BLUETOOTH_SCAN deliberately has NO android:usesPermissionFlags="neverForLocation":
+         with that flag Android filters scan results and some OEMs (Samsung, Pixel)
+         silently return empty scans, so ELM327 adapters never appear. The app
+         instead requests ACCESS_FINE_LOCATION (below, no maxSdkVersion) and scans
+         with androidUsesFineLocation: true — see connection_screen.dart. Keep these
+         three in sync; don't add neverForLocation or a maxSdkVersion to location. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Hardware features: declared required="false" so Google Play doesn't
+         filter out devices (BLUETOOTH/BLUETOOTH_ADMIN/CAMERA otherwise imply
+         required="true" features). BLE availability is checked at runtime. -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
 
-    <!-- Location required for BLE scanning on all Android versions -->
+    <!-- Location: required for BLE scanning on ALL Android versions (see note on
+         BLUETOOTH_SCAN above) and for the roadside location picker / tracking. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -67,6 +83,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
+        </intent>
+        <!-- url_launcher: "call driver" button on the roadside tracking screen -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
         </intent>
     </queries>
 </manifest>

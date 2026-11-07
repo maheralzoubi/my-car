@@ -1,0 +1,6 @@
+/* Arabic permission prompts. English defaults live in Info.plist. */
+"NSBluetoothAlwaysUsageDescription" = "يُستخدم البلوتوث للاتصال بمحوّل OBD-II (ELM327) وقراءة بيانات تشخيص مركبتك.";
+"NSBluetoothPeripheralUsageDescription" = "يُستخدم البلوتوث للاتصال بمحوّل OBD-II (ELM327) وقراءة بيانات تشخيص مركبتك.";
+"NSLocationWhenInUseUsageDescription" = "يُستخدم موقعك لإرسال المساعدة على الطريق إلى مكانك وعرض مسار السائق إليك.";
+"NSCameraUsageDescription" = "تُستخدم الكاميرا لالتقاط صورة لمركبتك أو للمشكلة وإرفاقها بطلب المساعدة على الطريق.";
+"NSPhotoLibraryUsageDescription" = "يتيح لك الوصول إلى الصور إرفاق صورة موجودة بطلب المساعدة على الطريق.";

@@ -1,5 +1,7 @@
-# Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+# google_maps_flutter_ios requires iOS 14+ (and the current GoogleMaps SDK 9.x
+# requires 15+); leaving this unset made CocoaPods fall back to 13.0 and fail
+# to resolve. Keep in sync with IPHONEOS_DEPLOYMENT_TARGET in project.pbxproj.
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -39,5 +41,22 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # permission_handler compiles every iOS permission OUT by default (all
+    # macros = 0), so any Permission.x call on iOS returns "permanently
+    # denied" without prompting. Enable only what the app uses; each one has
+    # a matching usage string in Runner/Info.plist.
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_BLUETOOTH=1',
+        # When-in-use only: PERMISSION_LOCATION would also compile in "Always",
+        # which needs NSLocationAlwaysAndWhenInUseUsageDescription.
+        'PERMISSION_LOCATION_WHENINUSE=1',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_NOTIFICATIONS=1',
+      ]
+    end
   end
 end

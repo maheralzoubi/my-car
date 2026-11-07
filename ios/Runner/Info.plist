@@ -41,12 +41,23 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ar</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>CARDIAG needs Bluetooth to connect to your OBD-II adapter</string>
+	<string>Bluetooth is used to connect to your OBD-II (ELM327) adapter and read your vehicle's diagnostics.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>CARDIAG needs Bluetooth to connect to your OBD-II adapter</string>
+	<string>Bluetooth is used to connect to your OBD-II (ELM327) adapter and read your vehicle's diagnostics.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Location access is required for Bluetooth device discovery</string>
+	<string>Your location is used to send roadside assistance to where you are and to show the driver's route to you.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera is used to take a photo of your vehicle or the problem to attach to your roadside assistance request.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library access lets you attach an existing photo to your roadside assistance request.</string>
+	<key>GMSApiKey</key>
+	<string>AIzaSyDH4PP1-1kECxnxcU-8G-b1ysP-BTfonZE</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
