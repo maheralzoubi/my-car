@@ -444,6 +444,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _matchPrefix(String code, List<String> prefixes) =>
       prefixes.any((p) => code.startsWith(p));
 
+  /// Lamps whose codes live in modules a standard OBD-II scan (modes 03/07,
+  /// answered by the engine / transmission computers) does not reach. They
+  /// light up when the engine computer happens to report one of their codes;
+  /// otherwise they are shown as "not readable" — never as OK.
+  static const Set<String> _notStandardObdLamps = {
+    'airbag',
+    'abs',
+    'traction',
+    'steering',
+    'body',
+  };
+
+  bool _lampUnreadable(Map<String, dynamic> lamp) =>
+      _notStandardObdLamps.contains(lamp['label']) && !_lampOn(lamp);
+
   @override
   void dispose() {
     // Flush any sub-1 km remainder before the trip is destroyed.
@@ -1698,11 +1713,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                 SizedBox(width: AppSizes.space12.w),
                 Expanded(
-                  child: Text(
-                    context.tr(
-                      _connected ? 'dash_lamps_off' : 'dash_lamps_unknown',
-                    ),
-                    style: AppTextStyles.body.copyWith(color: p.text2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        context.tr(
+                          _connected ? 'dash_lamps_off' : 'dash_lamps_unknown',
+                        ),
+                        style: AppTextStyles.body.copyWith(color: p.text2),
+                      ),
+                      if (_connected) ...[
+                        SizedBox(height: 2.h),
+                        Text(
+                          context.tr('dash_lamps_off_note'),
+                          key: const ValueKey('dash_lamps_off_note'),
+                          style: AppTextStyles.label.copyWith(
+                            fontWeight: FontWeight.w400,
+                            color: p.muted,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -1788,7 +1820,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// "See all": every lamp, lit ones in the warning color.
   void _showAllLampsSheet() {
-    final lamps = [for (final l in warningLights) (l, _lampOn(l))];
+    final lamps = [
+      for (final l in warningLights)
+        if (!_lampUnreadable(l)) (l, _lampOn(l)),
+    ];
+    final unreadable = warningLights.where(_lampUnreadable).toList();
     // Background, top corners and drag handle come from the sheet theme.
     showModalBottomSheet<void>(
       context: context,
@@ -1816,68 +1852,145 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               Expanded(
-                child: GridView.builder(
+                child: CustomScrollView(
                   controller: scrollCtrl,
-                  padding: EdgeInsetsDirectional.fromSTEB(
-                    AppSizes.space16.w,
-                    0,
-                    AppSizes.space16.w,
-                    AppSizes.space24.h,
-                  ),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: AppSizes.space8.w,
-                    mainAxisSpacing: AppSizes.space8.h,
-                    childAspectRatio: 0.9,
-                  ),
-                  itemCount: lamps.length,
-                  itemBuilder: (_, i) {
-                    final (light, on) = lamps[i];
-                    final label = light['label'] as String;
-                    final codes = light['codes'] as List<String>;
-                    return Material(
-                      color: on ? p.warnSoft : p.surface2,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd.r),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: on && codes.isNotEmpty
-                            ? () => _showDtcBottomSheet(sheetCtx, label, codes)
-                            : null,
-                        child: Padding(
-                          padding: EdgeInsets.all(AppSizes.space4.r),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _lampIcons[label],
-                                color: on ? p.warn : p.muted,
-                                size: 24.r,
-                              ),
-                              SizedBox(height: AppSizes.space8.h),
-                              Text(
-                                sheetCtx.tr(label),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: on ? p.warn : p.text2,
-                                  fontWeight: on
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsetsDirectional.fromSTEB(
+                        AppSizes.space16.w,
+                        0,
+                        AppSizes.space16.w,
+                        AppSizes.space16.h,
+                      ),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: AppSizes.space8.w,
+                          mainAxisSpacing: AppSizes.space8.h,
+                          childAspectRatio: 0.9,
+                        ),
+                        itemCount: lamps.length,
+                        itemBuilder: (_, i) {
+                          final (light, on) = lamps[i];
+                          final label = light['label'] as String;
+                          final codes = light['codes'] as List<String>;
+                          return Material(
+                            color: on ? p.warnSoft : p.surface2,
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd.r,
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: on && codes.isNotEmpty
+                                  ? () => _showDtcBottomSheet(
+                                      sheetCtx,
+                                      label,
+                                      codes,
+                                    )
+                                  : null,
+                              child: Padding(
+                                padding: EdgeInsets.all(AppSizes.space4.r),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _lampIcons[label],
+                                      color: on ? p.warn : p.muted,
+                                      size: 24.r,
+                                    ),
+                                    SizedBox(height: AppSizes.space8.h),
+                                    Text(
+                                      sheetCtx.tr(label),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: on ? p.warn : p.text2,
+                                        fontWeight: on
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    if (unreadable.isNotEmpty)
+                      SliverPadding(
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          AppSizes.space16.w,
+                          0,
+                          AppSizes.space16.w,
+                          AppSizes.space24.h,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: _unreadableLampsCard(sheetCtx, unreadable),
                         ),
                       ),
-                    );
-                  },
+                  ],
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  /// "Not readable over standard OBD-II": lamps a standard scan can't
+  /// confirm, with why — so a quiet airbag/ABS lamp is never read as OK.
+  Widget _unreadableLampsCard(
+    BuildContext ctx,
+    List<Map<String, dynamic>> lamps,
+  ) {
+    final p = ctx.colors;
+    return AppCard(
+      key: const ValueKey('dash_unreadable_lamps'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const IconBox.neutral(Icons.info_outline_rounded),
+              SizedBox(width: AppSizes.space12.w),
+              Expanded(
+                child: Text(
+                  ctx.tr('dash_lamps_limited_title'),
+                  style: AppTextStyles.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: p.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppSizes.space8.h),
+          Text(
+            ctx.tr('dash_lamps_limited_body'),
+            style: AppTextStyles.label.copyWith(
+              fontWeight: FontWeight.w400,
+              color: p.text2,
+            ),
+          ),
+          SizedBox(height: AppSizes.space12.h),
+          Wrap(
+            spacing: AppSizes.space8.w,
+            runSpacing: AppSizes.space8.h,
+            children: [
+              for (final l in lamps)
+                StatusBadge(
+                  label: ctx.tr(l['label'] as String),
+                  level: StatusLevel.neutral,
+                  icon: _lampIcons[l['label']],
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mycar/core/widgets/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mycar/core/constants/app_routes.dart';
 import 'package:mycar/core/theme/app_palette.dart';
 import 'package:mycar/core/theme/app_theme.dart';
-import 'package:mycar/core/widgets/app_card.dart';
 import 'package:mycar/core/localization/app_localizations.dart';
 import 'package:mycar/core/services/maintenance_service.dart';
 import 'package:mycar/core/services/obd_service.dart';
@@ -662,6 +662,61 @@ void main() {
         addTearDown(ivory.dispose);
         await mountConnected(tester, locale: locale, adapter: ivory);
         expect(find.textContaining('Ivory Coast  •  VIN:'), findsOneWidget);
+        await unmount(tester);
+      });
+
+      // ── 6b. Lamps a standard OBD-II scan can't read ──
+
+      testWidgets('[$lang] airbag / ABS are never shown as OK: a clean scan '
+          'says they are not covered and "See all" lists them as not '
+          'readable; a reported B00 code still lights the airbag lamp', (
+        tester,
+      ) async {
+        Future<void> openSeeAll() async {
+          final link = find.widgetWithText(
+            SectionLink,
+            tr('dash_see_all', locale),
+          );
+          await tester.ensureVisible(link.first);
+          await tester.tap(link.first);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 600));
+        }
+
+        Finder inUnreadable(String key) => find.descendant(
+          of: find.byKey(const ValueKey('dash_unreadable_lamps')),
+          matching: find.text(tr(key, locale)),
+        );
+
+        fake.dtcsToReturn = [];
+        await mountConnected(tester, locale: locale);
+        expect(lit(tester, 'airbag', locale), isFalse);
+        expect(
+          find.byKey(const ValueKey('dash_lamps_off_note')),
+          findsOneWidget,
+        );
+        await openSeeAll();
+        expect(
+          find.byKey(const ValueKey('dash_unreadable_lamps')),
+          findsOneWidget,
+        );
+        for (final key in ['airbag', 'abs', 'traction', 'steering', 'body']) {
+          expect(inUnreadable(key), findsOneWidget, reason: key);
+        }
+        expect(inUnreadable('check_engine'), findsNothing);
+        await unmount(tester);
+
+        await OBDService.instance.disconnect();
+        fake.dtcsToReturn = ['B0012'];
+        await mountConnected(tester, locale: locale);
+        expect(lit(tester, 'airbag', locale), isTrue);
+        await openSeeAll();
+        expect(
+          inUnreadable('airbag'),
+          findsNothing,
+          reason: 'a lamp with a reported code is readable, not "N/A"',
+        );
+        expect(inUnreadable('abs'), findsOneWidget);
         await unmount(tester);
       });
 
