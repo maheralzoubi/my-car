@@ -1,6 +1,6 @@
 // Flow 1 — the full OBD-II diagnostics journey through the real app:
 //
-//   splash → mode selection → dashboard (not connected) → connection screen
+//   splash → app shell, Home tab: dashboard (not connected) → connection screen
 //   → scan finds the ELM327 → connect → back to the dashboard with live data
 //   → diagnostic codes → scan finds codes → clear refused by the ECU shows
 //   the "turn engine off" hint → clear succeeds → codes gone → back to the
@@ -15,7 +15,7 @@ import 'package:mycar/modules/home/presentation/pages/connectionScreen/connectio
 import 'package:mycar/modules/home/presentation/pages/dashboardScreen/dashboard_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/dashboardScreen/obd_gauge.dart';
 import 'package:mycar/modules/home/presentation/pages/diagnosticCodesScreen/diagnostic_codes_screen.dart';
-import 'package:mycar/modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
+import 'package:mycar/modules/home/presentation/pages/shell/app_shell.dart';
 import 'package:mycar/modules/home/presentation/pages/spalchScreen/spalch_screen.dart';
 
 import '../helpers/fake_obd_adapter.dart';
@@ -39,20 +39,18 @@ void main() {
         ..dtcsToReturn = ['P0420', 'P0171']
         ..clearShouldFail = true;
 
-      // ── Splash → mode selection ──────────────────────────────────────────
+      // ── Splash → app shell, Home tab: dashboard (not yet connected) ──────
       await tester.pumpWidget(const App());
       await setAppLocale(tester, const Locale('en'));
       expectOnScreen<SplashScreen>();
       await advance(tester, const Duration(milliseconds: 5500));
-      expectOnScreen<ModeSelectionScreen>();
+      expectOnScreen<AppShell>();
       expect(
-        find.byType(SplashScreen),
+        find.byType(SplashScreen, skipOffstage: false),
         findsNothing,
-        reason: 'splash must be replaced, not kept under mode selection',
+        reason: 'splash must be replaced, not kept under the app shell',
       );
-
-      // ── Mode selection → dashboard (not yet connected) ───────────────────
-      await openDiagnostics(tester);
+      expect(currentTab(tester), AppTab.home);
       expectOnScreen<DashboardScreen>();
       expect(findTr('obd_not_connected'), findsOneWidget);
       expect(fake.startLiveDataCalled, isFalse);
@@ -106,7 +104,7 @@ void main() {
       expect(findTr('failed_clear_codes_hint'), findsNothing);
 
       // ── Back to the dashboard: still connected, still live ───────────────
-      await tapOn(tester, find.byIcon(Icons.arrow_back));
+      await pressBack(tester);
       await advance(tester, const Duration(milliseconds: 500));
       expectOnScreen<DashboardScreen>();
       expect(findTr('connected'), findsOneWidget);
@@ -130,7 +128,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 500));
       expectOnScreen<DiagnosticCodesScreen>();
       expect(findTr('go_to_connection'), findsOneWidget);
-      await tapOn(tester, find.byIcon(Icons.arrow_back));
+      await pressBack(tester);
       await advance(tester, const Duration(milliseconds: 500));
 
       await unmountApp(tester);

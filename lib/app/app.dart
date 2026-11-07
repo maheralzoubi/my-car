@@ -15,8 +15,8 @@ import '../modules/home/presentation/pages/dtc_lookup_page.dart';
 import '../modules/home/presentation/pages/profileScreen/edit_profile_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/upload_video_screen.dart';
 import '../modules/home/presentation/pages/videoTutorialsScreen/video_player_screen.dart';
-import '../modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
 import '../modules/home/presentation/pages/liveGraphScreen/live_graph_screen.dart';
+import '../modules/home/presentation/pages/shell/app_shell.dart';
 import '../modules/home/presentation/pages/maintenanceScreen/maintenance_screen.dart';
 import '../modules/home/presentation/pages/settingsScreen/dash_cam_settings_screen.dart';
 import '../core/app_services.dart';
@@ -40,56 +40,66 @@ class App extends StatelessWidget {
               providers: [
                 ...HomeModule.providers,
                 BlocProvider<RoadsideBloc>(
-                  create: (_) => RoadsideBloc(AppServices.instance.roadsideRepository),
+                  create: (_) =>
+                      RoadsideBloc(AppServices.instance.roadsideRepository),
                 ),
               ],
-              child: MaterialApp(
-                title: AppStrings.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.dark,
-                themeMode: ThemeMode.dark,
-                locale: localeState.locale,
-                supportedLocales: AppLocalizations.supportedLocales,
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                initialRoute: AppRoutes.splash,
-                routes: {
-                  AppRoutes.splash: (_) => HomeModule.splashPage,
-                  AppRoutes.auth: (_) => HomeModule.authPage,
-                  AppRoutes.home: (_) => HomeModule.homePage,
-                  AppRoutes.connectionscreen: (_) => HomeModule.connectionPage,
-                  AppRoutes.dashboard: (_) => HomeModule.dashboardPage,
-                  AppRoutes.diagnosticCodes: (_) =>
-                      HomeModule.diagnosticCodesPage,
-                  AppRoutes.parentMode: (_) => HomeModule.parentModePage,
-                  AppRoutes.smartKey: (_) => HomeModule.smartKeyPage,
-                  AppRoutes.history: (_) => HomeModule.historyPage,
-                  AppRoutes.settings: (_) => HomeModule.settingsPage,
-                  AppRoutes.videoTutorials: (_) =>
-                      HomeModule.videoTutorialsPage,
-                  AppRoutes.videoPlayer: (context) =>
-                      VideoPlayerScreen.fromContext(context),
-                  AppRoutes.uploadVideo: (_) => const UploadVideoScreen(),
-                  AppRoutes.profile: (_) => HomeModule.profilePage,
-                  AppRoutes.editProfile: (_) => const EditProfileScreen(),
-                  AppRoutes.dtcLookup: (_) => const DtcLookupPage(),
-                  AppRoutes.modeSelection: (_) => const ModeSelectionScreen(),
-                  AppRoutes.roadside: (_) => const RoadsideHomeScreen(),
-                  AppRoutes.dashCamSettings: (_) => const DashCamSettingsScreen(),
-                  AppRoutes.maintenance: (_) => const MaintenanceScreen(),
-                  AppRoutes.liveGraph:   (_) => const LiveGraphScreen(),
-                  AppRoutes.codeDetail: (context) {
-                    final args = ModalRoute.of(context)?.settings.arguments
-                        as Map<String, dynamic>?;
-                    return CodeDetailScreen(
-                      code: args ?? <String, dynamic>{},
-                    );
+              child: ValueListenableBuilder<ThemeMode>(
+                valueListenable: AppServices.instance.theme,
+                builder: (context, themeMode, _) => MaterialApp(
+                  title: AppStrings.appName,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.light,
+                  darkTheme: AppTheme.dark,
+                  themeMode: themeMode,
+                  locale: localeState.locale,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  localizationsDelegates:
+                      AppLocalizations.localizationsDelegates,
+                  initialRoute: AppRoutes.splash,
+                  routes: {
+                    AppRoutes.splash: (_) => HomeModule.splashPage,
+                    AppRoutes.auth: (_) => HomeModule.authPage,
+                    AppRoutes.home: (_) => HomeModule.homePage,
+                    AppRoutes.shell: (_) => const AppShell(),
+                    AppRoutes.connectionscreen: (_) =>
+                        HomeModule.connectionPage,
+                    AppRoutes.dashboard: (_) => HomeModule.dashboardPage,
+                    AppRoutes.diagnosticCodes: (_) =>
+                        HomeModule.diagnosticCodesPage,
+                    AppRoutes.parentMode: (_) => HomeModule.parentModePage,
+                    AppRoutes.smartKey: (_) => HomeModule.smartKeyPage,
+                    AppRoutes.history: (_) => HomeModule.historyPage,
+                    AppRoutes.settings: (_) => HomeModule.settingsPage,
+                    AppRoutes.videoTutorials: (_) =>
+                        HomeModule.videoTutorialsPage,
+                    AppRoutes.videoPlayer: (context) =>
+                        VideoPlayerScreen.fromContext(context),
+                    AppRoutes.uploadVideo: (_) => const UploadVideoScreen(),
+                    AppRoutes.profile: (_) => HomeModule.profilePage,
+                    AppRoutes.editProfile: (_) => const EditProfileScreen(),
+                    AppRoutes.dtcLookup: (_) => const DtcLookupPage(),
+                    AppRoutes.roadside: (_) => const RoadsideHomeScreen(),
+                    AppRoutes.dashCamSettings: (_) =>
+                        const DashCamSettingsScreen(),
+                    AppRoutes.maintenance: (_) => const MaintenanceScreen(),
+                    AppRoutes.liveGraph: (_) => const LiveGraphScreen(),
+                    AppRoutes.codeDetail: (context) {
+                      final args =
+                          ModalRoute.of(context)?.settings.arguments
+                              as Map<String, dynamic>?;
+                      return CodeDetailScreen(
+                        code: args ?? <String, dynamic>{},
+                      );
+                    },
+                    AppRoutes.solution: (context) {
+                      final args =
+                          ModalRoute.of(context)?.settings.arguments
+                              as Map<String, dynamic>?;
+                      return SolutionScreen(code: args ?? <String, dynamic>{});
+                    },
                   },
-                  AppRoutes.solution: (context) {
-                    final args = ModalRoute.of(context)?.settings.arguments
-                        as Map<String, dynamic>?;
-                    return SolutionScreen(code: args ?? <String, dynamic>{});
-                  },
-                },
+                ),
               ),
             );
           },

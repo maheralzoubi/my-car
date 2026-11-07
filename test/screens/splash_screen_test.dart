@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mycar/app/app.dart';
 import 'package:mycar/core/localization/app_localizations.dart';
+import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/spalchScreen/spalch_screen.dart';
+
+import 'helpers/screen_harness.dart' as harness;
 
 // The splash is pumped through the real [App] so it runs with the app's own
 // ScreenUtil design size (390x844, minTextAdapt, splitScreenMode).
@@ -50,15 +53,20 @@ void main() {
       final screen = Offset.zero & size;
       for (final text in ['CARDIAG', initializing]) {
         final rect = tester.getRect(find.text(text));
-        expect(screen.intersect(rect), rect,
-            reason: '"$text" at $rect is outside $screen');
+        expect(
+          screen.intersect(rect),
+          rect,
+          reason: '"$text" at $rect is outside $screen',
+        );
       }
 
       await _unmount(tester);
     });
   }
 
-  testWidgets('disposing during the intro delays does not throw', (tester) async {
+  testWidgets('disposing during the intro delays does not throw', (
+    tester,
+  ) async {
     _setSurface(tester, const Size(390, 844));
 
     // Before the 500 ms car delay.
@@ -73,4 +81,33 @@ void main() {
     await _unmount(tester);
     expect(tester.takeException(), isNull);
   });
+
+  for (final (themeName, theme) in [
+    ('light', AppTheme.light),
+    ('dark', AppTheme.dark),
+  ]) {
+    for (final locale in const [Locale('en'), Locale('ar')]) {
+      testWidgets('[$themeName/${locale.languageCode}] logo, wordmark and '
+          'progress render without exceptions', (tester) async {
+        await harness.pumpScreen(
+          tester,
+          const SplashScreen(),
+          locale: locale,
+          theme: theme,
+        );
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 500));
+          harness.expectNoException(tester);
+        }
+        expect(find.text('CARDIAG'), findsOneWidget);
+        expect(find.byIcon(Icons.directions_car_rounded), findsOneWidget);
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+        expect(
+          find.text(harness.tr('splash_initializing', locale)),
+          findsOneWidget,
+        );
+        await _unmount(tester);
+      });
+    }
+  }
 }

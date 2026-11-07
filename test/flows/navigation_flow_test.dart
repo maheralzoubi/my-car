@@ -1,9 +1,10 @@
 // Flow 5 — navigation, the system back button, and state preservation
 // between screens of the running app: polling pauses and resumes around the
-// codes scan, the dashboard keeps its connection/live data across tab
-// screens, the codes list survives a detail round-trip, and the hub's exit
-// confirmation, tab round-trips and logout. Expected-but-broken behaviours
-// are skipped as REGRESSIONs.
+// codes scan, the dashboard keeps its connection/live data across the
+// bottom-navigation tabs (Home · Diagnose · Roadside · History · Profile),
+// the codes list survives a detail round-trip, Back on a tab returns to Home,
+// Back on Home does not drop the user out on one press, and logout.
+// Expected-but-broken behaviours are skipped as REGRESSIONs.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,48 +18,30 @@ import 'package:mycar/modules/home/presentation/pages/diagnosticCodesScreen/code
 import 'package:mycar/modules/home/presentation/pages/diagnosticCodesScreen/diagnostic_codes_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/historyScreen/history_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/maintenanceScreen/maintenance_screen.dart';
-import 'package:mycar/modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/settingsScreen/settings_screen.dart';
+import 'package:mycar/modules/home/presentation/pages/shell/app_shell.dart';
 import 'package:mycar/modules/home/presentation/pages/smartKeyScreen/smart_key_screen.dart';
+import 'package:mycar/modules/roadside/presentation/pages/roadside_home_screen.dart';
 
 import '../helpers/fake_obd_adapter.dart';
 import 'helpers/flow_harness.dart';
 import 'helpers/obd_steps.dart';
 
-/// The bottom-nav item labelled with [key], as its icon's colour tells
-/// whether it is the selected tab (cyan) or not.
-bool _tabSelected(WidgetTester tester, IconData icon) {
-  final nav = find.descendant(
-    of: find.byType(DashboardScreen),
-    matching: find.byIcon(icon),
-  );
-  final widget = tester.widget<Icon>(nav.last);
-  return widget.color == const Color(0xFF00D9FF);
+/// Asserts the shell is on Home and the navigation bar highlights it.
+void _expectHomeSelected(WidgetTester tester) {
+  expect(currentTab(tester), AppTab.home);
+  expect(highlightedTab(tester), AppTab.home);
+  expectOnScreen<DashboardScreen>();
 }
 
-/// Smart Key header Row (back button + 24 sp title + Spacer + status chip,
-/// nothing flexible): 5.3 px past the edge in English at 390 px.
-// Fixed (header title is Expanded + ellipsis); kept empty so the tab
-// round-trip below is strict.
-const _smartKeyHeader = <String>[];
-
-/// The bottom-nav item with [icon] on the dashboard.
-Finder _tab(IconData icon) => find
-    .descendant(of: find.byType(DashboardScreen), matching: find.byIcon(icon))
-    .last;
-
-/// Asserts Home is the only highlighted bottom-nav tab.
-void _expectHomeOnlySelected(WidgetTester tester) {
-  expect(_tabSelected(tester, Icons.home), isTrue, reason: 'Home tab');
-  for (final icon in [
-    Icons.search,
-    Icons.vpn_key,
-    Icons.history,
-    Icons.settings,
-  ]) {
-    expect(_tabSelected(tester, icon), isFalse, reason: '$icon tab');
-  }
-}
+/// Each tab and the screen it shows.
+const _tabScreens = <AppTab, Type>{
+  AppTab.home: DashboardScreen,
+  AppTab.diagnose: DiagnosticCodesScreen,
+  AppTab.roadside: RoadsideHomeScreen,
+  AppTab.history: HistoryScreen,
+  AppTab.profile: SettingsScreen,
+};
 
 void main() {
   late FakeOBDAdapter fake;
@@ -154,13 +137,13 @@ void main() {
       await connectedDashboard(tester);
       final dashboardState = tester.state(find.byType(DashboardScreen));
 
-      await tapOn(tester, findTr('history').last, scroll: false);
-      await advance(tester, const Duration(milliseconds: 600));
+      await goToTab(tester, AppTab.history);
       expectOnScreen<HistoryScreen>();
+      expect(find.byType(DashboardScreen), findsNothing);
 
       await pressBack(tester);
       await advance(tester, const Duration(milliseconds: 600));
-      expectOnScreen<DashboardScreen>();
+      _expectHomeSelected(tester);
       expect(tester.state(find.byType(DashboardScreen)), same(dashboardState));
       expect(findTr('connected'), findsOneWidget);
       expect(OBDService.instance.isInitialized, isTrue);
@@ -172,76 +155,76 @@ void main() {
     });
   });
 
-  testWidgets('back on the service hub asks before exiting; cancel stays', (
+  // Was 'back on the service hub asks before exiting; cancel stays'. The hub
+  // is gone; Home is the root tab and a single Back must not drop the user
+  // out of the app (the dashboard asks for a second press).
+  testWidgets('back on Home does not leave the app on one press', (
     tester,
   ) async {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
     await withKnownOverflows(() async {
-      await bootToModeSelection(tester);
+      await bootToShell(tester);
       await advance(tester, const Duration(seconds: 1));
 
       await pressBack(tester);
       await advance(tester, const Duration(milliseconds: 400));
-      expect(findTr('exit_app'), findsOneWidget);
-      expect(findTr('exit_app_confirm'), findsOneWidget);
+      expect(findTr('press_back_to_exit'), findsOneWidget);
+      _expectHomeSelected(tester);
+      expectOnScreen<AppShell>();
 
-      await tapOn(tester, findTr('cancel'));
-      await advance(tester, const Duration(milliseconds: 400));
-      expect(findTr('exit_app'), findsNothing);
-      expectOnScreen<ModeSelectionScreen>();
-
+      await advance(tester, const Duration(seconds: 3)); // snackbar timeout
       await unmountApp(tester);
     });
   });
 
-  testWidgets('back from the dashboard returns to the hub and stops '
-      'polling; re-entering resumes it', (tester) async {
+  // Was 'back from the dashboard returns to the hub and stops polling;
+  // re-entering resumes it'. Tabs are kept alive, so leaving Home for
+  // another tab keeps the dashboard — and its live session — running.
+  testWidgets('leaving Home for another tab keeps the link and the live '
+      'session; coming back shows fresh data', (tester) async {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
     await withKnownOverflows(() async {
       await connectedDashboard(tester);
-      fake.stopLiveDataCalled = false;
+      final dashboardState = tester.state(find.byType(DashboardScreen));
 
-      await pressBack(tester);
-      await advance(tester, const Duration(milliseconds: 600));
-      expectOnScreen<ModeSelectionScreen>();
+      await goToTab(tester, AppTab.profile);
+      expectOnScreen<SettingsScreen>();
       expect(find.byType(DashboardScreen), findsNothing);
-      expect(fake.stopLiveDataCalled, isTrue);
       expect(
         OBDService.instance.isInitialized,
         isTrue,
-        reason: 'leaving the screen must not drop the link',
+        reason: 'switching tabs must not drop the link',
       );
+      expect(fake.disconnectCalled, isFalse);
 
-      fake.startLiveDataCalled = false;
-      await openDiagnostics(tester);
-      await advance(tester, const Duration(seconds: 2));
+      await goToTab(tester, AppTab.home);
+      _expectHomeSelected(tester);
+      expect(tester.state(find.byType(DashboardScreen)), same(dashboardState));
       expect(findTr('connected'), findsOneWidget);
-      expect(fake.startLiveDataCalled, isTrue);
+      fake.emitLiveData(driving(rpm: 1900));
+      await advance(tester, const Duration(milliseconds: 200));
+      expect(gaugeShowing('1900'), findsOneWidget);
 
       await unmountApp(tester);
     });
   });
 
-  testWidgets('returning from a tab screen re-selects the Home tab', (
-    tester,
-  ) async {
+  testWidgets('returning from a tab re-selects the Home tab', (tester) async {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
     await withKnownOverflows(() async {
       await bootToDashboard(tester);
-      expect(_tabSelected(tester, Icons.home), isTrue);
+      _expectHomeSelected(tester);
 
-      await tapOn(tester, findTr('history').last, scroll: false);
-      await advance(tester, const Duration(milliseconds: 600));
+      await goToTab(tester, AppTab.history);
       expectOnScreen<HistoryScreen>();
+      expect(highlightedTab(tester), AppTab.history);
       await pressBack(tester);
       await advance(tester, const Duration(milliseconds: 600));
 
-      expectOnScreen<DashboardScreen>();
-      expect(_tabSelected(tester, Icons.home), isTrue);
-      expect(_tabSelected(tester, Icons.history), isFalse);
+      _expectHomeSelected(tester);
       await unmountApp(tester);
     });
   });
@@ -252,7 +235,7 @@ void main() {
     fake.dtcsToReturn = ['P0420'];
     // Only the screens on the way in are tolerated, not the detail screen.
     await withKnownOverflows(
-      files: ['dashboard_screen.dart', 'mode_selection_screen.dart'],
+      files: ['dashboard_screen.dart'],
       () async {
         await connectedDashboard(tester);
         await tapOn(tester, findTr('quick_scan'));
@@ -270,11 +253,11 @@ void main() {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
     await withKnownOverflows(
-      files: ['dashboard_screen.dart', 'mode_selection_screen.dart'],
+      files: ['dashboard_screen.dart'],
       () async {
         await bootToDashboard(tester);
-        await tapOn(tester, findTr('history').last, scroll: false);
-        await advance(tester, const Duration(milliseconds: 600));
+        await goToTab(tester, AppTab.history);
+        await advance(tester, const Duration(milliseconds: 200));
         expectOnScreen<HistoryScreen>();
         await unmountApp(tester);
       },
@@ -283,8 +266,11 @@ void main() {
 
   // ── Adversarial double-checks ──────────────────────────────────────────────
 
-  testWidgets('hub ↔ dashboard round-trips keep the link, stop polling while '
-      'away and never stack live-data listeners', (tester) async {
+  // Was 'hub ↔ dashboard round-trips …': the dashboard is no longer
+  // disposed when the user leaves it (tabs stay alive), so the checks are now
+  // that repeated tab trips keep one live session and never stack listeners.
+  testWidgets('Home ↔ tab round-trips keep the link and the live session and '
+      'never stack live-data listeners', (tester) async {
     usePhoneSurface(tester);
     final counting = newCountingFakeAdapter();
     fake = counting; // connectedDashboard drives the shared `fake`
@@ -292,47 +278,41 @@ void main() {
       await connectedDashboard(tester);
       counting.emitLiveData(driving());
       await advance(tester, const Duration(milliseconds: 200));
-      final baseline = counting.liveListeners;
-      expect(baseline, greaterThan(0));
+      expect(counting.liveListeners, greaterThan(0));
+      final dashboardState = tester.state(find.byType(DashboardScreen));
 
+      int? listenersAfterFirstRound;
       for (var round = 1; round <= 3; round++) {
-        final stopsBefore = counting.stopLiveDataCalls;
-        await pressBack(tester);
-        await advance(tester, const Duration(milliseconds: 600));
-        expectOnScreen<ModeSelectionScreen>();
-        expect(find.byType(DashboardScreen, skipOffstage: false), findsNothing);
-        expect(counting.stopLiveDataCalls, greaterThan(stopsBefore));
-        expect(counting.pollingActive, isFalse, reason: 'round $round');
+        for (final tab in [AppTab.history, AppTab.roadside, AppTab.profile]) {
+          await goToTab(tester, tab);
+          expect(find.byType(_tabScreens[tab]!), findsOneWidget);
+          await advance(tester, const Duration(milliseconds: 500));
+          expect(OBDService.instance.isInitialized, isTrue);
+          expect(counting.disconnectCalled, isFalse);
+          // Back with the system button on one tab, the Home tab otherwise.
+          if (tab == AppTab.history) {
+            await pressBack(tester);
+            await advance(tester, const Duration(milliseconds: 400));
+          } else {
+            await goToTab(tester, AppTab.home);
+          }
+          _expectHomeSelected(tester);
+        }
         expect(
-          counting.liveListeners,
-          0,
-          reason:
-              'round $round: a disposed dashboard must drop every '
-              'live-data subscription (dashboard subs, gauges, alerts)',
+          tester.state(find.byType(DashboardScreen)),
+          same(dashboardState),
+          reason: 'round $round: the dashboard is kept, not rebuilt',
         );
-        expect(OBDService.instance.isInitialized, isTrue);
-        expect(counting.disconnectCalled, isFalse);
-
-        // Nothing restarts polling while the user is on the hub.
-        final startsOnHub = counting.startLiveDataCalls;
-        await advance(tester, const Duration(seconds: 3));
-        expect(
-          counting.startLiveDataCalls,
-          startsOnHub,
-          reason: 'round $round',
-        );
-
-        await openDiagnostics(tester);
-        await advance(tester, const Duration(seconds: 2));
         expect(findTr('connected'), findsOneWidget);
         expect(findTr('obd_not_connected'), findsNothing);
-        expect(counting.startLiveDataCalls, greaterThan(startsOnHub));
         await advance(tester, const Duration(seconds: 1));
         expect(counting.pollingActive, isTrue, reason: 'round $round');
+
+        listenersAfterFirstRound ??= counting.liveListeners;
         expect(
           counting.liveListeners,
-          baseline,
-          reason: 'round $round: re-entering must not duplicate listeners',
+          listenersAfterFirstRound,
+          reason: 'round $round: tab trips must not add listeners',
         );
 
         final before = counting.deliveries;
@@ -341,7 +321,7 @@ void main() {
         expect(gaugeShowing('${1000 + round * 100}'), findsOneWidget);
         expect(
           counting.deliveries - before,
-          baseline,
+          counting.liveListeners,
           reason: 'each poll reaches each listener exactly once',
         );
       }
@@ -349,8 +329,12 @@ void main() {
     });
   });
 
-  testWidgets('leaving the dashboard while its on-connect requests are in '
-      'flight does not restart polling afterwards', (tester) async {
+  // Was 'leaving the dashboard while its on-connect requests are in flight
+  // does not restart polling afterwards' (the dashboard was disposed). Now
+  // the dashboard stays alive on its tab, so the requests must finish and
+  // live polling must resume exactly once.
+  testWidgets('switching tabs while the on-connect requests are in flight '
+      'lets them finish and resumes one live session', (tester) async {
     usePhoneSurface(tester);
     final fake = newCountingFakeAdapter();
     await withKnownOverflows(() async {
@@ -362,29 +346,29 @@ void main() {
       await advance(tester, const Duration(milliseconds: 300));
       await tapOn(tester, findTr('scan_vehicle'));
       // Back on the dashboard, the DTC / readiness / VIN requests are
-      // still waiting out their 300 ms settle when the user leaves.
+      // still waiting out their 300 ms settle when the user switches tab.
       await advance(tester, const Duration(milliseconds: 150));
       expectOnScreen<DashboardScreen>();
       expect(fake.getDtcsCalled, isFalse, reason: 'request still in flight');
-      await pressBack(tester);
-      await advance(tester, const Duration(milliseconds: 600));
-      expectOnScreen<ModeSelectionScreen>();
-      expect(find.byType(DashboardScreen, skipOffstage: false), findsNothing);
-      // Readiness (chained after the DTC read) and the VIN are still pending
-      // or just finishing as the dashboard is disposed; once they are done
-      // the adapter's poll timer must be off.
+      await goToTab(tester, AppTab.history);
+      expectOnScreen<HistoryScreen>();
+
       await advance(tester, const Duration(seconds: 3));
       expect(fake.getDtcsCalled, isTrue);
-      expect(
-        fake.pollingActive,
-        isFalse,
-        reason: 'a request finishing after dispose must not resume polling',
-      );
-      final startsAfterSettled = fake.startLiveDataCalls;
+      expect(fake.pollingActive, isTrue, reason: 'live session resumed');
+      final listeners = fake.liveListeners;
+      expect(listeners, greaterThan(0));
+      final starts = fake.startLiveDataCalls;
       await advance(tester, const Duration(seconds: 3));
-      expect(fake.startLiveDataCalls, startsAfterSettled);
-      expect(fake.liveListeners, 0);
+      expect(fake.startLiveDataCalls, starts, reason: 'no restart loop');
       expect(OBDService.instance.isInitialized, isTrue);
+
+      await goToTab(tester, AppTab.home);
+      expect(findTr('connected'), findsOneWidget);
+      expect(fake.liveListeners, listeners);
+      fake.emitLiveData(driving(rpm: 2600));
+      await advance(tester, const Duration(milliseconds: 200));
+      expect(gaugeShowing('2600'), findsOneWidget);
       await unmountApp(tester);
     });
   });
@@ -394,55 +378,61 @@ void main() {
   ) async {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
-    // Smart Key's header overflows (see the skipped layout test below);
-    // only that one spot is tolerated here.
-    await withKnownOverflows(files: _smartKeyHeader, () async {
+    await withKnownOverflows(files: const [], () async {
       await bootToDashboard(tester);
-      _expectHomeOnlySelected(tester);
+      _expectHomeSelected(tester);
 
-      final tabs = <(IconData, Type)>[
-        (Icons.history, HistoryScreen),
-        (Icons.search, DiagnosticCodesScreen),
-        (Icons.vpn_key, SmartKeyScreen),
-        (Icons.settings, SettingsScreen),
-      ];
-      for (final (icon, screen) in tabs) {
-        await tapOn(tester, _tab(icon), scroll: false);
-        await advance(tester, const Duration(milliseconds: 600));
+      for (final tab in [
+        AppTab.history,
+        AppTab.diagnose,
+        AppTab.roadside,
+        AppTab.profile,
+      ]) {
+        final screen = _tabScreens[tab]!;
+        await goToTab(tester, tab);
         expect(find.byType(screen), findsOneWidget, reason: '$screen opened');
+        expect(highlightedTab(tester), tab);
+        expect(
+          Navigator.of(tester.element(find.byType(AppShell))).canPop(),
+          isFalse,
+          reason: 'tabs switch in place; no route is pushed',
+        );
         await pressBack(tester);
         await advance(tester, const Duration(milliseconds: 600));
-        expectOnScreen<DashboardScreen>();
-        _expectHomeOnlySelected(tester);
+        _expectHomeSelected(tester);
       }
 
-      // The same, leaving through the screens' own back arrow.
-      await tapOn(tester, _tab(Icons.history), scroll: false);
-      await advance(tester, const Duration(milliseconds: 600));
-      await tapOn(tester, find.byIcon(Icons.arrow_back).last, scroll: false);
-      await advance(tester, const Duration(milliseconds: 600));
-      expectOnScreen<DashboardScreen>();
-      _expectHomeOnlySelected(tester);
+      // The same, leaving through the Home tab itself.
+      await goToTab(tester, AppTab.history);
+      await goToTab(tester, AppTab.home);
+      _expectHomeSelected(tester);
 
-      // The maintenance card (not a tab) leaves the highlight on Home too.
-      await tapOn(tester, findTr('maintenance_tracker'));
+      // A screen pushed from Home (the Maintenance service, not a tab)
+      // leaves the highlight on Home, and its back arrow returns there.
+      await tapOn(tester, findTr('dash_svc_maintenance'));
       await advance(tester, const Duration(milliseconds: 600));
       expectOnScreen<MaintenanceScreen>();
-      await pressBack(tester);
+      expect(highlightedTab(tester), AppTab.home);
+      await tapOn(
+        tester,
+        find.byIcon(Icons.arrow_back_rounded).last,
+        scroll: false,
+      );
       await advance(tester, const Duration(milliseconds: 600));
-      expectOnScreen<DashboardScreen>();
-      _expectHomeOnlySelected(tester);
+      _expectHomeSelected(tester);
 
       // Tapping Home itself keeps it selected and pushes nothing.
-      await tapOn(tester, _tab(Icons.home), scroll: false);
-      await advance(tester, const Duration(milliseconds: 400));
-      expectOnScreen<DashboardScreen>();
-      _expectHomeOnlySelected(tester);
+      await goToTab(tester, AppTab.home);
+      _expectHomeSelected(tester);
+      expect(
+        Navigator.of(tester.element(find.byType(AppShell))).canPop(),
+        isFalse,
+      );
       await unmountApp(tester);
     });
   });
 
-  testWidgets('logout from settings lands on the auth screen and Back cannot '
+  testWidgets('logout from Profile lands on the auth screen and Back cannot '
       'return into the app', (tester) async {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
@@ -450,8 +440,7 @@ void main() {
       await connectedDashboard(tester);
       expect(AppServices.instance.session.isLoggedIn, isTrue);
 
-      await tapOn(tester, _tab(Icons.settings), scroll: false);
-      await advance(tester, const Duration(milliseconds: 600));
+      await goToTab(tester, AppTab.profile);
       expectOnScreen<SettingsScreen>();
 
       // Cancel first: nothing happens.
@@ -481,9 +470,9 @@ void main() {
       expect(AppServices.instance.session.isLoggedIn, isFalse);
       expect(AppServices.instance.session.token, isNull);
       for (final type in [
+        AppShell,
         SettingsScreen,
         DashboardScreen,
-        ModeSelectionScreen,
         ConnectionScreen,
       ]) {
         expect(
@@ -502,6 +491,7 @@ void main() {
       await pressBack(tester);
       await advance(tester, const Duration(milliseconds: 600));
       expectOnScreen<AuthScreen>();
+      expect(find.byType(AppShell, skipOffstage: false), findsNothing);
       expect(find.byType(DashboardScreen, skipOffstage: false), findsNothing);
       expect(find.byType(SettingsScreen, skipOffstage: false), findsNothing);
       expect(
@@ -513,14 +503,19 @@ void main() {
   });
 
   group('', () {
+    // Smart Key was a tab on the dashboard's old bottom bar; it is now
+    // opened from Home's Services row.
     testWidgets('smart key screen lays out without overflow', (tester) async {
       usePhoneSurface(tester);
       fake = newFakeAdapter();
       await withKnownOverflows(files: const [], () async {
         await bootToDashboard(tester);
-        await tapOn(tester, _tab(Icons.vpn_key), scroll: false);
+        await tapOn(tester, findTr('smart_key'));
         await advance(tester, const Duration(milliseconds: 600));
         expectOnScreen<SmartKeyScreen>();
+        await pressBack(tester);
+        await advance(tester, const Duration(milliseconds: 600));
+        _expectHomeSelected(tester);
         await unmountApp(tester);
       });
     });

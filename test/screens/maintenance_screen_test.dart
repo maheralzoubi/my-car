@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mycar/core/services/maintenance_service.dart';
+import 'package:mycar/core/theme/app_palette.dart';
+import 'package:mycar/core/theme/app_theme.dart';
+import 'package:mycar/core/widgets/widgets.dart';
 import 'package:mycar/modules/home/presentation/pages/maintenanceScreen/maintenance_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -12,8 +15,10 @@ import 'helpers/screen_harness.dart';
 const _itemsKey = 'maintenance_v1';
 const _mileageKey = 'maintenance_mileage_v1';
 
-const _red = Color(0xFFFF1744);
-const _yellow = Color(0xFFFFD600);
+// Status colors of the default (dark) harness theme.
+final _red = AppPalette.dark.crit;
+final _yellow = AppPalette.dark.warn;
+final _green = AppPalette.dark.ok;
 
 // Tall enough that all 7 default items are laid out (ListView.builder is
 // lazy) — used for tests that inspect every card.
@@ -42,6 +47,7 @@ Future<void> _pump(
   Locale locale = en,
   Size size = phonePortrait,
   bool pushed = false,
+  ThemeData? theme,
 }) async {
   await pumpScreen(
     tester,
@@ -49,6 +55,7 @@ Future<void> _pump(
     locale: locale,
     size: size,
     pushed: pushed,
+    theme: theme,
   );
   // MaintenanceService.load() → SharedPreferences (in-memory) → setState.
   await tester.pump();
@@ -66,19 +73,17 @@ Finder _statusPills([Locale l = en]) => find.byWidgetPredicate(
           w.data == tr('status_ok', l)),
 );
 
-/// Colours of the small dots drawn on item icons when due/overdue (the only
-/// [Positioned] widgets inside the list).
+/// Status tints of the item icons: only due/overdue items get a colored
+/// [IconBox] (OK and never-serviced items stay neutral).
 Iterable<Color?> _dotColors(WidgetTester tester) => tester
-    .widgetList<Positioned>(
+    .widgetList<IconBox>(
       find.descendant(
         of: find.byType(ListView),
-        matching: find.byType(Positioned),
+        matching: find.byType(IconBox),
       ),
     )
-    .map((p) {
-      final c = p.child as Container;
-      return (c.decoration as BoxDecoration).color;
-    });
+    .map((b) => b.color)
+    .whereType<Color>();
 
 void main() {
   setUpAll(loadAppFonts);
@@ -105,6 +110,53 @@ void main() {
       );
     }
 
+    for (final theme in [AppTheme.light, AppTheme.dark]) {
+      for (final locale in [en, ar]) {
+        testWidgets('${theme.brightness.name} theme, small phone '
+            '(${locale.languageCode}): logged and unlogged items', (
+          tester,
+        ) async {
+          _seed(
+            mileage: 6000,
+            items: {
+              'oil': _logged(km: 0, daysAgo: 10),
+              'tires': _logged(km: 0, daysAgo: 10),
+              'air': _logged(km: 5000, daysAgo: 10),
+            },
+          );
+          await _pump(tester, locale: locale, size: smallPhone, theme: theme);
+          expectNoException(tester);
+          await tester.drag(find.byType(ListView), const Offset(0, -3000));
+          await tester.pumpAndSettle();
+          expectNoException(tester);
+          await tester.tap(find.text(tr('set', locale)));
+          await tester.pumpAndSettle();
+          expect(find.byType(AlertDialog), findsOneWidget);
+          expectNoException(tester);
+        });
+      }
+    }
+
+    testWidgets('logged items show when the next service is due', (
+      tester,
+    ) async {
+      final last = DateTime.now().subtract(const Duration(days: 10));
+      _seed(mileage: 1000, items: {'oil': _logged(km: 0, daysAgo: 10)});
+      await _pump(tester, size: _tall);
+      final next = last.add(const Duration(days: 180));
+      final date =
+          '${next.year}-${next.month.toString().padLeft(2, '0')}-'
+          '${next.day.toString().padLeft(2, '0')}';
+      expect(
+        find.text(
+          tr(
+            'maint_next_service',
+          ).replaceAll('{value}', '5000 ${tr('unit_km')} · $date'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('renders on a small phone without overflow', (tester) async {
       await _pump(tester, size: smallPhone, locale: ar);
       expectNoException(tester);
@@ -112,25 +164,22 @@ void main() {
 
     // Header: the title used to sit unconstrained next to the back button.
     for (final locale in [en, ar]) {
-      testWidgets(
-        'header title is one ellipsized line on a 320-wide phone '
-        '(${locale.languageCode})',
-        (tester) async {
-          await _pump(tester, size: const Size(320, 568), locale: locale);
-          expectNoException(tester);
-          final title = tester.widget<Text>(
-            find.text(tr('maintenance_tracker', locale)),
-          );
-          expect(title.maxLines, 1);
-          expect(title.overflow, TextOverflow.ellipsis);
-          // The title ends before the screen edge.
-          final rect = tester.getRect(
-            find.text(tr('maintenance_tracker', locale)),
-          );
-          expect(rect.left, greaterThanOrEqualTo(0));
-          expect(rect.right, lessThanOrEqualTo(320));
-        },
-      );
+      testWidgets('header title is one ellipsized line on a 320-wide phone '
+          '(${locale.languageCode})', (tester) async {
+        await _pump(tester, size: const Size(320, 568), locale: locale);
+        expectNoException(tester);
+        final title = tester.widget<Text>(
+          find.text(tr('maintenance_tracker', locale)),
+        );
+        expect(title.maxLines, 1);
+        expect(title.overflow, TextOverflow.ellipsis);
+        // The title ends before the screen edge.
+        final rect = tester.getRect(
+          find.text(tr('maintenance_tracker', locale)),
+        );
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(320));
+      });
     }
 
     testWidgets('shows a spinner until the service has loaded', (tester) async {
@@ -182,7 +231,21 @@ void main() {
           .whereType<Border>()
           .map((b) => b.top.color.withValues(alpha: 1))
           .toSet();
-      for (final status in const [_red, _yellow, Color(0xFF00E676)]) {
+      // Cards are AppCards: their border is the Material shape's side.
+      borders.addAll(
+        tester
+            .widgetList<Material>(
+              find.descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Material),
+              ),
+            )
+            .map((m) => m.shape)
+            .whereType<RoundedRectangleBorder>()
+            .map((s) => s.side.color.withValues(alpha: 1)),
+      );
+      expect(borders, isNotEmpty);
+      for (final status in [_red, _yellow, _green]) {
         expect(
           borders.contains(status),
           isFalse,
@@ -375,7 +438,7 @@ void main() {
       await _pump(tester, pushed: true);
       expect(find.byType(MaintenanceScreen), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
       expect(find.byType(MaintenanceScreen), findsNothing);
       expect(find.text(launcherText), findsOneWidget);

@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mycar/core/services/obd_service.dart';
 import 'package:mycar/modules/home/presentation/pages/dashboardScreen/dashboard_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/diagnosticCodesScreen/diagnostic_codes_screen.dart';
-import 'package:mycar/modules/home/presentation/pages/modeSelectionScreen/mode_selection_screen.dart';
+import 'package:mycar/modules/home/presentation/pages/shell/app_shell.dart';
 
 import '../helpers/fake_obd_adapter.dart';
 import 'helpers/flow_harness.dart';
@@ -28,19 +28,13 @@ Future<void> _arabicJourney(WidgetTester tester, FakeOBDAdapter fake) async {
     ..dtcsToReturn = ['P0420', 'P0171']
     ..clearShouldFail = true;
 
-  // ── Splash → mode selection, in Arabic and RTL ─────────────────────
-  await bootToModeSelection(tester, locale: _ar);
+  // ── Splash → app shell (Home tab), in Arabic and RTL ───────────────
+  await bootToShell(tester, locale: _ar);
   await advance(tester, const Duration(seconds: 1));
-  expect(findTr('car_diagnostics', 'ar'), findsOneWidget);
-  expect(findTr('roadside_assistance', 'ar'), findsOneWidget);
-  expect(findTr('car_diagnostics'), findsNothing); // no English leak
-  expect(
-    _directionAt(tester, find.byType(ModeSelectionScreen)),
-    TextDirection.rtl,
-  );
+  _expectArabicNav(tester);
+  expect(_directionAt(tester, find.byType(NavigationBar)), TextDirection.rtl);
 
   // ── Dashboard (disconnected) ───────────────────────────────────────
-  await openDiagnostics(tester, lang: 'ar');
   expect(_directionAt(tester, find.byType(DashboardScreen)), TextDirection.rtl);
   expect(findTr('obd_not_connected', 'ar'), findsOneWidget);
   expect(findTr('quick_scan', 'ar'), findsOneWidget);
@@ -74,7 +68,7 @@ Future<void> _arabicJourney(WidgetTester tester, FakeOBDAdapter fake) async {
   expect(find.text('P0420'), findsNothing);
 
   // ── Back to the dashboard ──────────────────────────────────────────
-  await tapOn(tester, find.byIcon(Icons.arrow_back));
+  await pressBack(tester);
   await advance(tester, const Duration(milliseconds: 500));
   expectOnScreen<DashboardScreen>();
   expect(findTr('connected', 'ar'), findsOneWidget);
@@ -87,13 +81,26 @@ Future<void> _arabicJourney(WidgetTester tester, FakeOBDAdapter fake) async {
   expect(findTr('obd_not_connected', 'ar'), findsOneWidget);
   expect(OBDService.instance.isInitialized, isFalse);
 
-  // ── Back to the hub, still Arabic and RTL ──────────────────────────
-  await pressBack(tester);
-  await advance(tester, const Duration(milliseconds: 600));
-  expectOnScreen<ModeSelectionScreen>();
-  expect(findTr('car_diagnostics', 'ar'), findsOneWidget);
+  // ── Other tabs, still Arabic and RTL; Back returns to Home ─────────
+  for (final tab in AppTab.values.skip(1)) {
+    await goToTab(tester, tab, lang: 'ar');
+    expect(currentTab(tester), tab);
+    _expectArabicNav(tester);
+    await pressBack(tester);
+    await advance(tester, const Duration(milliseconds: 400));
+    expect(currentTab(tester), AppTab.home);
+    expectOnScreen<DashboardScreen>();
+  }
 
   await unmountApp(tester);
+}
+
+/// Every bottom-navigation label is the Arabic one, none English.
+void _expectArabicNav(WidgetTester tester) {
+  for (final tab in AppTab.values) {
+    expect(navTab(tab, lang: 'ar'), findsOneWidget, reason: '$tab');
+    expect(navTab(tab), findsNothing, reason: '$tab: no English leak');
+  }
 }
 
 void main() {
@@ -122,13 +129,21 @@ void main() {
     });
   });
 
-  testWidgets('Arabic service hub lays out without overflow', (tester) async {
+  // Was 'Arabic service hub lays out without overflow': the hub is replaced
+  // by the bottom-navigation shell, so every tab is checked instead.
+  testWidgets('Arabic app shell: every tab lays out without overflow', (
+    tester,
+  ) async {
     usePhoneSurface(tester);
     fake = newFakeAdapter();
     // Strict: no overflow tolerance at all.
-    await bootToModeSelection(tester, locale: _ar);
+    await bootToShell(tester, locale: _ar);
     await advance(tester, const Duration(seconds: 2));
-    expect(findTr('car_diagnostics', 'ar'), findsOneWidget);
+    for (final tab in [...AppTab.values.skip(1), AppTab.home]) {
+      await goToTab(tester, tab, lang: 'ar');
+      await advance(tester, const Duration(seconds: 1));
+      expect(currentTab(tester), tab);
+    }
     await unmountApp(tester);
   });
 }

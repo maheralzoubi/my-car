@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mycar/core/constants/app_routes.dart';
+import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/videoTutorialsScreen/video_player_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -50,7 +51,7 @@ void main() {
         expect(find.text('Mike Johnson'), findsOneWidget);
         expect(find.text(tr('like', locale)), findsOneWidget);
         expect(find.text(tr('description_label', locale)), findsOneWidget);
-        expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+        expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
         expect(
           directionAt(tester, find.byType(VideoPlayerScreen)),
           locale == ar ? TextDirection.rtl : TextDirection.ltr,
@@ -62,6 +63,27 @@ void main() {
       await _pump(tester, locale: ar, size: smallPhone);
       expectNoException(tester);
     });
+
+    for (final locale in [en, ar]) {
+      testWidgets('light theme renders (${locale.languageCode})', (
+        tester,
+      ) async {
+        await pumpScreen(
+          tester,
+          VideoPlayerScreen(tutorial: _tutorial()),
+          locale: locale,
+          theme: AppTheme.light,
+        );
+        expectNoException(tester);
+        await tester.drag(
+          find.byType(SingleChildScrollView),
+          const Offset(0, -4000),
+        );
+        await tester.pumpAndSettle();
+        expectNoException(tester);
+        expect(find.text(tr('related_videos', locale)), findsOneWidget);
+      });
+    }
 
     testWidgets('empty tutorial map renders placeholders', (tester) async {
       await _pump(tester, tutorial: {});
@@ -96,13 +118,13 @@ void main() {
   group('player controls', () {
     testWidgets('play / pause toggles', (tester) async {
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
       await tester.pump();
-      expect(find.byIcon(Icons.pause), findsOneWidget);
+      expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.pause));
+      await tester.tap(find.byIcon(Icons.pause_rounded));
       await tester.pump();
-      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
     });
 
     testWidgets('scrubbing moves the position label', (tester) async {
@@ -120,7 +142,7 @@ void main() {
 
     testWidgets('picture-in-picture dialog opens and cancels', (tester) async {
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.picture_in_picture_alt));
+      await tester.tap(find.byIcon(Icons.picture_in_picture_alt_rounded));
       await tester.pumpAndSettle();
       expect(find.text(tr('pip_mode')), findsOneWidget);
       expect(find.text(tr('pip_prompt')), findsOneWidget);
@@ -132,7 +154,7 @@ void main() {
 
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });
@@ -141,25 +163,22 @@ void main() {
   // Independent re-check: the player has no video source (sample catalogue,
   // no tutorial backend), so its controls must not pretend otherwise.
   group('double-check', () {
-    testWidgets(
-      'play on a sample tutorial says there is no video instead of '
-      'pretending to play',
-      (tester) async {
-        await _pump(tester);
-        await tester.tap(find.byIcon(Icons.play_arrow));
-        await tester.pumpAndSettle();
-        final explained =
-            find.byType(SnackBar).evaluate().isNotEmpty ||
-            find.byType(AlertDialog).evaluate().isNotEmpty;
-        expect(explained, isTrue);
-      },
-    );
+    testWidgets('play on a sample tutorial says there is no video instead of '
+        'pretending to play', (tester) async {
+      await _pump(tester);
+      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+      await tester.pumpAndSettle();
+      final explained =
+          find.byType(SnackBar).evaluate().isNotEmpty ||
+          find.byType(AlertDialog).evaluate().isNotEmpty;
+      expect(explained, isTrue);
+    });
 
     testWidgets(
       '"Enable" picture-in-picture does not silently pretend to work',
       (tester) async {
         await _pump(tester);
-        await tester.tap(find.byIcon(Icons.picture_in_picture_alt));
+        await tester.tap(find.byIcon(Icons.picture_in_picture_alt_rounded));
         await tester.pumpAndSettle();
         await tester.tap(find.text(tr('enable_pip')));
         await tester.pumpAndSettle();
@@ -171,7 +190,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
       await tester.pumpAndSettle();
       expect(find.text(tr('video_playback_unavailable')), findsOneWidget);
     });
@@ -180,7 +199,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.picture_in_picture_alt));
+      await tester.tap(find.byIcon(Icons.picture_in_picture_alt_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('enable_pip')));
       await tester.pumpAndSettle();
@@ -196,7 +215,7 @@ void main() {
           find.text(tr('like', locale)),
           find.text(tr('save', locale)),
           find.text(tr('subscribe', locale)),
-          find.byIcon(Icons.share),
+          find.byIcon(Icons.share_rounded),
         ]) {
           await tapVisible(tester, target);
           await tester.pumpAndSettle();

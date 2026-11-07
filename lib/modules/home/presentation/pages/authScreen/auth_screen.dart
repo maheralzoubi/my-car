@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/app_services.dart';
 import '../../../../../core/auth/api_auth_repository.dart';
-import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/bloc/locale/locale_bloc.dart';
+import '../../../../../core/bloc/locale/locale_event.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/network/api_exception.dart';
 
@@ -16,9 +19,9 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AuthScreenState extends State<AuthScreen> {
+  /// false: the sign-in form; true: the sign-up form.
+  bool _isSignup = false;
   final _loginFormKey = GlobalKey<FormState>();
   final _signupFormKey = GlobalKey<FormState>();
 
@@ -40,14 +43,7 @@ class _AuthScreenState extends State<AuthScreen>
   bool _isSubmitting = false;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _loginEmailController.dispose();
     _loginPasswordController.dispose();
     _signupNameController.dispose();
@@ -69,7 +65,7 @@ class _AuthScreenState extends State<AuthScreen>
       AppServices.instance.socketClient.connect();
       unawaited(AppServices.instance.registerPushNotifications());
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
+        Navigator.pushReplacementNamed(context, AppRoutes.shell);
       }
     } on ApiException catch (e) {
       _showError(e);
@@ -91,7 +87,7 @@ class _AuthScreenState extends State<AuthScreen>
       AppServices.instance.socketClient.connect();
       unawaited(AppServices.instance.registerPushNotifications());
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
+        Navigator.pushReplacementNamed(context, AppRoutes.shell);
       }
     } on ApiException catch (e) {
       _showError(e);
@@ -114,23 +110,12 @@ class _AuthScreenState extends State<AuthScreen>
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0A1929),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text(
-          ctx.tr('forgot_password_title'),
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          ctx.tr('forgot_password_unavailable'),
-          style: const TextStyle(color: Color(0xFFE8EAED)),
-        ),
+        title: Text(ctx.tr('forgot_password_title')),
+        content: Text(ctx.tr('forgot_password_unavailable')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              ctx.tr('ok'),
-              style: const TextStyle(color: Color(0xFF00D9FF)),
-            ),
+            child: Text(ctx.tr('ok')),
           ),
         ],
       ),
@@ -139,174 +124,175 @@ class _AuthScreenState extends State<AuthScreen>
 
   void _showError(ApiException error) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_errorText(error)),
-        backgroundColor: const Color(0xFFB3261E),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(_errorText(error))));
+  }
+
+  void _setSignup(bool value) {
+    if (_isSubmitting || value == _isSignup) return;
+    setState(() => _isSignup = value);
+  }
+
+  /// Switches between English and Arabic. The app's [LocaleBloc] is absent
+  /// when the screen is shown on its own (tests); then this is a no-op.
+  void _toggleLanguage() {
+    final next = _isArabic ? const Locale('en') : const Locale('ar');
+    try {
+      context.read<LocaleBloc>().add(ChangeLocale(next));
+    } on ProviderNotFoundException {
+      // No app-level locale bloc above this screen.
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = context.colors;
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0D0D0D), Color(0xFF0A1929)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.r),
-                    child: Column(
-                      children: [
-                        _buildLogo(),
-                        SizedBox(height: 40.h),
-                        _buildTabBar(),
-                        SizedBox(height: 30.h),
-                        _buildTabContent(),
-                      ],
-                    ),
-                  ),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: AppSizes.space20.w),
+              sliver: SliverFillRemaining(
+                hasScrollBody: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(height: AppSizes.space40.h),
+                    _buildIntro(p),
+                    SizedBox(height: AppSizes.space32.h),
+                    if (_isSignup) _buildSignupForm() else _buildLoginForm(),
+                    SizedBox(height: AppSizes.space24.h),
+                    _buildSwitchMode(p),
+                    const Spacer(),
+                    SizedBox(height: AppSizes.space24.h),
+                    _buildLanguageSwitch(p),
+                    SizedBox(height: AppSizes.space8.h),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildLogo() {
+  /// Logo tile, title and one-line subtitle.
+  Widget _buildIntro(AppPalette p) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 80.w,
-          height: 80.h,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+        ExcludeSemantics(
+          child: Container(
+            width: 56.r,
+            height: 56.r,
+            decoration: BoxDecoration(
+              color: p.primaryButton,
+              borderRadius: BorderRadius.circular(AppSizes.radiusLg.r),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF00D9FF).withValues(alpha: 0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.directions_car_filled_rounded,
+              size: 28.r,
+              color: p.onPrimary,
+            ),
           ),
-          child: Icon(Icons.directions_car, size: 40.r, color: Colors.white),
         ),
-        SizedBox(height: 20.h),
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF00D9FF), Color(0xFFE8EAED)],
-          ).createShader(bounds),
+        SizedBox(height: AppSizes.space24.h),
+        Semantics(
+          header: true,
           child: Text(
-            'CARDIAG',
-            style: TextStyle(
-              fontSize: 32.sp,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 4,
-            ),
+            context.tr(_isSignup ? 'join_cardiag' : 'welcome_back'),
+            style: AppTextStyles.display.copyWith(color: p.text),
           ),
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: AppSizes.space4.h),
         Text(
-          context.tr('professional_vehicle_diagnostics'),
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: const Color(0xFF00D9FF),
-            fontWeight: FontWeight.w300,
-            letterSpacing: _isArabic ? 0 : 1,
+          context.tr(
+            _isSignup ? 'auth_signup_subtitle' : 'auth_welcome_subtitle',
           ),
+          style: AppTextStyles.body.copyWith(color: p.text2),
         ),
       ],
     );
   }
 
-  Widget _buildTabBar() {
-    return Container(
-      height: 50.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(
-          color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+  /// "New to CARDIAG?" / "Already have an account?" divider and the
+  /// secondary button that switches between the two forms.
+  Widget _buildSwitchMode(AppPalette p) {
+    final divider = Expanded(child: Divider(color: p.border, height: 1));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            divider,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSizes.space12.w),
+              child: Text(
+                context.tr(_isSignup ? 'already_have_account' : 'auth_new_to'),
+                style: AppTextStyles.label.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: p.muted,
+                ),
+              ),
+            ),
+            divider,
+          ],
         ),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerHeight: 0,
-        indicator: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
-          ),
-          borderRadius: BorderRadius.circular(15.r),
+        SizedBox(height: AppSizes.space16.h),
+        AppButton.secondary(
+          label: context.tr(_isSignup ? 'auth_sign_in' : 'auth_create_account'),
+          onPressed: _isSubmitting ? null : () => _setSignup(!_isSignup),
         ),
-        labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFFE8EAED).withValues(alpha: 0.6),
-        labelStyle: TextStyle(
-          fontSize: 16.sp,
-          fontWeight: FontWeight.w700,
-          letterSpacing: _isArabic ? 0 : 1,
+      ],
+    );
+  }
+
+  /// Shows the other language's own name ("العربية" / "English").
+  Widget _buildLanguageSwitch(AppPalette p) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: _toggleLanguage,
+        style: TextButton.styleFrom(
+          foregroundColor: p.text2,
+          minimumSize: Size(44.r, 44.r),
         ),
-        tabs: [
-          Tab(text: context.tr('login_tab')),
-          Tab(text: context.tr('signup_tab')),
-        ],
+        icon: Icon(Icons.language_rounded, size: 20.r),
+        label: Text(
+          _isArabic ? 'English' : 'العربية',
+          style: AppTextStyles.label.copyWith(fontSize: 14.sp),
+        ),
       ),
     );
   }
 
-  Widget _buildTabContent() {
-    return SizedBox(
-      height: 500.h,
-      child: TabBarView(
-        controller: _tabController,
-        children: [_buildLoginForm(), _buildSignupForm()],
-      ),
-    );
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) return context.tr('enter_email');
+    if (!value.contains('@')) return context.tr('invalid_email');
+    return null;
   }
 
   Widget _buildLoginForm() {
     return Form(
       key: _loginFormKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildTextField(
             controller: _loginEmailController,
             label: context.tr('email'),
-            icon: Icons.email_outlined,
+            icon: Icons.mail_outline_rounded,
             keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return context.tr('enter_email');
-              }
-              if (!value.contains('@')) return context.tr('invalid_email');
-              return null;
-            },
+            validator: _validateEmail,
           ),
-          SizedBox(height: 20.h),
+          SizedBox(height: AppSizes.space16.h),
           _buildTextField(
             controller: _loginPasswordController,
             label: context.tr('password'),
-            icon: Icons.lock_outline,
+            icon: Icons.lock_outline_rounded,
             isPassword: true,
             isPasswordVisible: _isLoginPasswordVisible,
             onTogglePassword: () {
@@ -321,23 +307,21 @@ class _AuthScreenState extends State<AuthScreen>
               return null;
             },
           ),
-          SizedBox(height: 15.h),
+          SizedBox(height: AppSizes.space4.h),
           Align(
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               onPressed: _showForgotPassword,
+              style: TextButton.styleFrom(minimumSize: Size(44.r, 44.r)),
               child: Text(
                 context.tr('forgot_password'),
-                style: TextStyle(
-                  color: const Color(0xFF00D9FF),
-                  fontSize: 14.sp,
-                ),
+                style: AppTextStyles.label.copyWith(fontSize: 14.sp),
               ),
             ),
           ),
-          SizedBox(height: 30.h),
-          _buildGradientButton(
-            text: context.tr('login_tab'),
+          SizedBox(height: AppSizes.space12.h),
+          AppButton(
+            label: context.tr('auth_sign_in'),
             onPressed: _isSubmitting ? null : _handleLogin,
             isLoading: _isSubmitting,
           ),
@@ -349,102 +333,98 @@ class _AuthScreenState extends State<AuthScreen>
   Widget _buildSignupForm() {
     return Form(
       key: _signupFormKey,
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildTextField(
-              controller: _signupNameController,
-              label: context.tr('full_name'),
-              icon: Icons.person_outline,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return context.tr('enter_full_name');
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 20.h),
-            _buildTextField(
-              controller: _signupEmailController,
-              label: context.tr('email'),
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return context.tr('enter_email');
-                }
-                if (!value.contains('@')) return context.tr('invalid_email');
-                return null;
-              },
-            ),
-            SizedBox(height: 20.h),
-            _buildTextField(
-              controller: _signupPhoneController,
-              label: context.tr('phone'),
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return context.tr('enter_phone');
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 20.h),
-            _buildTextField(
-              controller: _signupPasswordController,
-              label: context.tr('password'),
-              icon: Icons.lock_outline,
-              isPassword: true,
-              isPasswordVisible: _isSignupPasswordVisible,
-              onTogglePassword: () {
-                setState(
-                  () => _isSignupPasswordVisible = !_isSignupPasswordVisible,
-                );
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return context.tr('enter_password');
-                }
-                if (value.length < 6) return context.tr('password_too_short');
-                return null;
-              },
-            ),
-            SizedBox(height: 20.h),
-            _buildTextField(
-              controller: _signupConfirmPasswordController,
-              label: context.tr('confirm_password'),
-              icon: Icons.lock_outline,
-              isPassword: true,
-              isPasswordVisible: _isSignupConfirmPasswordVisible,
-              onTogglePassword: () {
-                setState(
-                  () => _isSignupConfirmPasswordVisible =
-                      !_isSignupConfirmPasswordVisible,
-                );
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return context.tr('confirm_your_password');
-                }
-                if (value != _signupPasswordController.text) {
-                  return context.tr('passwords_do_not_match');
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 30.h),
-            _buildGradientButton(
-              text: context.tr('signup_tab'),
-              onPressed: _isSubmitting ? null : _handleSignup,
-              isLoading: _isSubmitting,
-            ),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(
+            controller: _signupNameController,
+            label: context.tr('full_name'),
+            icon: Icons.person_outline_rounded,
+            keyboardType: TextInputType.name,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return context.tr('enter_full_name');
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: AppSizes.space16.h),
+          _buildTextField(
+            controller: _signupEmailController,
+            label: context.tr('email'),
+            icon: Icons.mail_outline_rounded,
+            keyboardType: TextInputType.emailAddress,
+            validator: _validateEmail,
+          ),
+          SizedBox(height: AppSizes.space16.h),
+          _buildTextField(
+            controller: _signupPhoneController,
+            label: context.tr('phone'),
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return context.tr('enter_phone');
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: AppSizes.space16.h),
+          _buildTextField(
+            controller: _signupPasswordController,
+            label: context.tr('password'),
+            icon: Icons.lock_outline_rounded,
+            isPassword: true,
+            isPasswordVisible: _isSignupPasswordVisible,
+            onTogglePassword: () {
+              setState(
+                () => _isSignupPasswordVisible = !_isSignupPasswordVisible,
+              );
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return context.tr('enter_password');
+              }
+              if (value.length < 6) return context.tr('password_too_short');
+              return null;
+            },
+          ),
+          SizedBox(height: AppSizes.space16.h),
+          _buildTextField(
+            controller: _signupConfirmPasswordController,
+            label: context.tr('confirm_password'),
+            icon: Icons.lock_outline_rounded,
+            isPassword: true,
+            isPasswordVisible: _isSignupConfirmPasswordVisible,
+            onTogglePassword: () {
+              setState(
+                () => _isSignupConfirmPasswordVisible =
+                    !_isSignupConfirmPasswordVisible,
+              );
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return context.tr('confirm_your_password');
+              }
+              if (value != _signupPasswordController.text) {
+                return context.tr('passwords_do_not_match');
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: AppSizes.space24.h),
+          AppButton(
+            label: context.tr('auth_create_account'),
+            onPressed: _isSubmitting ? null : _handleSignup,
+            isLoading: _isSubmitting,
+          ),
+        ],
       ),
     );
   }
 
+  /// A label above a themed field (fill, borders and icon colors come from
+  /// the theme's inputDecorationTheme).
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -455,106 +435,44 @@ class _AuthScreenState extends State<AuthScreen>
     VoidCallback? onTogglePassword,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: isPassword && !isPasswordVisible,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: const TextStyle(color: Color(0xFFE8EAED)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: const Color(0xFF00D9FF).withValues(alpha: 0.7),
-        ),
-        prefixIcon: Icon(icon, color: const Color(0xFF00D9FF)),
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(
-                  isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                  color: const Color(0xFF00D9FF).withValues(alpha: 0.7),
-                ),
-                onPressed: onTogglePassword,
-              )
-            : null,
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(
-            color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+    final p = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsetsDirectional.only(bottom: AppSizes.space8.h),
+          child: Text(
+            label,
+            style: AppTextStyles.label.copyWith(color: p.text2),
           ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(
-            color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword && !isPasswordVisible,
+          keyboardType: keyboardType,
+          validator: validator,
+          style: AppTextStyles.body.copyWith(color: p.text),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, size: 20.r),
+            suffixIcon: isPassword
+                ? IconButton(
+                    tooltip: context.tr(
+                      isPasswordVisible
+                          ? 'auth_hide_password'
+                          : 'auth_show_password',
+                    ),
+                    icon: Icon(
+                      isPasswordVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 20.r,
+                    ),
+                    onPressed: onTogglePassword,
+                  )
+                : null,
           ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Color(0xFF00D9FF), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Color(0xFFFF1744)),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Color(0xFFFF1744), width: 2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGradientButton({
-    required String text,
-    required VoidCallback? onPressed,
-    bool isLoading = false,
-  }) {
-    return Container(
-      width: double.infinity,
-      height: 56.h,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
-        ),
-        borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00D9FF).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-        ),
-        child: isLoading
-            ? SizedBox(
-                width: 22.r,
-                height: 22.r,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                ),
-              )
-            : Text(
-                text,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: _isArabic ? 0 : 2,
-                  color: Colors.white,
-                ),
-              ),
-      ),
+      ],
     );
   }
 }

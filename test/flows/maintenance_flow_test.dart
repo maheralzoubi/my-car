@@ -31,14 +31,15 @@ String _dueAlertText(WidgetTester tester) {
       .join(' ');
 }
 
-/// The dashboard's "Service" warning lamp is lit (orange label).
+/// The dashboard's "Service" warning lamp is lit. The redesigned dashboard
+/// lists only the lit lamps (the full grid moved behind "See all"), so a
+/// lit lamp is a "Service" row in that list.
 bool _serviceLampOn(WidgetTester tester, [String lang = 'en']) {
   final label = find.descendant(
-    of: find.byType(GridView),
+    of: find.byKey(const ValueKey('dash_lit_lamps')),
     matching: findTr('service', lang),
   );
-  expect(label, findsOneWidget, reason: 'service lamp in the warning grid');
-  return tester.widget<Text>(label).style?.color == const Color(0xFFFF6B35);
+  return label.evaluate().isNotEmpty;
 }
 
 /// Opens the maintenance tracker by route from the dashboard (the
@@ -114,7 +115,7 @@ void main() {
       expect(MaintenanceService.instance.dueCount, 1);
 
       // ── Back to the dashboard ────────────────────────────────────────
-      await tapOn(tester, find.byIcon(Icons.arrow_back));
+      await tapOn(tester, find.byIcon(Icons.arrow_back_rounded));
       await advance(tester, const Duration(milliseconds: 600));
       expectOnScreen<DashboardScreen>();
 
@@ -165,7 +166,7 @@ void main() {
 
       // Any visible control on the dashboard (or the settings it links
       // to) labelled with the tracker's title.
-      await tapOn(tester, findTr('maintenance_tracker'));
+      await tapOn(tester, findTr('dash_svc_maintenance'));
       await advance(tester, const Duration(milliseconds: 600));
       expectOnScreen<MaintenanceScreen>();
       await unmountApp(tester);
@@ -194,7 +195,7 @@ void main() {
       await _setMileage(tester, '5000');
       expect(MaintenanceService.instance.dueCount, 1);
 
-      await tapOn(tester, find.byIcon(Icons.arrow_back));
+      await tapOn(tester, find.byIcon(Icons.arrow_back_rounded));
       await advance(tester, const Duration(milliseconds: 600));
       expectOnScreen<DashboardScreen>();
       expect(_dueAlert, findsOneWidget);
@@ -204,7 +205,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 600));
       await _logFirstItem(tester);
       expect(MaintenanceService.instance.dueCount, 0);
-      await tapOn(tester, find.byIcon(Icons.arrow_back));
+      await tapOn(tester, find.byIcon(Icons.arrow_back_rounded));
       await advance(tester, const Duration(milliseconds: 600));
       expectOnScreen<DashboardScreen>();
       expect(_dueAlert, findsNothing);
@@ -228,7 +229,7 @@ void main() {
         expect(_serviceLampOn(tester, lang), isFalse);
 
         // The permanent card opens the tracker on a fresh install.
-        await tapOn(tester, findTr('maintenance_tracker', lang));
+        await tapOn(tester, findTr('dash_svc_maintenance', lang));
         await advance(tester, const Duration(milliseconds: 600));
         expectOnScreen<MaintenanceScreen>();
         await tapOn(tester, findTr('log_label', lang).first);
@@ -238,14 +239,14 @@ void main() {
         expect(findTr('status_ok', lang), findsOneWidget);
         expect(MaintenanceService.instance.dueCount, 0);
 
-        await tapOn(tester, find.byIcon(Icons.arrow_back));
+        await tapOn(tester, find.byIcon(Icons.arrow_back_rounded));
         await advance(tester, const Duration(milliseconds: 600));
         expectOnScreen<DashboardScreen>();
         expect(_dueAlert, findsNothing, reason: 'just serviced: nothing due');
         expect(_serviceLampOn(tester, lang), isFalse);
 
         // Odometer reaches the interval (card again, system Back this time).
-        await tapOn(tester, findTr('maintenance_tracker', lang));
+        await tapOn(tester, findTr('dash_svc_maintenance', lang));
         await advance(tester, const Duration(milliseconds: 600));
         await tapOn(tester, findTr('set', lang));
         await advance(tester, const Duration(milliseconds: 400));

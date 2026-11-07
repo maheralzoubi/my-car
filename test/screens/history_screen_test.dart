@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mycar/core/services/dtc_history_service.dart';
+import 'package:mycar/core/theme/app_palette.dart';
+import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/historyScreen/history_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -41,6 +43,7 @@ Future<void> _pump(
   Locale locale = en,
   Size size = phonePortrait,
   bool pushed = false,
+  ThemeData? theme,
 }) async {
   await pumpScreen(
     tester,
@@ -48,6 +51,7 @@ Future<void> _pump(
     locale: locale,
     size: size,
     pushed: pushed,
+    theme: theme,
   );
   await tester.pump();
   // Entry fade-in (TweenAnimationBuilder, up to ~400 ms).
@@ -105,6 +109,27 @@ void main() {
       });
     }
 
+    for (final theme in [AppTheme.light, AppTheme.dark]) {
+      for (final locale in [en, ar]) {
+        testWidgets('${theme.brightness.name} theme, small phone '
+            '(${locale.languageCode}): entries and empty state', (
+          tester,
+        ) async {
+          _seed(_three());
+          await _pump(tester, locale: locale, size: smallPhone, theme: theme);
+          expectNoException(tester);
+          await tester.tap(_filterChip('clean_scan', locale));
+          await tester.pump(const Duration(seconds: 1));
+          await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(tr('clear_all', locale)));
+          await tester.pumpAndSettle();
+          expect(find.text(tr('no_scan_history_yet', locale)), findsOneWidget);
+          expectNoException(tester);
+        });
+      }
+    }
+
     testWidgets('small phone, Arabic, with entries: no overflow', (
       tester,
     ) async {
@@ -116,25 +141,22 @@ void main() {
     // Header: title + delete button used to overflow (title had no
     // Expanded / ellipsis).
     for (final locale in [en, ar]) {
-      testWidgets(
-        'header title + delete button fit a 320-wide phone '
-        '(${locale.languageCode})',
-        (tester) async {
-          _seed(_three());
-          await _pump(tester, locale: locale, size: const Size(320, 568));
-          expectNoException(tester);
-          final finder = find.text(tr('history_title', locale));
-          final title = tester.widget<Text>(finder);
-          expect(title.maxLines, 1);
-          expect(title.overflow, TextOverflow.ellipsis);
-          expect(find.byIcon(Icons.delete_outline), findsOneWidget);
-          final del = tester.getRect(find.byIcon(Icons.delete_outline));
-          expect(del.left, greaterThanOrEqualTo(0));
-          expect(del.right, lessThanOrEqualTo(320));
-          // Title and delete button don't overlap.
-          expect(tester.getRect(finder).overlaps(del), isFalse);
-        },
-      );
+      testWidgets('header title + delete button fit a 320-wide phone '
+          '(${locale.languageCode})', (tester) async {
+        _seed(_three());
+        await _pump(tester, locale: locale, size: const Size(320, 568));
+        expectNoException(tester);
+        final finder = find.text(tr('history_title', locale));
+        final title = tester.widget<Text>(finder);
+        expect(title.maxLines, 1);
+        expect(title.overflow, TextOverflow.ellipsis);
+        expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+        final del = tester.getRect(find.byIcon(Icons.delete_outline_rounded));
+        expect(del.left, greaterThanOrEqualTo(0));
+        expect(del.right, lessThanOrEqualTo(320));
+        // Title and delete button don't overlap.
+        expect(tester.getRect(finder).overlaps(del), isFalse);
+      });
     }
 
     testWidgets('shows a spinner until history has loaded', (tester) async {
@@ -237,8 +259,9 @@ void main() {
           (w) => w is Text && w.style?.color == c && w.style?.fontSize != null,
         ),
       );
-      expect(pill(const Color(0xFFFF1744)), findsOneWidget); // confirmed
-      expect(pill(const Color(0xFFFFD600)), findsOneWidget); // pending
+      // Default harness theme is dark.
+      expect(pill(AppPalette.dark.crit), findsOneWidget); // confirmed
+      expect(pill(AppPalette.dark.warn), findsOneWidget); // pending
     });
   });
 
@@ -298,7 +321,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester);
-      expect(find.byIcon(Icons.delete_outline), findsNothing);
+      expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
     });
 
     testWidgets('confirming clears entries, prefs and the delete button', (
@@ -307,7 +330,7 @@ void main() {
       _seed(_three());
       await _pump(tester);
 
-      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
       await tester.pumpAndSettle();
       expect(find.text(tr('clear_history')), findsOneWidget);
       expect(find.text(tr('clear_history_content')), findsOneWidget);
@@ -317,7 +340,7 @@ void main() {
 
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.text(tr('no_scan_history_yet')), findsOneWidget);
-      expect(find.byIcon(Icons.delete_outline), findsNothing);
+      expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
       expect(DtcHistoryService.instance.entries, isEmpty);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey(_key), isFalse);
@@ -327,21 +350,21 @@ void main() {
       _seed(_three());
       await _pump(tester);
 
-      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('cancel')));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsNothing);
       expect(DtcHistoryService.instance.entries, hasLength(3));
-      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
     });
 
     testWidgets('clear works in Arabic', (tester) async {
       _seed(_three());
       await _pump(tester, locale: ar);
 
-      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('clear_all', ar)));
       await tester.pumpAndSettle();
@@ -355,7 +378,7 @@ void main() {
     testWidgets('back arrow pops the screen', (tester) async {
       await _pump(tester, pushed: true);
 
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
       expect(find.byType(HistoryScreen), findsNothing);
       expect(find.text(launcherText), findsOneWidget);

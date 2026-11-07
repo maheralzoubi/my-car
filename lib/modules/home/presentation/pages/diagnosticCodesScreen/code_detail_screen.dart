@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import 'dtc_code_info.dart';
 
@@ -11,8 +10,9 @@ class CodeDetailScreen extends StatefulWidget {
   const CodeDetailScreen({super.key, required this.code});
 
   /// Route arguments: `code`, `title`, `description`, `system`, `severity`
-  /// (+ optional `title_ar`, `description_ar`, `system_ar`) and `pending`
-  /// (true for a mode-07 code the ECU has not confirmed yet).
+  /// (+ optional `title_ar`, `description_ar`, `system_ar`), `pending`
+  /// (true for a mode-07 code the ECU has not confirmed yet) and optional
+  /// `freeze_frame` (already-localized label → value snapshot).
   final Map<String, dynamic> code;
 
   @override
@@ -20,23 +20,18 @@ class CodeDetailScreen extends StatefulWidget {
 }
 
 class _CodeDetailScreenState extends State<CodeDetailScreen> {
-  static const Color _severityCritical = Color(0xFFFF1744);
-  static const Color _severityWarning = Color(0xFFFF6B35);
-  static const Color _severityInfo = Color(0xFFFFD600);
-  static const Color _pendingColor = Color(0xFFFFD600);
+  /// The shared [StatusLevel] for this code's severity, or null when the
+  /// caller passed none / an unknown one.
+  StatusLevel? get _severityLevel => switch (widget.code['severity']) {
+    'critical' => StatusLevel.critical,
+    'warning' => StatusLevel.warning,
+    'info' => StatusLevel.info,
+    _ => null,
+  };
 
-  Color getSeverityColor() {
-    switch (widget.code['severity']) {
-      case 'critical':
-        return _severityCritical;
-      case 'warning':
-        return _severityWarning;
-      case 'info':
-        return _severityInfo;
-      default:
-        return AppColors.accentCyan;
-    }
-  }
+  /// Severity tone; the accent when the severity is unknown.
+  Color getSeverityColor() =>
+      _severityLevel?.colorOf(context) ?? context.colors.primary;
 
   // ── Argument accessors ────────────────────────────────────────────────────
 
@@ -71,6 +66,12 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
 
   DtcCodeInfo get _info => DtcCodeInfo(_codeStr ?? '');
 
+  Map<String, String> get _freezeFrame {
+    final raw = widget.code['freeze_frame'];
+    if (raw is! Map) return const {};
+    return {for (final e in raw.entries) '${e.key}': '${e.value}'};
+  }
+
   // ── Share ─────────────────────────────────────────────────────────────────
 
   Future<void> _share(BuildContext buttonContext) async {
@@ -80,20 +81,27 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
     final desc = _description;
     if (desc != null && desc != '—') buf.write('\n$desc');
     if (info.categoryKey != null) {
-      buf.write('\n${context.tr('dtc_category_label')}: '
-          '${context.tr(info.categoryKey!)}');
+      buf.write(
+        '\n${context.tr('dtc_category_label')}: '
+        '${context.tr(info.categoryKey!)}',
+      );
     }
     if (info.typeKey != null) {
-      buf.write('\n${context.tr('dtc_type_label')}: '
-          '${context.tr(info.typeKey!)}');
+      buf.write(
+        '\n${context.tr('dtc_type_label')}: '
+        '${context.tr(info.typeKey!)}',
+      );
     }
     if (info.subsystemKey != null) {
-      buf.write('\n${context.tr('dtc_subsystem_label')}: '
-          '${context.tr(info.subsystemKey!)}');
+      buf.write(
+        '\n${context.tr('dtc_subsystem_label')}: '
+        '${context.tr(info.subsystemKey!)}',
+      );
     }
     if (_isPending != null) {
-      buf.write('\n${context.tr('dtc_status_label')}: ${context.tr(
-          _isPending! ? 'dtc_status_pending' : 'dtc_status_confirmed')}');
+      buf.write(
+        '\n${context.tr('dtc_status_label')}: ${context.tr(_isPending! ? 'dtc_status_pending' : 'dtc_status_confirmed')}',
+      );
     }
     buf.write('\n\n${context.tr('report_generated_by')}');
 
@@ -101,8 +109,9 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
     await Share.share(
       buf.toString(),
       subject: '$code — $_title',
-      sharePositionOrigin:
-          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      sharePositionOrigin: box == null
+          ? null
+          : box.localToGlobal(Offset.zero) & box.size,
     );
   }
 
@@ -110,226 +119,130 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final severityColor = getSeverityColor();
-
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20.r),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildCodeCard(severityColor),
-                      SizedBox(height: 25.h),
-                      _buildDetailsSection(),
-                      SizedBox(height: 25.h),
-                      _buildNextSteps(),
-                      SizedBox(height: 25.h),
-                      _buildActionButton(),
-                    ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            ScreenHeader(
+              title: context.tr('code_details'),
+              actions: [
+                Builder(
+                  builder: (buttonContext) => HeaderAction(
+                    icon: Icons.share_outlined,
+                    tooltip: context.tr('dtc_share_code'),
+                    onPressed: () => _share(buttonContext),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: EdgeInsets.all(20.r),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Text(
-              context.tr('code_details'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 24.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
+              ],
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  AppSizes.space20.w,
+                  AppSizes.space8.h,
+                  AppSizes.space20.w,
+                  AppSizes.space24.h,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: AppSizes.space24.h,
+                  children: [
+                    _buildCodeCard(),
+                    _buildDetailsSection(),
+                    if (_freezeFrame.isNotEmpty) _buildFreezeFrame(),
+                    _buildNextSteps(),
+                  ],
+                ),
               ),
             ),
-          ),
-          Builder(
-            builder: (buttonContext) => IconButton(
-              icon: Icon(Icons.share, color: AppColors.accentCyan),
-              onPressed: () => _share(buttonContext),
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(
+                AppSizes.space20.w,
+                AppSizes.space8.h,
+                AppSizes.space20.w,
+                AppSizes.space12.h,
+              ),
+              child: AppButton(
+                label: context.tr('view_solution'),
+                icon: Icons.build_outlined,
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.solution,
+                  arguments: widget.code,
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCodeCard(Color severityColor) {
-    final system = _field('system') ?? '—';
-    final description = _description;
-    return Container(
-      padding: EdgeInsets.all(25.r),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            severityColor.withValues(alpha: 0.15),
-            severityColor.withValues(alpha: 0.05),
           ],
         ),
-        border: Border.all(
-          color: severityColor.withValues(alpha: 0.3),
-        ),
-        borderRadius: BorderRadius.circular(25.r),
-        boxShadow: [
-          BoxShadow(
-            color: severityColor.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
+    );
+  }
+
+  /// Code, severity / pending badges, title and description.
+  Widget _buildCodeCard() {
+    final p = context.colors;
+    final level = _severityLevel;
+    final description = _description;
+    return AppCard(
+      padding: EdgeInsets.all(AppSizes.space20.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 10.h,
-                ),
-                decoration: BoxDecoration(
-                  color: severityColor.withValues(alpha: 0.2),
-                  border: Border.all(color: severityColor, width: 2),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  _codeStr ?? '—',
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w900,
-                    color: severityColor,
-                  ),
-                ),
+              IconBox(
+                level?.icon ?? Icons.info_outline_rounded,
+                key: const ValueKey('dtc_severity_icon'),
+                color: getSeverityColor(),
+                size: 48,
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: AppSizes.space12.w),
               Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentCyan.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Text(
-                    system,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: AppColors.accentCyan,
-                      fontWeight: FontWeight.w600,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _codeStr ?? '—',
+                      style: AppTextStyles.headline.copyWith(color: p.text),
                     ),
-                  ),
+                    if (level != null || _isPending == true) ...[
+                      SizedBox(height: AppSizes.space4.h),
+                      Wrap(
+                        spacing: AppSizes.space8.w,
+                        runSpacing: AppSizes.space4.h,
+                        children: [
+                          if (level != null)
+                            StatusBadge(
+                              label: context.tr(
+                                'severity_${widget.code['severity']}',
+                              ),
+                              level: level,
+                            ),
+                          if (_isPending == true)
+                            StatusBadge(
+                              label: context.tr('dtc_pending'),
+                              level: StatusLevel.info,
+                              icon: Icons.hourglass_empty_rounded,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (_isPending == true) ...[
-                SizedBox(width: 8.w),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: _pendingColor.withValues(alpha: 0.15),
-                    border: Border.all(color: _pendingColor),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    context.tr('dtc_pending'),
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      color: _pendingColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
-          SizedBox(height: 20.h),
-          Text(
-            _title,
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
-              height: 1.3,
-            ),
-          ),
+          SizedBox(height: AppSizes.space16.h),
+          Text(_title, style: AppTextStyles.title.copyWith(color: p.text)),
           if (description != null) ...[
-            SizedBox(height: 12.h),
+            SizedBox(height: AppSizes.space8.h),
             Text(
               description,
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: AppColors.textLight.withValues(alpha: 0.7),
-                height: 1.5,
-              ),
+              style: AppTextStyles.body.copyWith(color: p.text2),
             ),
           ],
         ],
       ),
-    );
-  }
-
-  Widget _sectionTitle(String text) {
-    return Row(
-      children: [
-        Container(
-          width: 4.w,
-          height: 20.h,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.accentCyan, AppColors.accentOrange],
-            ),
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -338,100 +251,88 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
   Widget _buildDetailsSection() {
     final info = _info;
     final pending = _isPending;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle(context.tr('what_this_means')),
-        SizedBox(height: 15.h),
-        _buildDetailCard(
-          '⚠️',
-          context.tr('severity_label'),
-          context
-              .tr('severity_${widget.code['severity'] as String? ?? 'info'}')
-              .toUpperCase(),
-          getSeverityColor(),
+    final rows = <Widget>[
+      _detailRow(
+        Icons.directions_car_outlined,
+        context.tr('dtc_system_label'),
+        _field('system') ?? '—',
+      ),
+      if (pending != null)
+        _detailRow(
+          pending ? Icons.hourglass_empty_rounded : Icons.push_pin_outlined,
+          context.tr('dtc_status_label'),
+          context.tr(pending ? 'dtc_status_pending' : 'dtc_status_confirmed'),
         ),
-        if (pending != null)
-          _buildDetailCard(
-            pending ? '⏳' : '📌',
-            context.tr('dtc_status_label'),
-            context.tr(
-                pending ? 'dtc_status_pending' : 'dtc_status_confirmed'),
-            pending ? _pendingColor : AppColors.accentCyan,
-          ),
-        if (info.categoryKey != null)
-          _buildDetailCard(
-            '🚗',
-            context.tr('dtc_category_label'),
-            context.tr(info.categoryKey!),
-            AppColors.accentCyan,
-          ),
-        if (info.typeKey != null)
-          _buildDetailCard(
-            info.isManufacturerSpecific ? '🏭' : '📘',
-            context.tr('dtc_type_label'),
-            context.tr(info.typeKey!),
-            AppColors.accentCyan,
-          ),
-        if (info.subsystemKey != null)
-          _buildDetailCard(
-            '🔍',
-            context.tr('dtc_subsystem_label'),
-            context.tr(info.subsystemKey!),
-            AppColors.accentCyan,
-          ),
-      ],
+      if (info.categoryKey != null)
+        _detailRow(
+          Icons.category_outlined,
+          context.tr('dtc_category_label'),
+          context.tr(info.categoryKey!),
+        ),
+      if (info.typeKey != null)
+        _detailRow(
+          info.isManufacturerSpecific
+              ? Icons.factory_outlined
+              : Icons.menu_book_outlined,
+          context.tr('dtc_type_label'),
+          context.tr(info.typeKey!),
+        ),
+      if (info.subsystemKey != null)
+        _detailRow(
+          Icons.manage_search_rounded,
+          context.tr('dtc_subsystem_label'),
+          context.tr(info.subsystemKey!),
+        ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [SectionTitle(context.tr('what_this_means')), _rowsCard(rows)],
     );
   }
 
-  Widget _buildDetailCard(
-    String icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(18.r),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(15.r),
+  /// [rows] in one card, separated by hairlines.
+  Widget _rowsCard(List<Widget> rows) {
+    final divider = Divider(
+      height: 1,
+      thickness: 1,
+      color: context.colors.border,
+    );
+    return AppCard(
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.space16.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) divider,
+            rows[i],
+          ],
+        ],
       ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    final p = context.colors;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSizes.space12.h),
       child: Row(
         children: [
-          Container(
-            width: 45.w,
-            height: 45.h,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Center(
-              child: Text(icon, style: TextStyle(fontSize: 22.sp)),
-            ),
-          ),
-          SizedBox(width: 15.w),
+          IconBox.neutral(icon, size: 36),
+          SizedBox(width: AppSizes.space12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.6),
-                  ),
+                  style: AppTextStyles.label.copyWith(color: p.text2),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.h),
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: color,
+                  style: AppTextStyles.body.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: p.text,
                   ),
                 ),
               ],
@@ -442,105 +343,80 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
     );
   }
 
+  /// Sensor snapshot the ECU stored when the fault was set.
+  Widget _buildFreezeFrame() {
+    final p = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitle(context.tr('freeze_frame_title')),
+        _rowsCard([
+          for (final e in _freezeFrame.entries)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSizes.space12.h),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      e.key,
+                      style: AppTextStyles.body.copyWith(color: p.text2),
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.space12.w),
+                  Text(
+                    e.value,
+                    style: AppTextStyles.numeric(
+                      AppTextStyles.body,
+                    ).copyWith(fontWeight: FontWeight.w600, color: p.text),
+                  ),
+                ],
+              ),
+            ),
+        ]),
+      ],
+    );
+  }
+
   Widget _buildNextSteps() {
+    final p = context.colors;
     final steps = _info.nextStepKeys(isPending: _isPending ?? false);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _sectionTitle(context.tr('dtc_next_steps')),
-        SizedBox(height: 15.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(18.r),
-          decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.05),
-            border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
-            borderRadius: BorderRadius.circular(15.r),
-          ),
+        SectionTitle(context.tr('dtc_next_steps')),
+        AppCard(
           child: Column(
+            spacing: AppSizes.space12.h,
             children: [
-              for (var i = 0; i < steps.length; i++)
-                Padding(
-                  padding: EdgeInsets.only(
-                      bottom: i == steps.length - 1 ? 0 : 12.h),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(top: 3.h),
-                        child: Icon(
-                          steps[i] == 'dtc_step_stop'
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_outline,
-                          size: 16.r,
-                          color: steps[i] == 'dtc_step_stop'
-                              ? _severityWarning
-                              : AppColors.accentCyan,
-                        ),
+              for (final step in steps)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(top: 2.h),
+                      child: Icon(
+                        step == 'dtc_step_stop'
+                            ? Icons.warning_amber_rounded
+                            : Icons.check_circle_outline_rounded,
+                        size: 18.r,
+                        color: step == 'dtc_step_stop'
+                            ? StatusLevel.warning.colorOf(context)
+                            : p.primary,
                       ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: Text(
-                          context.tr(steps[i]),
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: AppColors.textLight.withValues(alpha: 0.85),
-                            height: 1.45,
-                          ),
-                        ),
+                    ),
+                    SizedBox(width: AppSizes.space12.w),
+                    Expanded(
+                      child: Text(
+                        context.tr(step),
+                        style: AppTextStyles.body.copyWith(color: p.text),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildActionButton() {
-    return Container(
-      width: double.infinity,
-      height: 56.h,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.accentCyan, AppColors.accentOrange],
-        ),
-        borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentCyan.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.solution,
-            arguments: widget.code,
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.transparent,
-          shadowColor: AppColors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-        ),
-        child: Text(
-          context.tr('view_solution').toUpperCase(),
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w700,
-            letterSpacing: _isArabic ? 0 : 2,
-            color: AppColors.white,
-          ),
-        ),
-      ),
     );
   }
 }

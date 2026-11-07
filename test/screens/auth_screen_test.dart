@@ -3,10 +3,14 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mycar/core/app_services.dart';
 import 'package:mycar/core/constants/app_routes.dart';
+import 'package:mycar/core/bloc/locale/locale_bloc.dart';
+import 'package:mycar/core/theme/app_theme.dart';
+import 'package:mycar/core/widgets/app_button.dart';
 import 'package:mycar/modules/home/presentation/pages/authScreen/auth_screen.dart';
 
 import '../roadside/helpers/roadside_fakes.dart'
@@ -29,22 +33,30 @@ Future<void> _pump(
   Locale locale = en,
   Size size = phonePortrait,
   RecordingObserver? observer,
+  ThemeData? theme,
 }) => pumpScreen(
   tester,
   const AuthScreen(),
   locale: locale,
   size: size,
   observer: observer,
+  theme: theme,
 );
 
-/// The form fields in the visible tab.
+/// The fields of the visible form (only one form is shown at a time).
 Finder get _fields => find.byType(TextFormField);
 
-Finder _submit(String tabKey, [Locale l = en]) =>
-    find.widgetWithText(ElevatedButton, tr(tabKey, l));
+/// The visible form's primary button: 'auth_sign_in' on the sign-in form,
+/// 'auth_create_account' on the sign-up form. (Each label also appears on
+/// the secondary switch button of the *other* form, never on the same one.)
+Finder _submit(String key, [Locale l = en]) =>
+    find.widgetWithText(AppButton, tr(key, l));
 
+/// Taps the secondary "Create an account" button under the sign-in form.
 Future<void> _openSignup(WidgetTester tester, [Locale l = en]) async {
-  await tester.tap(find.widgetWithText(Tab, tr('signup_tab', l)));
+  final toSignup = find.widgetWithText(AppButton, tr('auth_create_account', l));
+  await tester.ensureVisible(toSignup);
+  await tester.tap(toSignup);
   await tester.pumpAndSettle();
 }
 
@@ -83,23 +95,20 @@ void main() {
         await _pump(tester, locale: locale);
         expectNoException(tester);
 
-        expect(find.text('CARDIAG'), findsOneWidget);
+        // Was: CARDIAG wordmark, tagline and LOGIN / SIGN UP tabs. The
+        // redesign shows a title + subtitle, and a secondary button under
+        // the form switches to sign-up.
+        expect(find.text(tr('welcome_back', locale)), findsOneWidget);
+        expect(find.text(tr('auth_welcome_subtitle', locale)), findsOneWidget);
+        expect(find.text(tr('auth_new_to', locale)), findsOneWidget);
         expect(
-          find.text(tr('professional_vehicle_diagnostics', locale)),
-          findsOneWidget,
-        );
-        expect(
-          find.widgetWithText(Tab, tr('login_tab', locale)),
-          findsOneWidget,
-        );
-        expect(
-          find.widgetWithText(Tab, tr('signup_tab', locale)),
+          find.widgetWithText(AppButton, tr('auth_create_account', locale)),
           findsOneWidget,
         );
         expect(find.text(tr('email', locale)), findsOneWidget);
         expect(find.text(tr('password', locale)), findsOneWidget);
         expect(find.text(tr('forgot_password', locale)), findsOneWidget);
-        expect(_submit('login_tab', locale), findsOneWidget);
+        expect(_submit('auth_sign_in', locale), findsOneWidget);
         expect(
           directionAt(tester, find.byType(AuthScreen)),
           locale == ar ? TextDirection.rtl : TextDirection.ltr,
@@ -122,9 +131,53 @@ void main() {
         ]) {
           expect(find.text(tr(key, locale)), findsOneWidget, reason: key);
         }
-        expect(_submit('signup_tab', locale), findsOneWidget);
+        expect(_submit('auth_create_account', locale), findsOneWidget);
+        expect(find.text(tr('join_cardiag', locale)), findsOneWidget);
+        // The secondary button switches back to sign-in.
+        expect(_submit('auth_sign_in', locale), findsOneWidget);
+        await tester.ensureVisible(_submit('auth_sign_in', locale));
+        await tester.tap(_submit('auth_sign_in', locale));
+        await tester.pumpAndSettle();
+        expect(find.text(tr('welcome_back', locale)), findsOneWidget);
+        expect(_fields, findsNWidgets(2));
+      });
+
+      testWidgets('light theme, both forms (${locale.languageCode})', (
+        tester,
+      ) async {
+        await _pump(tester, locale: locale, theme: AppTheme.light);
+        expectNoException(tester);
+        await _openSignup(tester, locale);
+        expectNoException(tester);
+        expect(_fields, findsNWidgets(5));
       });
     }
+
+    testWidgets('language switch asks the app to change locale', (
+      tester,
+    ) async {
+      final bloc = LocaleBloc();
+      addTearDown(bloc.close);
+      await pumpScreen(
+        tester,
+        BlocProvider.value(value: bloc, child: const AuthScreen()),
+      );
+      // English UI offers Arabic by its own name.
+      await tester.ensureVisible(find.text('العربية'));
+      await tester.tap(find.text('العربية'));
+      await tester.pump();
+      expect(bloc.state.locale.languageCode, 'ar');
+    });
+
+    testWidgets('language switch without an app locale bloc is a no-op', (
+      tester,
+    ) async {
+      await _pump(tester, locale: ar);
+      await tester.ensureVisible(find.text('English'));
+      await tester.tap(find.text('English'));
+      await tester.pump();
+      expectNoException(tester);
+    });
 
     testWidgets('small phone, Arabic, both tabs: no overflow', (tester) async {
       await _pump(tester, locale: ar, size: smallPhone);
@@ -135,9 +188,10 @@ void main() {
 
     testWidgets('Arabic UI shows no untranslated English copy', (tester) async {
       await _pump(tester, locale: ar);
-      expect(englishLeaks(tester), isEmpty);
+      // 'English' is the language switch, named in its own language.
+      expect(englishLeaks(tester, allow: {'English'}), isEmpty);
       await _openSignup(tester, ar);
-      expect(englishLeaks(tester), isEmpty);
+      expect(englishLeaks(tester, allow: {'English'}), isEmpty);
     });
   });
 
@@ -146,7 +200,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester);
-      await tester.tap(_submit('login_tab'));
+      await tester.tap(_submit('auth_sign_in'));
       await tester.pump();
 
       expect(find.text(tr('enter_email')), findsOneWidget);
@@ -158,7 +212,7 @@ void main() {
       await _pump(tester);
       await tester.enterText(_fields.at(0), 'driver.example.com');
       await tester.enterText(_fields.at(1), 'secret1');
-      await tester.tap(_submit('login_tab'));
+      await tester.tap(_submit('auth_sign_in'));
       await tester.pump();
 
       expect(find.text(tr('invalid_email')), findsOneWidget);
@@ -167,7 +221,7 @@ void main() {
 
     testWidgets('errors are localized in Arabic', (tester) async {
       await _pump(tester, locale: ar);
-      await tester.tap(_submit('login_tab', ar));
+      await tester.tap(_submit('auth_sign_in', ar));
       await tester.pump();
       expect(find.text(tr('enter_email', ar)), findsOneWidget);
       expectNoException(tester);
@@ -180,10 +234,10 @@ void main() {
       );
 
       expect(field().obscureText, isTrue);
-      await tester.tap(find.byIcon(Icons.visibility_off));
+      await tester.tap(find.byIcon(Icons.visibility_off_outlined));
       await tester.pump();
       expect(field().obscureText, isFalse);
-      expect(find.byIcon(Icons.visibility), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
     });
   });
 
@@ -191,7 +245,7 @@ void main() {
     Future<void> fillAndSubmit(WidgetTester tester) async {
       await tester.enterText(_fields.at(0), '  driver@example.com ');
       await tester.enterText(_fields.at(1), 'secret1');
-      await tester.tap(_submit('login_tab'));
+      await tester.tap(_submit('auth_sign_in'));
       await tester.pump();
     }
 
@@ -214,10 +268,10 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(AuthScreen), findsOneWidget);
-      expect(observer.pushedNames, isNot(contains(AppRoutes.modeSelection)));
+      expect(observer.pushedNames, isNot(contains(AppRoutes.shell)));
       // Button is usable again.
       expect(
-        tester.widget<ElevatedButton>(_submit('login_tab')).onPressed,
+        tester.widget<AppButton>(_submit('auth_sign_in')).onPressed,
         isNotNull,
       );
 
@@ -243,10 +297,10 @@ void main() {
 
       final button = find.ancestor(
         of: find.byType(CircularProgressIndicator),
-        matching: find.byType(ElevatedButton),
+        matching: find.byType(AppButton),
       );
       expect(button, findsOneWidget);
-      expect(tester.widget<ElevatedButton>(button).onPressed, isNull);
+      expect(tester.widget<AppButton>(button).onPressed, isNull);
 
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
@@ -266,11 +320,11 @@ void main() {
       await _pump(tester, locale: ar);
       await tester.enterText(_fields.at(0), 'driver@example.com');
       await tester.enterText(_fields.at(1), 'secret1');
-      await tester.tap(_submit('login_tab', ar));
+      await tester.tap(_submit('auth_sign_in', ar));
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
-      expect(englishLeaks(tester), isEmpty);
+      expect(englishLeaks(tester, allow: {'English'}), isEmpty);
     });
   });
 
@@ -278,8 +332,8 @@ void main() {
     testWidgets('empty form shows every required-field error', (tester) async {
       await _pump(tester);
       await _openSignup(tester);
-      await tester.ensureVisible(_submit('signup_tab'));
-      await tester.tap(_submit('signup_tab'));
+      await tester.ensureVisible(_submit('auth_create_account'));
+      await tester.tap(_submit('auth_create_account'));
       await tester.pump();
 
       expect(find.text(tr('enter_full_name')), findsOneWidget);
@@ -295,12 +349,9 @@ void main() {
       String password = 'secret1',
       String confirm = 'secret1',
     }) async {
-      // Login tab fields stay in the tree only while visible; after switching
-      // tabs the sign-up form owns these five.
-      final f = find.descendant(
-        of: find.byType(TabBarView),
-        matching: find.byType(TextFormField),
-      );
+      // Only the visible form is in the tree: the sign-up form owns these
+      // five.
+      final f = _fields;
       final n = f.evaluate().length;
       final base = n - 5;
       await tester.enterText(f.at(base + 0), 'Jane Tester');
@@ -308,8 +359,8 @@ void main() {
       await tester.enterText(f.at(base + 2), '+962700000000');
       await tester.enterText(f.at(base + 3), password);
       await tester.enterText(f.at(base + 4), confirm);
-      await tester.ensureVisible(_submit('signup_tab'));
-      await tester.tap(_submit('signup_tab'));
+      await tester.ensureVisible(_submit('auth_create_account'));
+      await tester.tap(_submit('auth_create_account'));
       await tester.pump();
     }
 
@@ -372,7 +423,7 @@ void main() {
         );
         // Nothing is sent and no "email sent" style success is claimed.
         expect(_http.requests, isEmpty);
-        if (locale == ar) expect(englishLeaks(tester), isEmpty);
+        if (locale == ar) expect(englishLeaks(tester, allow: {'English'}), isEmpty);
 
         await tester.tap(find.text(tr('ok', locale)));
         await tester.pumpAndSettle();
@@ -398,7 +449,7 @@ void main() {
     Future<void> login(WidgetTester tester, Locale l) async {
       await tester.enterText(_fields.at(0), 'driver@example.com');
       await tester.enterText(_fields.at(1), 'secret1');
-      await tester.tap(_submit('login_tab', l));
+      await tester.tap(_submit('auth_sign_in', l));
       await tester.pumpAndSettle();
     }
 
@@ -417,10 +468,10 @@ void main() {
       expect(AppServices.instance.session.token, isNull);
       expect(_stored, isEmpty);
       expect(
-        tester.widget<ElevatedButton>(_submit('login_tab', l)).onPressed,
+        tester.widget<AppButton>(_submit('auth_sign_in', l)).onPressed,
         isNotNull,
       );
-      if (l == ar) expect(englishLeaks(tester), isEmpty);
+      if (l == ar) expect(englishLeaks(tester, allow: {'English'}), isEmpty);
     }
 
     const user = {
@@ -527,25 +578,22 @@ void main() {
         serveRaw(201, '{"accessToken": "abc"}');
         await _pump(tester, locale: locale);
         await _openSignup(tester, locale);
-        final f = find.descendant(
-          of: find.byType(TabBarView),
-          matching: find.byType(TextFormField),
-        );
+        final f = _fields;
         final base = f.evaluate().length - 5;
         await tester.enterText(f.at(base + 0), 'Jane Tester');
         await tester.enterText(f.at(base + 1), 'jane@example.com');
         await tester.enterText(f.at(base + 2), '+962700000000');
         await tester.enterText(f.at(base + 3), 'secret1');
         await tester.enterText(f.at(base + 4), 'secret1');
-        await tester.ensureVisible(_submit('signup_tab', locale));
-        await tester.tap(_submit('signup_tab', locale));
+        await tester.ensureVisible(_submit('auth_create_account', locale));
+        await tester.tap(_submit('auth_create_account', locale));
         await tester.pumpAndSettle();
 
         expectNoException(tester);
         expect(find.text(tr('auth_err_bad_response', locale)), findsOneWidget);
         expect(AppServices.instance.session.isLoggedIn, isFalse);
         expect(_stored, isEmpty);
-        if (locale == ar) expect(englishLeaks(tester), isEmpty);
+        if (locale == ar) expect(englishLeaks(tester, allow: {'English'}), isEmpty);
       });
     }
 
@@ -572,12 +620,12 @@ void main() {
         testWidgets('no overflow ${size.width.toInt()}x${size.height.toInt()} '
             '(${locale.languageCode}), both tabs with errors', (tester) async {
           await _pump(tester, locale: locale, size: size);
-          await tester.tap(_submit('login_tab', locale));
+          await tester.tap(_submit('auth_sign_in', locale));
           await tester.pumpAndSettle();
           expectNoException(tester);
           await _openSignup(tester, locale);
-          await tester.ensureVisible(_submit('signup_tab', locale));
-          await tester.tap(_submit('signup_tab', locale));
+          await tester.ensureVisible(_submit('auth_create_account', locale));
+          await tester.tap(_submit('auth_create_account', locale));
           await tester.pumpAndSettle();
           expectNoException(tester);
         });

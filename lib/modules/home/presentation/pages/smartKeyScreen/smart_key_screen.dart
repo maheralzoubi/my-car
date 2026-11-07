@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
+/// Remote lock / unlock / engine controls.
+///
+/// No remote-key link exists (OBD-II cannot lock doors or start the engine,
+/// and there is no BLE key integration), so the controls only change local
+/// state. The header says "Demo" instead of claiming "Connected".
 class SmartKeyScreen extends StatefulWidget {
   const SmartKeyScreen({super.key});
 
@@ -11,408 +16,178 @@ class SmartKeyScreen extends StatefulWidget {
   State<SmartKeyScreen> createState() => _SmartKeyScreenState();
 }
 
-class _SmartKeyScreenState extends State<SmartKeyScreen>
-    with SingleTickerProviderStateMixin {
+class _SmartKeyScreenState extends State<SmartKeyScreen> {
   bool isLocked = true;
   bool engineRunning = false;
-  late AnimationController _pulseController;
 
-  static const Color _successGreen = Color(0xFF00E676);
-  static const Color _successGreenDark = Color(0xFF00C853);
-  static const Color _orangeDark = Color(0xFFFF5722);
-  static const Color _blueDark = Color(0xFF0066FF);
+  void _lock() => setState(() {
+    isLocked = true;
+    engineRunning = false;
+  });
 
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-  }
+  void _unlock() => setState(() => isLocked = false);
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
+  /// The engine can only be started once the car is unlocked.
+  void _toggleEngine() {
+    if (isLocked) return;
+    setState(() => engineRunning = !engineRunning);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20.r),
-                  child: Column(
-                    children: [
-                      _buildCarImage(),
-                      SizedBox(height: 40.h),
-                      _buildLockButton(),
-                      SizedBox(height: 20.h),
-                      _buildUnlockButton(),
-                      SizedBox(height: 20.h),
-                      _buildEngineButton(),
-                      SizedBox(height: 40.h),
-                      _buildQuickActions(),
-                    ],
-                  ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            ScreenHeader(
+              title: context.tr('smart_key_title'),
+              actions: [
+                StatusBadge(
+                  label: context.tr('smart_key_demo'),
+                  level: StatusLevel.neutral,
+                ),
+              ],
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  AppSizes.space20.w,
+                  AppSizes.space8.h,
+                  AppSizes.space20.w,
+                  AppSizes.space24.h,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildStatusCard(),
+                    SizedBox(height: AppSizes.space24.h),
+                    SectionTitle(context.tr('smart_key_controls')),
+                    _ControlCard(
+                      icon: Icons.lock_rounded,
+                      label: context.tr('lock'),
+                      active: isLocked,
+                      onTap: _lock,
+                    ),
+                    SizedBox(height: AppSizes.space12.h),
+                    _ControlCard(
+                      icon: Icons.lock_open_rounded,
+                      label: context.tr('unlock'),
+                      active: !isLocked,
+                      onTap: _unlock,
+                    ),
+                    SizedBox(height: AppSizes.space12.h),
+                    _ControlCard(
+                      icon: Icons.power_settings_new_rounded,
+                      label: engineRunning
+                          ? context.tr('stop_engine')
+                          : context.tr('start_engine'),
+                      active: engineRunning,
+                      hint: isLocked
+                          ? context.tr('smart_key_unlock_first')
+                          : null,
+                      dimmed: isLocked,
+                      onTap: _toggleEngine,
+                    ),
+                    SizedBox(height: AppSizes.space24.h),
+                    SettingsGroup(
+                      title: context.tr('quick_actions'),
+                      children: [
+                        SettingsTile(
+                          leading: const IconBox.neutral(
+                            Icons.ac_unit_rounded,
+                          ),
+                          title: context.tr('climate'),
+                          onTap: _showUnavailable,
+                        ),
+                        SettingsTile(
+                          leading: const IconBox.neutral(
+                            Icons.local_parking_rounded,
+                          ),
+                          title: context.tr('find_car'),
+                          onTap: _showUnavailable,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: EdgeInsets.all(20.r),
-      child: Row(
+  /// Car tile, lock + engine state, and a note that this is a simulation.
+  Widget _buildStatusCard() {
+    final p = context.colors;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Text(
-              context.tr('smart_key_title'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 24.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
+          Row(
+            children: [
+              const IconBox(Icons.directions_car_filled_rounded, size: 48),
+              SizedBox(width: AppSizes.space12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.tr('vehicle_status'),
+                      style: AppTextStyles.label.copyWith(color: p.text2),
+                    ),
+                    SizedBox(height: AppSizes.space8.h),
+                    Wrap(
+                      spacing: AppSizes.space8.w,
+                      runSpacing: AppSizes.space8.h,
+                      children: [
+                        StatusBadge(
+                          label: context.tr(isLocked ? 'locked' : 'unlocked'),
+                          level: StatusLevel.neutral,
+                          icon: isLocked
+                              ? Icons.lock_rounded
+                              : Icons.lock_open_rounded,
+                        ),
+                        StatusBadge(
+                          label: context.tr(
+                            engineRunning ? 'engine_on' : 'engine_off',
+                          ),
+                          level: engineRunning
+                              ? StatusLevel.ok
+                              : StatusLevel.neutral,
+                          icon: engineRunning
+                              ? Icons.power_settings_new_rounded
+                              : Icons.power_off_rounded,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-          SizedBox(width: 8.w),
-          // No remote-key link exists (OBD-II cannot lock doors or start the
-          // engine, and there is no BLE key integration), so the controls
-          // below only animate locally. Say so instead of claiming
-          // "Connected".
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.05),
-              border: Border.all(
-                color: AppColors.textLight.withValues(alpha: 0.4),
-              ),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8.w,
-                  height: 8.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.textLight.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
+          SizedBox(height: AppSizes.space12.h),
+          Divider(height: 1, color: p.border),
+          SizedBox(height: AppSizes.space12.h),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline_rounded, size: 18.r, color: p.muted),
+              SizedBox(width: AppSizes.space8.w),
+              Expanded(
+                child: Text(
+                  context.tr('smart_key_demo_hint'),
+                  style: AppTextStyles.label.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: p.text2,
                   ),
                 ),
-                SizedBox(width: 6.w),
-                Text(
-                  context.tr('smart_key_demo'),
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCarImage() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        return Container(
-          width: 300.w,
-          height: 200.h,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30.r),
-            boxShadow: [
-              BoxShadow(
-                color: (isLocked ? AppColors.accentOrange : _successGreen)
-                    .withValues(alpha: 0.3 + (_pulseController.value * 0.2)),
-                blurRadius: 40,
-                spreadRadius: 10,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30.r),
-            child: Stack(
-              children: [
-                Center(
-                  child: Icon(
-                    Icons.directions_car,
-                    size: 120.r,
-                    color: AppColors.accentCyan.withValues(alpha: 0.5),
-                  ),
-                ),
-                if (isLocked)
-                  Center(
-                    child: Icon(
-                      Icons.lock,
-                      size: 60.r,
-                      color: AppColors.accentOrange,
-                    ),
-                  ),
-                if (engineRunning)
-                  PositionedDirectional(
-                    top: 20,
-                    end: 20,
-                    child: Container(
-                      padding: EdgeInsets.all(10.r),
-                      decoration: BoxDecoration(
-                        color: _successGreen.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: _successGreen,
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.power_settings_new,
-                        color: _successGreen,
-                        size: 24.r,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildLockButton() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          isLocked = true;
-          engineRunning = false;
-        });
-      },
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(25.r),
-        decoration: BoxDecoration(
-          gradient: isLocked
-              ? const LinearGradient(
-                  colors: [AppColors.accentOrange, _orangeDark],
-                )
-              : null,
-          color: isLocked ? null : AppColors.white.withValues(alpha: 0.05),
-          border: Border.all(
-            color: isLocked
-                ? AppColors.transparent
-                : AppColors.accentCyan.withValues(alpha: 0.2),
-          ),
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: isLocked
-              ? [
-                  BoxShadow(
-                    color: AppColors.accentOrange.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.lock,
-              color: isLocked ? AppColors.white : AppColors.textLight,
-              size: 32.r,
-            ),
-            SizedBox(width: 15.w),
-            Text(
-              context.tr('lock'),
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w700,
-                color: isLocked ? AppColors.white : AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUnlockButton() {
-    return GestureDetector(
-      onTap: () {
-        setState(() => isLocked = false);
-      },
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(25.r),
-        decoration: BoxDecoration(
-          gradient: !isLocked
-              ? const LinearGradient(
-                  colors: [_successGreen, _successGreenDark],
-                )
-              : null,
-          color: !isLocked ? null : AppColors.white.withValues(alpha: 0.05),
-          border: Border.all(
-            color: !isLocked
-                ? AppColors.transparent
-                : AppColors.accentCyan.withValues(alpha: 0.2),
-          ),
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: !isLocked
-              ? [
-                  BoxShadow(
-                    color: _successGreen.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.lock_open,
-              color: !isLocked ? AppColors.white : AppColors.textLight,
-              size: 32.r,
-            ),
-            SizedBox(width: 15.w),
-            Text(
-              context.tr('unlock'),
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w700,
-                color: !isLocked ? AppColors.white : AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEngineButton() {
-    return GestureDetector(
-      onTap: () {
-        if (!isLocked) {
-          setState(() => engineRunning = !engineRunning);
-        }
-      },
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(25.r),
-        decoration: BoxDecoration(
-          gradient: engineRunning
-              ? const LinearGradient(
-                  colors: [AppColors.accentCyan, _blueDark],
-                )
-              : null,
-          color: engineRunning ? null : AppColors.white.withValues(alpha: 0.05),
-          border: Border.all(
-            color: engineRunning
-                ? AppColors.transparent
-                : AppColors.accentCyan.withValues(alpha: 0.2),
-          ),
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: engineRunning
-              ? [
-                  BoxShadow(
-                    color: AppColors.accentCyan.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.power_settings_new,
-              color: engineRunning
-                  ? AppColors.white
-                  : AppColors.textLight.withValues(
-                      alpha: isLocked ? 0.3 : 1,
-                    ),
-              size: 32.r,
-            ),
-            SizedBox(width: 15.w),
-            Text(
-              engineRunning ? context.tr('stop_engine') : context.tr('start_engine'),
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w700,
-                color: engineRunning
-                    ? AppColors.white
-                    : AppColors.textLight.withValues(
-                        alpha: isLocked ? 0.3 : 1,
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.tr('quick_actions'),
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textLight,
-          ),
-        ),
-        SizedBox(height: 15.h),
-        Row(
-          children: [
-            _buildQuickAction(
-              Icons.ac_unit,
-              context.tr('climate'),
-              _showUnavailable,
-            ),
-            SizedBox(width: 15.w),
-            _buildQuickAction(
-              Icons.local_parking,
-              context.tr('find_car'),
-              _showUnavailable,
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -425,32 +200,78 @@ class _SmartKeyScreenState extends State<SmartKeyScreen>
         SnackBar(content: Text(context.tr('smart_key_action_unavailable'))),
       );
   }
+}
 
-  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(20.r),
-          decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.05),
-            border: Border.all(
-              color: AppColors.accentCyan.withValues(alpha: 0.2),
-            ),
-            borderRadius: BorderRadius.circular(15.r),
+/// A large lock / unlock / engine control. The active one is outlined in the
+/// accent color with a check mark; [dimmed] fades a control that can't be
+/// used yet and shows [hint] under its label.
+class _ControlCard extends StatelessWidget {
+  const _ControlCard({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.hint,
+    this.dimmed = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final String? hint;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.colors;
+    return Semantics(
+      button: true,
+      selected: active,
+      enabled: !dimmed,
+      child: Opacity(
+        opacity: dimmed ? 0.55 : 1,
+        child: AppCard(
+          accent: active ? p.primary : null,
+          accentStyle: AppCardAccent.strong,
+          onTap: onTap,
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.space16.w,
+            vertical: AppSizes.space16.h,
           ),
-          child: Column(
+          child: Row(
             children: [
-              Icon(icon, color: AppColors.accentCyan, size: 32.r),
-              SizedBox(height: 10.h),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: AppColors.textLight,
-                  fontWeight: FontWeight.w600,
+              active ? IconBox(icon, size: 48) : IconBox.neutral(icon, size: 48),
+              SizedBox(width: AppSizes.space16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.title.copyWith(color: p.text),
+                    ),
+                    if (hint != null)
+                      Text(
+                        hint!,
+                        style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: p.text2,
+                        ),
+                      ),
+                  ],
                 ),
               ),
+              if (active) ...[
+                SizedBox(width: AppSizes.space12.w),
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 22.r,
+                  color: p.primary,
+                ),
+              ],
             ],
           ),
         ),

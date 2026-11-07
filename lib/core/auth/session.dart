@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Holds the current logged-in user's auth token and profile in memory,
@@ -35,14 +37,28 @@ class Session {
   String? get location => _location;
   bool get isLoggedIn => _token != null;
 
+  final Completer<void> _loaded = Completer<void>();
+
+  /// Completes when the first [load] has finished (even if it failed), i.e.
+  /// once [isLoggedIn] reflects the saved session. The splash screen waits on
+  /// this to choose between sign-in and the app.
+  Future<void> get loaded => _loaded.future;
+
+  /// Whether the first [load] has finished (synchronous form of [loaded]).
+  bool get isLoaded => _loaded.isCompleted;
+
   Future<void> load() async {
-    _token = await _storage.read(key: _tokenKey);
-    _userId = await _storage.read(key: _userIdKey);
-    _role = await _storage.read(key: _roleKey);
-    _name = await _storage.read(key: _nameKey);
-    _email = await _storage.read(key: _emailKey);
-    _phone = await _storage.read(key: _phoneKey);
-    _location = await _storage.read(key: _locationKey);
+    try {
+      _token = await _storage.read(key: _tokenKey);
+      _userId = await _storage.read(key: _userIdKey);
+      _role = await _storage.read(key: _roleKey);
+      _name = await _storage.read(key: _nameKey);
+      _email = await _storage.read(key: _emailKey);
+      _phone = await _storage.read(key: _phoneKey);
+      _location = await _storage.read(key: _locationKey);
+    } finally {
+      if (!_loaded.isCompleted) _loaded.complete();
+    }
   }
 
   Future<void> save({

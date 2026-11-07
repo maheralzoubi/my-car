@@ -16,19 +16,19 @@ class DtcHistoryEntry {
 
   bool get hasCodes => codes.isNotEmpty;
   int get confirmedCount => codes.where((c) => !c.startsWith('~')).length;
-  int get pendingCount   => codes.where((c) =>  c.startsWith('~')).length;
+  int get pendingCount => codes.where((c) => c.startsWith('~')).length;
 
   Map<String, dynamic> toJson() => {
-        'scannedAt':  scannedAt.toIso8601String(),
-        'mileageKm':  mileageKm,
-        'codes':      codes,
-      };
+    'scannedAt': scannedAt.toIso8601String(),
+    'mileageKm': mileageKm,
+    'codes': codes,
+  };
 
   factory DtcHistoryEntry.fromJson(Map<String, dynamic> j) => DtcHistoryEntry(
-        scannedAt:  DateTime.parse(j['scannedAt'] as String),
-        mileageKm:  (j['mileageKm'] as num).toDouble(),
-        codes:      List<String>.from(j['codes'] as List),
-      );
+    scannedAt: DateTime.parse(j['scannedAt'] as String),
+    mileageKm: (j['mileageKm'] as num).toDouble(),
+    codes: List<String>.from(j['codes'] as List),
+  );
 }
 
 // ── Service ────────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ class DtcHistoryService {
   DtcHistoryService._();
   static final DtcHistoryService instance = DtcHistoryService._();
 
-  static const _prefKey  = 'dtc_history_v1';
+  static const _prefKey = 'dtc_history_v1';
   static const _maxEntries = 50;
 
   List<DtcHistoryEntry> _entries = [];
@@ -72,7 +72,8 @@ class DtcHistoryService {
       codes: codes,
     );
     _entries.insert(0, entry);
-    if (_entries.length > _maxEntries) _entries = _entries.take(_maxEntries).toList();
+    if (_entries.length > _maxEntries)
+      _entries = _entries.take(_maxEntries).toList();
     await _save();
   }
 
@@ -84,6 +85,9 @@ class DtcHistoryService {
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, jsonEncode(_entries.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+      _prefKey,
+      jsonEncode(_entries.map((e) => e.toJson()).toList()),
+    );
   }
 }

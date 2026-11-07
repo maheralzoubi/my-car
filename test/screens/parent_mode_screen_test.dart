@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mycar/core/theme/app_theme.dart';
+
 import 'package:mycar/modules/home/presentation/pages/parentModeScreen/parent_mode_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -83,6 +85,26 @@ void main() {
       expectNoException(tester);
       await unmount(tester);
     });
+
+    for (final locale in [en, ar]) {
+      testWidgets('light theme renders, scrolled through '
+          '(${locale.languageCode})', (tester) async {
+        await pumpScreen(
+          tester,
+          const ParentModeScreen(),
+          locale: locale,
+          theme: AppTheme.light,
+        );
+        expectNoException(tester);
+        await tester.drag(
+          find.byType(SingleChildScrollView).first,
+          const Offset(0, -4000),
+        );
+        await _step(tester);
+        expectNoException(tester);
+        await unmount(tester);
+      });
+    }
 
     testWidgets('Arabic UI shows no untranslated English copy', (tester) async {
       await _pump(tester, locale: ar);
@@ -171,7 +193,7 @@ void main() {
   group('navigation', () {
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(ParentModeScreen), findsNothing);

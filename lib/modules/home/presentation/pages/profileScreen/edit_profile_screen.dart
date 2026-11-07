@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/app_services.dart';
-import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import 'profile_avatar.dart';
 
@@ -21,22 +21,24 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  static const Color _errorRed = Color(0xFFFF1744);
-
   /// Minimum time the save spinner shows, so the press registers visibly
   /// even though the local write is near-instant.
   static const Duration _minSaveFeedback = Duration(milliseconds: 600);
 
   final _formKey = GlobalKey<FormState>();
   final _session = AppServices.instance.session;
-  late final TextEditingController _nameController =
-      TextEditingController(text: _session.name ?? '');
-  late final TextEditingController _emailController =
-      TextEditingController(text: _session.email ?? '');
-  late final TextEditingController _phoneController =
-      TextEditingController(text: _session.phone ?? '');
-  late final TextEditingController _locationController =
-      TextEditingController(text: _session.location ?? '');
+  late final TextEditingController _nameController = TextEditingController(
+    text: _session.name ?? '',
+  );
+  late final TextEditingController _emailController = TextEditingController(
+    text: _session.email ?? '',
+  );
+  late final TextEditingController _phoneController = TextEditingController(
+    text: _session.phone ?? '',
+  );
+  late final TextEditingController _locationController = TextEditingController(
+    text: _session.location ?? '',
+  );
   final ImagePicker _picker = ImagePicker();
 
   bool isSaving = false;
@@ -53,44 +55,96 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  AppSizes.space20.w,
+                  AppSizes.space8.h,
+                  AppSizes.space20.w,
+                  AppSizes.space24.h,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildAvatarSection(),
+                      SizedBox(height: AppSizes.space24.h),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: AppSizes.space16.h,
+                        children: [
+                          _buildNameField(),
+                          _buildEmailField(),
+                          _buildPhoneField(),
+                          _buildLocationField(),
+                        ],
+                      ),
+                      SizedBox(height: AppSizes.space24.h),
+                      _buildPasswordSection(),
+                      SizedBox(height: AppSizes.space32.h),
+                      _buildSaveButton(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        child: SafeArea(
-          child: Column(
+      ),
+    );
+  }
+
+  Widget _buildHeader() =>
+      ScreenHeader(title: context.tr('edit_profile'), close: true);
+
+  /// Avatar with a camera badge; the avatar, the badge and the "Change
+  /// photo" link all open the picture options.
+  Widget _buildAvatarSection() {
+    final p = context.colors;
+    final size = 96.r;
+    final badge = 36.r;
+    return Column(
+      children: [
+        SizedBox(
+          width: size + AppSizes.space4.r,
+          height: size + AppSizes.space4.r,
+          child: Stack(
             children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20.r),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildAvatarSection(),
-                        SizedBox(height: 30.h),
-                        _buildNameField(),
-                        SizedBox(height: 20.h),
-                        _buildEmailField(),
-                        SizedBox(height: 20.h),
-                        _buildPhoneField(),
-                        SizedBox(height: 20.h),
-                        _buildLocationField(),
-                        SizedBox(height: 30.h),
-                        _buildPasswordSection(),
-                        SizedBox(height: 30.h),
-                        _buildSaveButton(),
-                        SizedBox(height: 20.h),
-                      ],
+              Material(
+                type: MaterialType.transparency,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: _showAvatarOptions,
+                  child: ProfileAvatar(size: size),
+                ),
+              ),
+              PositionedDirectional(
+                bottom: 0,
+                end: 0,
+                child: Tooltip(
+                  message: context.tr('change_profile_picture'),
+                  child: Material(
+                    color: p.primaryButton,
+                    shape: CircleBorder(
+                      side: BorderSide(color: p.bg, width: 3),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: _showAvatarOptions,
+                      child: SizedBox.square(
+                        dimension: badge,
+                        child: Icon(
+                          Icons.photo_camera_rounded,
+                          color: p.onPrimary,
+                          size: 18.r,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -98,439 +152,198 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: EdgeInsets.all(20.r),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.close, color: AppColors.accentCyan, size: 24.r),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Text(
-            context.tr('edit_profile'),
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAvatarSection() {
-    return Center(
-      child: Stack(
-        children: [
-          Container(
-            width: 120.w,
-            height: 120.h,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.accentCyan, AppColors.accentOrange],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentCyan.withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: ProfileAvatarContent(fontSize: 42.sp),
-          ),
-          PositionedDirectional(
-            bottom: 0,
-            end: 0,
-            child: GestureDetector(
-              onTap: _showAvatarOptions,
-              child: Container(
-                width: 40.w,
-                height: 40.h,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentCyan, AppColors.accentOrange],
-                  ),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.backgroundDark,
-                    width: 3,
-                  ),
-                ),
-                child: Icon(
-                  Icons.camera_alt,
-                  color: AppColors.white,
-                  size: 20.r,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        SizedBox(height: AppSizes.space8.h),
+        AppButton.ghost(
+          label: context.tr('change_photo'),
+          onPressed: _showAvatarOptions,
+        ),
+      ],
     );
   }
 
   Widget _buildNameField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(context.tr('full_name')),
-        TextFormField(
-          controller: _nameController,
-          style: const TextStyle(color: AppColors.textLight),
-          decoration: _buildInputDecoration(
-            hintText: context.tr('enter_full_name'),
-            prefixIcon: Icons.person_outline,
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return context.tr('please_enter_name');
-            }
-            return null;
-          },
+    return _labelled(
+      context.tr('full_name'),
+      TextFormField(
+        controller: _nameController,
+        style: AppTextStyles.body,
+        textInputAction: TextInputAction.next,
+        decoration: _buildInputDecoration(
+          hintText: context.tr('enter_full_name'),
+          prefixIcon: Icons.person_outline_rounded,
         ),
-      ],
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return context.tr('please_enter_name');
+          }
+          return null;
+        },
+      ),
     );
   }
 
   Widget _buildEmailField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(context.tr('email_address')),
-        TextFormField(
-          controller: _emailController,
-          style: const TextStyle(color: AppColors.textLight),
-          keyboardType: TextInputType.emailAddress,
-          decoration: _buildInputDecoration(
-            hintText: context.tr('enter_email'),
-            prefixIcon: Icons.email_outlined,
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return context.tr('please_enter_email');
-            }
-            if (!value.contains('@')) {
-              return context.tr('invalid_email');
-            }
-            return null;
-          },
+    return _labelled(
+      context.tr('email_address'),
+      TextFormField(
+        controller: _emailController,
+        style: AppTextStyles.body,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.next,
+        decoration: _buildInputDecoration(
+          hintText: context.tr('enter_email'),
+          prefixIcon: Icons.mail_outline_rounded,
         ),
-      ],
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return context.tr('please_enter_email');
+          }
+          if (!value.contains('@')) {
+            return context.tr('invalid_email');
+          }
+          return null;
+        },
+      ),
     );
   }
 
   Widget _buildPhoneField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(context.tr('phone')),
-        TextFormField(
-          controller: _phoneController,
-          style: const TextStyle(color: AppColors.textLight),
-          keyboardType: TextInputType.phone,
-          decoration: _buildInputDecoration(
-            hintText: context.tr('enter_phone'),
-            prefixIcon: Icons.phone_outlined,
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return context.tr('please_enter_phone');
-            }
-            return null;
-          },
+    return _labelled(
+      context.tr('phone'),
+      TextFormField(
+        controller: _phoneController,
+        style: AppTextStyles.body,
+        keyboardType: TextInputType.phone,
+        textInputAction: TextInputAction.next,
+        decoration: _buildInputDecoration(
+          hintText: context.tr('enter_phone'),
+          prefixIcon: Icons.phone_outlined,
         ),
-      ],
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return context.tr('please_enter_phone');
+          }
+          return null;
+        },
+      ),
     );
   }
 
   Widget _buildLocationField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(context.tr('location_label')),
-        TextFormField(
-          controller: _locationController,
-          style: const TextStyle(color: AppColors.textLight),
-          decoration: _buildInputDecoration(
-            hintText: context.tr('enter_location'),
-            prefixIcon: Icons.location_on_outlined,
-          ),
+    return _labelled(
+      context.tr('location_label'),
+      TextFormField(
+        controller: _locationController,
+        style: AppTextStyles.body,
+        textInputAction: TextInputAction.done,
+        decoration: _buildInputDecoration(
+          hintText: context.tr('enter_location'),
+          prefixIcon: Icons.location_on_outlined,
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildPasswordSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsGroup(
+      title: context.tr('security'),
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10.r)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              context.tr('security'),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 15.h),
-        GestureDetector(
+        SettingsTile(
+          leading: const IconBox.neutral(Icons.lock_outline_rounded),
+          title: context.tr('change_password'),
+          subtitle: context.tr('update_your_password'),
           onTap: _showChangePasswordDialog,
-          child: Container(
-            padding: EdgeInsets.all(18.r),
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.05),
-              border: Border.all(
-                color: AppColors.white.withValues(alpha: 0.1),
-              ),
-              borderRadius: BorderRadius.circular(15.r),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 45.w,
-                  height: 45.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentOrange.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: const Icon(
-                    Icons.lock_outline,
-                    color: AppColors.accentOrange,
-                  ),
-                ),
-                SizedBox(width: 15.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.tr('change_password'),
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textLight,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        context.tr('update_your_password'),
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          color: AppColors.accentCyan,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: AppColors.accentCyan,
-                  size: 16.r,
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );
   }
 
   Widget _buildSaveButton() {
-    return Container(
-      width: double.infinity,
-      height: 56.h,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.accentCyan, AppColors.accentOrange],
-        ),
-        borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentCyan.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: isSaving ? null : _handleSave,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.transparent,
-          shadowColor: AppColors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-        ),
-        child: isSaving
-            ? SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: const CircularProgressIndicator(
-                  color: AppColors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                context.tr('save_changes'),
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing:
-                      Localizations.localeOf(context).languageCode == 'ar'
-                          ? 0
-                          : 2,
-                  color: AppColors.white,
-                ),
-              ),
-      ),
+    return AppButton(
+      label: context.tr('save_changes'),
+      onPressed: _handleSave,
+      isLoading: isSaving,
     );
   }
 
-  Widget _buildLabel(String label) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 10.h),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textLight,
+  /// A field with its [label] above it (mockup sign-in form style).
+  Widget _labelled(String label, Widget field) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsetsDirectional.only(bottom: AppSizes.space8.h),
+          child: Text(
+            label,
+            style: AppTextStyles.label.copyWith(color: context.colors.text),
+          ),
         ),
-      ),
+        field,
+      ],
     );
   }
 
+  /// Fill, borders, icon and error colors come from the app's input theme.
   InputDecoration _buildInputDecoration({
     required String hintText,
     required IconData prefixIcon,
   }) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: TextStyle(
-        color: AppColors.textLight.withValues(alpha: 0.5),
-      ),
-      prefixIcon: Icon(prefixIcon, color: AppColors.accentCyan),
-      filled: true,
-      fillColor: AppColors.white.withValues(alpha: 0.05),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: BorderSide(
-          color: AppColors.accentCyan.withValues(alpha: 0.3),
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: BorderSide(
-          color: AppColors.accentCyan.withValues(alpha: 0.3),
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: const BorderSide(
-          color: AppColors.accentCyan,
-          width: 2,
-        ),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: const BorderSide(color: _errorRed),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: const BorderSide(color: _errorRed, width: 2),
-      ),
-    );
+    return InputDecoration(hintText: hintText, prefixIcon: Icon(prefixIcon));
   }
 
   void _showAvatarOptions() {
+    // Background, corners and the drag handle come from the bottom-sheet
+    // theme (which draws its own handle).
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20.r),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(10.r),
+      builder: (context) {
+        final p = context.colors;
+        return Padding(
+          padding: EdgeInsetsDirectional.fromSTEB(
+            AppSizes.space20.w,
+            0,
+            AppSizes.space20.w,
+            AppSizes.space20.h,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.tr('change_profile_picture'),
+                style: AppTextStyles.title.copyWith(color: p.text),
               ),
-            ),
-            SizedBox(height: 20.h),
-            Text(
-              context.tr('change_profile_picture'),
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
+              SizedBox(height: AppSizes.space16.h),
+              ListTile(
+                leading: Icon(Icons.photo_camera_outlined, color: p.primary),
+                title: Text(context.tr('take_photo')),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAvatar(ImageSource.camera);
+                },
               ),
-            ),
-            SizedBox(height: 20.h),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: AppColors.accentCyan),
-              title: Text(
-                context.tr('take_photo'),
-                style: const TextStyle(color: AppColors.textLight),
+              ListTile(
+                leading: Icon(Icons.photo_library_outlined, color: p.primary),
+                title: Text(context.tr('choose_from_gallery')),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAvatar(ImageSource.gallery);
+                },
               ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAvatar(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: AppColors.accentCyan),
-              title: Text(
-                context.tr('choose_from_gallery'),
-                style: const TextStyle(color: AppColors.textLight),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded, color: p.crit),
+                title: Text(
+                  context.tr('remove_photo'),
+                  style: TextStyle(color: p.crit),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  AppServices.instance.profilePhoto.clear();
+                },
               ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAvatar(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: _errorRed),
-              title: Text(
-                context.tr('remove_photo'),
-                style: const TextStyle(color: _errorRed),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                AppServices.instance.profilePhoto.clear();
-              },
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -554,9 +367,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// The backend has no password-change endpoint, so a valid entry is not
@@ -600,28 +413,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        title: Text(
-          context.tr('success'),
-          style: const TextStyle(color: AppColors.textLight),
-        ),
+        title: Text(context.tr('success')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.tr('profile_updated'),
-              style: const TextStyle(color: AppColors.textLight),
-            ),
-            SizedBox(height: 10.h),
+            Text(context.tr('profile_updated')),
+            SizedBox(height: AppSizes.space8.h),
             Text(
               context.tr('profile_saved_on_device'),
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: AppColors.textLight.withValues(alpha: 0.7),
+              style: AppTextStyles.label.copyWith(
+                fontWeight: FontWeight.w400,
+                color: context.colors.text2,
               ),
             ),
           ],
@@ -632,12 +435,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Navigator.pop(context);
               Navigator.pop(this.context);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentCyan,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
             child: Text(context.tr('done')),
           ),
         ],
@@ -656,8 +453,6 @@ class _ChangePasswordDialog extends StatefulWidget {
 }
 
 class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
-  static const Color _errorRed = Color(0xFFFF1744);
-
   final _current = TextEditingController();
   final _next = TextEditingController();
   final _confirm = TextEditingController();
@@ -689,43 +484,20 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     Navigator.pop(context, true);
   }
 
-  InputDecoration _decoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: AppColors.accentCyan),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: AppColors.accentCyan.withValues(alpha: 0.3),
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: const BorderSide(color: AppColors.accentCyan),
-      ),
-    );
-  }
-
   Widget _field(TextEditingController controller, String label) {
     return TextField(
       controller: controller,
       obscureText: true,
-      style: const TextStyle(color: AppColors.textLight),
-      decoration: _decoration(label),
+      style: AppTextStyles.body,
+      // Borders and label colors come from the app's input theme.
+      decoration: InputDecoration(labelText: label),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.surfaceDark,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      title: Text(
-        context.tr('change_password'),
-        style: const TextStyle(color: AppColors.textLight),
-      ),
+      title: Text(context.tr('change_password')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -733,19 +505,25 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
           children: [
             Text(
               context.tr('password_change_unavailable'),
-              style: TextStyle(fontSize: 13.sp, color: AppColors.accentOrange),
+              style: AppTextStyles.label.copyWith(
+                fontWeight: FontWeight.w400,
+                color: context.colors.warn,
+              ),
             ),
-            SizedBox(height: 15.h),
+            SizedBox(height: AppSizes.space16.h),
             _field(_current, context.tr('current_password')),
-            SizedBox(height: 15.h),
+            SizedBox(height: AppSizes.space16.h),
             _field(_next, context.tr('new_password')),
-            SizedBox(height: 15.h),
+            SizedBox(height: AppSizes.space16.h),
             _field(_confirm, context.tr('confirm_new_password')),
             if (_error != null) ...[
-              SizedBox(height: 12.h),
+              SizedBox(height: AppSizes.space12.h),
               Text(
                 _error!,
-                style: TextStyle(fontSize: 13.sp, color: _errorRed),
+                style: AppTextStyles.label.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: context.colors.crit,
+                ),
               ),
             ],
           ],
@@ -754,21 +532,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(
-            context.tr('cancel'),
-            style: const TextStyle(color: AppColors.accentCyan),
-          ),
+          child: Text(context.tr('cancel')),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentCyan,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-          ),
-          child: Text(context.tr('update')),
-        ),
+        ElevatedButton(onPressed: _submit, child: Text(context.tr('update'))),
       ],
     );
   }

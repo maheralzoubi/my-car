@@ -163,6 +163,7 @@ Widget buildHarness(
   Map<String, WidgetBuilder> routes = const {},
   RecordingObserver? observer,
   bool pushed = false,
+  ThemeData? theme,
 }) {
   return ScreenUtilInit(
     designSize: const Size(390, 844),
@@ -170,7 +171,7 @@ Widget buildHarness(
     splitScreenMode: true,
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: theme ?? AppTheme.dark,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -191,6 +192,9 @@ Widget buildHarness(
 
 /// Pumps [child] at phone size inside the app shell and settles one frame.
 ///
+/// [theme] defaults to the dark theme; pass `AppTheme.light` to check the
+/// light theme (every redesigned screen must work in both).
+///
 /// With [pushed], [child] is pushed on top of a launcher page (so its back
 /// button has somewhere to go); the push transition is completed here.
 Future<void> pumpScreen(
@@ -201,6 +205,7 @@ Future<void> pumpScreen(
   Map<String, WidgetBuilder> routes = const {},
   RecordingObserver? observer,
   bool pushed = false,
+  ThemeData? theme,
 }) async {
   setPhoneSurface(tester, size);
   await tester.pumpWidget(
@@ -210,6 +215,7 @@ Future<void> pumpScreen(
       routes: routes,
       observer: observer,
       pushed: pushed,
+      theme: theme,
     ),
   );
   await tester.pump();

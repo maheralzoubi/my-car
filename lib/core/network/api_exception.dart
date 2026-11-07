@@ -28,17 +28,26 @@ ApiException mapDioException(DioException e) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
-      return ApiException('Connection timed out. Please check your internet connection.');
+      return ApiException(
+        'Connection timed out. Please check your internet connection.',
+      );
     case DioExceptionType.connectionError:
-      return ApiException('Could not reach the server. Please check your internet connection.');
+      return ApiException(
+        'Could not reach the server. Please check your internet connection.',
+      );
     case DioExceptionType.badCertificate:
-      return ApiException('Could not establish a secure connection to the server.');
+      return ApiException(
+        'Could not establish a secure connection to the server.',
+      );
     case DioExceptionType.badResponse:
       return ApiException(_statusMessage(statusCode), statusCode: statusCode);
     case DioExceptionType.cancel:
       return ApiException('The request was cancelled.');
     default:
-      return ApiException('Something went wrong. Please try again.', statusCode: statusCode);
+      return ApiException(
+        'Something went wrong. Please try again.',
+        statusCode: statusCode,
+      );
   }
 }
 

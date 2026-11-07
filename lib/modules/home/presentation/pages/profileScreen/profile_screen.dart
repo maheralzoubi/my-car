@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/app_services.dart';
-import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/dtc_history_service.dart';
 import 'profile_avatar.dart';
@@ -16,8 +15,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const Color _ratingYellow = Color(0xFFFFD600);
-
   // Only what the app actually knows is shown: the session user (the
   // backend has no profile endpoint beyond login/register), this device's
   // scan history, and nothing invented for the rest.
@@ -41,290 +38,159 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   /// [value], or a localized "not set" when empty.
-  String _orNotSet(String? value) =>
-      value == null || value.trim().isEmpty ? context.tr('profile_not_set') : value;
+  String _orNotSet(String? value) => value == null || value.trim().isEmpty
+      ? context.tr('profile_not_set')
+      : value;
+
+  Future<void> _openEditProfile() async {
+    await Navigator.pushNamed(context, AppRoutes.editProfile);
+    // Pick up edits saved on the edit screen.
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundDark,
-              AppColors.backgroundDarkBlue,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20.r),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildProfileCard(),
-                      SizedBox(height: 25.h),
-                      _buildStatsSection(),
-                      SizedBox(height: 25.h),
-                      _buildPersonalInfoSection(),
-                      SizedBox(height: 25.h),
-                      _buildVehiclesSection(),
-                      SizedBox(height: 25.h),
-                      _buildAchievementsSection(),
-                      SizedBox(height: 20.h),
-                    ],
-                  ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            ScreenHeader(title: context.tr('my_profile')),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  AppSizes.space20.w,
+                  AppSizes.space8.h,
+                  AppSizes.space20.w,
+                  AppSizes.space24.h,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: AppSizes.space24.h,
+                  children: [
+                    _buildProfileCard(),
+                    _buildStatsSection(),
+                    _buildPersonalInfoSection(),
+                    _buildVehiclesSection(),
+                    _buildAchievementsSection(),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: EdgeInsets.all(20.r),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan, size: 24.r),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Text(
-            context.tr('my_profile'),
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileCard() {
-    return Container(
-      padding: EdgeInsets.all(25.r),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.accentCyan.withValues(alpha: 0.1),
-            AppColors.accentOrange.withValues(alpha: 0.05),
           ],
         ),
-        border: Border.all(
-          color: AppColors.accentCyan.withValues(alpha: 0.3),
-        ),
-        borderRadius: BorderRadius.circular(25.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
+    );
+  }
+
+  /// Avatar, name and email, with the "Edit profile" action underneath.
+  Widget _buildProfileCard() {
+    final p = context.colors;
+    final hasName = _session.name?.trim().isNotEmpty == true;
+    final hasEmail = _session.email?.trim().isNotEmpty == true;
+    // No "verified" badge: nothing in the app or backend verifies an account.
+    return AppCard(
+      padding: EdgeInsets.all(AppSizes.space16.r),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // No "verified" badge: nothing in the app or backend verifies an
-          // account.
-          Container(
-            width: 100.w,
-            height: 100.h,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.accentCyan, AppColors.accentOrange],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentCyan.withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: ProfileAvatarContent(fontSize: 36.sp),
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            _session.name?.trim().isNotEmpty == true
-                ? _session.name!
-                : context.tr('profile_guest'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
-            ),
-          ),
-          SizedBox(height: 20.h),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                await Navigator.pushNamed(context, AppRoutes.editProfile);
-                // Pick up edits saved on the edit screen.
-                if (mounted) setState(() {});
-              },
-              icon: const Icon(Icons.edit),
-              label: Text(
-                context.tr('edit_profile'),
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentCyan,
-                foregroundColor: AppColors.white,
-                padding: EdgeInsets.symmetric(vertical: 15.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
+          Row(
+            children: [
+              ProfileAvatar(size: 64.r),
+              SizedBox(width: AppSizes.space16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasName ? _session.name! : context.tr('profile_guest'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.title.copyWith(color: p.text),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      hasEmail
+                          ? _session.email!
+                          : context.tr('profile_not_signed_in'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.label.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: p.text2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
+          ),
+          SizedBox(height: AppSizes.space16.h),
+          AppButton.secondary(
+            label: context.tr('edit_profile'),
+            icon: Icons.edit_outlined,
+            compact: true,
+            onPressed: _openEditProfile,
           ),
         ],
       ),
+    );
+  }
+
+  /// A titled block: [SectionTitle] followed by [child].
+  Widget _section(String title, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [SectionTitle(title), child],
     );
   }
 
   Widget _buildStatsSection() {
-    return Container(
-      padding: EdgeInsets.all(20.r),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4.w,
-                height: 20.h,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentCyan, AppColors.accentOrange],
-                  ),
-                  borderRadius: BorderRadius.all(Radius.circular(10.r)),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Text(
-                context.tr('activity_stats'),
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textLight,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20.h),
-          Row(
-            children: [
-              _buildStatItem(
-                '🔍',
-                context.tr('total_scans'),
-                _totalScans?.toString() ?? '—',
-              ),
-              _buildStatItem(
-                '📹',
-                context.tr('videos_watched'),
-                // Not tracked anywhere in the app yet.
-                '—',
-              ),
-              _buildStatItem(
-                '🔖',
-                context.tr('saved_codes'),
-                // There is no "save code" feature yet.
-                '—',
-              ),
-            ],
-          ),
-        ],
-      ),
+    // Three across leaves no room for an icon beside the label (it cut
+    // "Videos watched" short, worse in Arabic), so these tiles go without.
+    Widget stat(String labelKey, String value) => Expanded(
+      child: StatTile(label: context.tr(labelKey), value: value),
     );
-  }
 
-  Widget _buildStatItem(String icon, String label, String value) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(icon, style: TextStyle(fontSize: 32.sp)),
-          SizedBox(height: 8.h),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w900,
-              color: AppColors.accentCyan,
-            ),
-          ),
-          SizedBox(height: 5.h),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11.sp,
-              color: AppColors.textLight.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
+    return _section(
+      context.tr('activity_stats'),
+      IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSizes.space12.w,
+          children: [
+            stat('total_scans', _totalScans?.toString() ?? '—'),
+            // Not tracked anywhere in the app yet.
+            stat('videos_watched', '—'),
+            // There is no "save code" feature yet.
+            stat('saved_codes', '—'),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPersonalInfoSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsGroup(
+      title: context.tr('personal_information'),
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10.r)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              context.tr('personal_information'),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
+        _infoRow(
+          Icons.mail_outline_rounded,
+          context.tr('email'),
+          _orNotSet(_session.email),
         ),
-        SizedBox(height: 15.h),
-        _buildInfoCard('📧', context.tr('email'), _orNotSet(_session.email)),
-        _buildInfoCard('📱', context.tr('phone_short'), _orNotSet(_session.phone)),
-        _buildInfoCard(
-          '📍',
+        _infoRow(
+          Icons.phone_outlined,
+          context.tr('phone_short'),
+          _orNotSet(_session.phone),
+        ),
+        _infoRow(
+          Icons.location_on_outlined,
           context.tr('location_label'),
           _orNotSet(_session.location),
         ),
         // The login response carries no account creation date.
-        _buildInfoCard(
-          '📅',
+        _infoRow(
+          Icons.calendar_today_outlined,
           context.tr('member_since'),
           context.tr('profile_not_available'),
         ),
@@ -332,45 +198,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildInfoCard(String icon, String label, String value) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(18.r),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(15.r),
-      ),
-      child: Row(
-        children: [
-          Text(icon, style: TextStyle(fontSize: 24.sp)),
-          SizedBox(width: 15.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.6),
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+  /// Read-only row: [label] with its [value] underneath.
+  Widget _infoRow(IconData icon, String label, String value) {
+    return MergeSemantics(
+      child: SettingsTile(
+        leading: IconBox.neutral(icon),
+        title: label,
+        subtitle: value,
       ),
     );
   }
@@ -379,159 +213,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// so this explains where vehicle data comes from instead of listing
   /// placeholder cars.
   Widget _buildVehiclesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsGroup(
+      title: context.tr('my_vehicles'),
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10.r)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              context.tr('my_vehicles'),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 15.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(18.r),
-          decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.05),
-            border: Border.all(
-              color: AppColors.white.withValues(alpha: 0.1),
-            ),
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.directions_car,
-                color: AppColors.accentCyan.withValues(alpha: 0.7),
-                size: 28.r,
-              ),
-              SizedBox(width: 15.w),
-              Expanded(
-                child: Text(
-                  context.tr('profile_no_vehicles'),
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.7),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        SettingsTile(
+          leading: const IconBox.neutral(Icons.directions_car_outlined),
+          title: context.tr('profile_no_vehicles'),
         ),
       ],
     );
   }
 
   Widget _buildAchievementsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10.r)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              context.tr('achievements'),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
+    final badges = [
+      // Only "first scan" has real data behind it (scan history); the others
+      // stay locked until the app tracks them.
+      (
+        Icons.emoji_events_outlined,
+        context.tr('ach_first_scan'),
+        (_totalScans ?? 0) > 0,
+      ),
+      (Icons.build_outlined, context.tr('ach_diy_master'), false),
+      (
+        Icons.play_circle_outline_rounded,
+        context.tr('ach_video_learner'),
+        false,
+      ),
+      (Icons.star_outline_rounded, context.tr('ach_pro_user'), false),
+      (Icons.directions_car_outlined, context.tr('ach_fleet_owner'), false),
+    ];
+    const perRow = 3;
+    final gap = AppSizes.space8.w;
+    return _section(
+      context.tr('achievements'),
+      AppCard(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.space8.w,
+          vertical: AppSizes.space16.h,
         ),
-        SizedBox(height: 15.h),
-        // Tall enough for the emoji + a two-line label at any text scale the
-        // design size produces (was 100.h: overflowed by 8 px EN / 14 px AR).
-        SizedBox(
-          height: 112.h,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              // Only "first scan" has real data behind it (scan history);
-              // the others stay locked until the app tracks them.
-              _buildAchievementBadge(
-                '🏆',
-                context.tr('ach_first_scan'),
-                (_totalScans ?? 0) > 0,
-              ),
-              _buildAchievementBadge('🔧', context.tr('ach_diy_master'), false),
-              _buildAchievementBadge('📹', context.tr('ach_video_learner'), false),
-              _buildAchievementBadge('⭐', context.tr('ach_pro_user'), false),
-              _buildAchievementBadge('🚗', context.tr('ach_fleet_owner'), false),
-            ],
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = (constraints.maxWidth - gap * (perRow - 1)) / perRow;
+            return Wrap(
+              spacing: gap,
+              runSpacing: AppSizes.space16.h,
+              children: [
+                for (final (icon, label, unlocked) in badges)
+                  SizedBox(
+                    width: width,
+                    child: _buildAchievementBadge(icon, label, unlocked),
+                  ),
+              ],
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildAchievementBadge(String icon, String label, bool unlocked) {
-    return Container(
-      width: 80.w,
-      margin: EdgeInsetsDirectional.only(end: 12.w),
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: unlocked
-            ? _ratingYellow.withValues(alpha: 0.1)
-            : AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: unlocked
-              ? _ratingYellow
-              : AppColors.white.withValues(alpha: 0.1),
+  Widget _buildAchievementBadge(IconData icon, String label, bool unlocked) {
+    final p = context.colors;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Locked badges are dimmed; the unlocked one is drawn fully opaque.
+        Opacity(
+          opacity: unlocked ? 1.0 : 0.45,
+          child: unlocked
+              ? IconBox(icon, size: 44)
+              : IconBox.neutral(icon, size: 44),
         ),
-        borderRadius: BorderRadius.circular(15.r),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Opacity(
-            opacity: unlocked ? 1.0 : 0.3,
-            child: Text(icon, style: TextStyle(fontSize: 28.sp)),
+        SizedBox(height: AppSizes.space8.h),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.label.copyWith(
+            color: unlocked ? p.text : p.muted,
           ),
-          SizedBox(height: 6.h),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-              color: unlocked
-                  ? _ratingYellow
-                  : AppColors.textLight.withValues(alpha: 0.5),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

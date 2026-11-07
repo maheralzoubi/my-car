@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/dtc_history_service.dart';
 
+/// The History tab root: scan totals, a filter row and one card listing every
+/// logged scan, newest first.
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -13,12 +15,8 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  static const Color _colCritical = Color(0xFFFF1744);
-  static const Color _colWarning  = Color(0xFFFF6B35);
-  static const Color _colClean    = Color(0xFF00E676);
-
   String _filter = 'All';
-  bool   _loading = true;
+  bool _loading = true;
 
   static const _filters = ['All', 'With Codes', 'Clean'];
 
@@ -33,9 +31,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<DtcHistoryEntry> get _filtered {
     final all = DtcHistoryService.instance.entries;
     switch (_filter) {
-      case 'With Codes': return all.where((e) => e.hasCodes).toList();
-      case 'Clean':      return all.where((e) => !e.hasCodes).toList();
-      default:           return all;
+      case 'With Codes':
+        return all.where((e) => e.hasCodes).toList();
+      case 'Clean':
+        return all.where((e) => !e.hasCodes).toList();
+      default:
+        return all;
     }
   }
 
@@ -44,132 +45,82 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              if (_loading)
-                const Expanded(child: Center(
-                  child: CircularProgressIndicator(color: AppColors.accentCyan)))
-              else ...[
-                _buildStats(),
-                _buildFilterRow(),
-                Expanded(child: _buildList()),
+      body: SafeArea(
+        child: Column(
+          children: [
+            ScreenHeader(
+              title: context.tr('history_title'),
+              actions: [
+                if (DtcHistoryService.instance.entries.isNotEmpty)
+                  HeaderAction(
+                    icon: Icons.delete_outline_rounded,
+                    tooltip: context.tr('clear_all'),
+                    onPressed: _confirmClear,
+                  ),
               ],
+            ),
+            if (_loading)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else ...[
+              _buildStats(),
+              SizedBox(height: AppSizes.space16.h),
+              _buildFilterRow(),
+              Expanded(child: _buildList()),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: EdgeInsets.all(20.r),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Text(
-              context.tr('history_title'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 24.sp, fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ),
-          if (DtcHistoryService.instance.entries.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.delete_outline, color: AppColors.accentOrange),
-              onPressed: _confirmClear,
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ── Stats card ────────────────────────────────────────────────────────────
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
   Widget _buildStats() {
-    final all      = DtcHistoryService.instance.entries;
+    final all = DtcHistoryService.instance.entries;
     final withCode = all.where((e) => e.hasCodes).length;
-    final clean    = all.where((e) => !e.hasCodes).length;
+    final clean = all.length - withCode;
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-      padding: EdgeInsets.all(18.r),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.04),
-        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.2)),
-        borderRadius: BorderRadius.circular(18.r),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _stat(context.tr('total_scans'), all.length, AppColors.accentCyan),
-          _stat(context.tr('with_codes'),  withCode,   _colWarning),
-          _stat(context.tr('clean_scan'),  clean,      _colClean),
-        ],
+    Widget tile(String label, int n) => Expanded(
+      child: StatTile(label: label, value: '$n'),
+    );
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.space20.w),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSizes.space12.w,
+          children: [
+            tile(context.tr('total_scans'), all.length),
+            tile(context.tr('with_codes'), withCode),
+            tile(context.tr('clean_scan'), clean),
+          ],
+        ),
       ),
     );
   }
-
-  Widget _stat(String label, int n, Color color) => Column(
-    children: [
-      Text('$n', style: TextStyle(fontSize: 28.sp, fontWeight: FontWeight.w900, color: color)),
-      SizedBox(height: 4.h),
-      Text(label, style: TextStyle(fontSize: 11.sp, color: AppColors.textLight.withValues(alpha: 0.7))),
-    ],
-  );
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
   Widget _buildFilterRow() {
     return SizedBox(
-      height: 46.h,
-      child: ListView(
+      height: 44.h,
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        children: _filters.map((f) {
-          final sel = f == _filter;
-          return GestureDetector(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.space20.w,
+          vertical: 4.h,
+        ),
+        itemCount: _filters.length,
+        separatorBuilder: (_, _) => SizedBox(width: AppSizes.space8.w),
+        itemBuilder: (_, i) {
+          final f = _filters[i];
+          return AppFilterChip(
+            label: _trFilter(f),
+            selected: f == _filter,
             onTap: () => setState(() => _filter = f),
-            child: Container(
-              margin: EdgeInsetsDirectional.only(end: 10.w),
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              decoration: BoxDecoration(
-                gradient: sel ? const LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange]) : null,
-                color: sel ? null : AppColors.white.withValues(alpha: 0.05),
-                border: Border.all(
-                  color: sel ? AppColors.transparent
-                              : AppColors.accentCyan.withValues(alpha: 0.2)),
-                borderRadius: BorderRadius.circular(25.r),
-              ),
-              child: Center(
-                child: Text(_trFilter(f), style: TextStyle(
-                  fontSize: 13.sp, fontWeight: FontWeight.w600,
-                  color: sel ? AppColors.white : AppColors.textLight,
-                )),
-              ),
-            ),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -179,38 +130,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget _buildList() {
     final items = _filtered;
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.history, size: 70.r,
-                color: AppColors.accentCyan.withValues(alpha: 0.3)),
-            SizedBox(height: 16.h),
-            Text(context.tr('no_scan_history_yet'),
-                style: TextStyle(fontSize: 16.sp, color: AppColors.textLight)),
-            SizedBox(height: 8.h),
-            Text(context.tr('run_scan_to_log'),
-                style: TextStyle(fontSize: 13.sp,
-                    color: AppColors.textLight.withValues(alpha: 0.5))),
-          ],
-        ),
+      return EmptyState(
+        icon: Icons.history,
+        title: context.tr('no_scan_history_yet'),
+        message: context.tr('run_scan_to_log'),
       );
     }
 
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 20.h),
-      itemCount: items.length,
-      itemBuilder: (_, i) => _buildEntry(items[i], i),
+    final p = context.colors;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.space20.w,
+        AppSizes.space12.h,
+        AppSizes.space20.w,
+        AppSizes.space24.h,
+      ),
+      children: [
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) Divider(height: 1, thickness: 1, color: p.border),
+                _buildEntry(items[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   // ── Single history entry ──────────────────────────────────────────────────
 
-  Widget _buildEntry(DtcHistoryEntry entry, int index) {
-    final hasCode  = entry.hasCodes;
-    final color    = hasCode ? _colWarning : _colClean;
+  Widget _buildEntry(DtcHistoryEntry entry) {
+    final p = context.colors;
+    final hasCode = entry.hasCodes;
     final confirmed = entry.confirmedCount;
-    final pending   = entry.pendingCount;
+    final pending = entry.pendingCount;
+
+    // Overall tone of the scan: any confirmed code is critical, pending-only
+    // is a warning, no codes is ok.
+    final StatusLevel tone = !hasCode
+        ? StatusLevel.ok
+        : confirmed > 0
+        ? StatusLevel.critical
+        : StatusLevel.warning;
 
     // Strip '~' from pending codes for display
     final displayCodes = entry.codes
@@ -218,168 +183,163 @@ class _HistoryScreenState extends State<HistoryScreen> {
         .toSet()
         .toList();
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 250 + index * 60),
-      builder: (_, v, child) => Opacity(
-          opacity: v, child: Transform.translate(offset: Offset(30*(1-v), 0), child: child)),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 14.h),
-        padding: EdgeInsets.all(18.r),
-        decoration: BoxDecoration(
-          color: AppColors.white.withValues(alpha: 0.03),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(18.r),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Row 1: date + mileage + badge ─────────────────────────────
-            Row(
+    return Padding(
+      padding: EdgeInsets.all(AppSizes.space16.r),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconBox(tone.icon, color: tone.colorOf(context)),
+          SizedBox(width: AppSizes.space12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                // ── Date + summary badge ─────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                         _formatDate(entry.scannedAt),
-                        style: TextStyle(
-                            fontSize: 13.sp, color: AppColors.accentCyan,
-                            fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.numeric(
+                          AppTextStyles.body,
+                        ).copyWith(fontWeight: FontWeight.w600, color: p.text),
                       ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        '${entry.mileageKm.toStringAsFixed(0)} ${context.tr('unit_km')}',
-                        style: TextStyle(
-                            fontSize: 11.sp,
-                            color: AppColors.textLight.withValues(alpha: 0.5)),
-                      ),
+                    ),
+                    SizedBox(width: AppSizes.space8.w),
+                    StatusBadge(
+                      label: hasCode
+                          ? (entry.codes.length == 1
+                                ? context.tr('history_code_one')
+                                : context
+                                      .tr('history_codes_n')
+                                      .replaceAll(
+                                        '{n}',
+                                        '${entry.codes.length}',
+                                      ))
+                          : context.tr('clean_scan'),
+                      level: hasCode ? StatusLevel.neutral : StatusLevel.ok,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  '${entry.mileageKm.toStringAsFixed(0)} ${context.tr('unit_km')}',
+                  style: AppTextStyles.numeric(
+                    AppTextStyles.label,
+                  ).copyWith(fontWeight: FontWeight.w400, color: p.text2),
+                ),
+                // ── Confirmed / pending breakdown ─────────────────────────
+                if (hasCode) ...[
+                  SizedBox(height: AppSizes.space8.h),
+                  Wrap(
+                    spacing: AppSizes.space8.w,
+                    runSpacing: AppSizes.space4.h,
+                    children: [
+                      if (confirmed > 0)
+                        StatusBadge(
+                          label: context
+                              .tr('history_confirmed_n')
+                              .replaceAll('{n}', '$confirmed'),
+                          level: StatusLevel.critical,
+                        ),
+                      if (pending > 0)
+                        StatusBadge(
+                          label: context
+                              .tr('history_pending_n')
+                              .replaceAll('{n}', '$pending'),
+                          level: StatusLevel.warning,
+                        ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    border: Border.all(color: color),
-                    borderRadius: BorderRadius.circular(20.r),
+                ],
+                // ── Code chips ───────────────────────────────────────────
+                if (displayCodes.isNotEmpty) ...[
+                  SizedBox(height: AppSizes.space8.h),
+                  Wrap(
+                    spacing: 6.w,
+                    runSpacing: 6.h,
+                    children: [for (final c in displayCodes) _codeChip(c)],
                   ),
-                  child: Text(
-                    hasCode
-                        ? (entry.codes.length == 1
-                            ? context.tr('history_code_one')
-                            : context.tr('history_codes_n')
-                                .replaceAll('{n}', '${entry.codes.length}'))
-                        : context.tr('clean_scan'),
-                    style: TextStyle(
-                        fontSize: 11.sp, fontWeight: FontWeight.w700,
-                        color: color),
-                  ),
-                ),
+                ],
               ],
             ),
-            // ── Row 2: confirmed/pending breakdown ────────────────────────
-            if (hasCode) ...[
-              SizedBox(height: 10.h),
-              Row(
-                children: [
-                  if (confirmed > 0)
-                    _pill(context.tr('history_confirmed_n')
-                        .replaceAll('{n}', '$confirmed'), _colCritical),
-                  if (confirmed > 0 && pending > 0) SizedBox(width: 6.w),
-                  if (pending > 0)
-                    _pill(context.tr('history_pending_n')
-                        .replaceAll('{n}', '$pending'), const Color(0xFFFFD600)),
-                ],
-              ),
-            ],
-            // ── Row 3: code chips ─────────────────────────────────────────
-            if (displayCodes.isNotEmpty) ...[
-              SizedBox(height: 10.h),
-              Wrap(
-                spacing: 6.w, runSpacing: 6.h,
-                children: displayCodes.map((c) => Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.05),
-                    border: Border.all(
-                        color: AppColors.accentCyan.withValues(alpha: 0.3)),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(c,
-                      style: TextStyle(
-                          fontSize: 11.sp, fontWeight: FontWeight.w700,
-                          color: AppColors.accentCyan)),
-                )).toList(),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _pill(String text, Color color) => Container(
-    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(6.r),
-    ),
-    child: Text(text,
-        style: TextStyle(fontSize: 10.sp, color: color, fontWeight: FontWeight.w600)),
-  );
+  Widget _codeChip(String code) {
+    final p = context.colors;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSizes.space8.w,
+        vertical: 3.h,
+      ),
+      decoration: BoxDecoration(
+        color: p.surface2,
+        border: Border.all(color: p.border),
+        borderRadius: BorderRadius.circular(AppSizes.radiusSm.r),
+      ),
+      child: Text(
+        code,
+        textDirection: TextDirection.ltr,
+        style: AppTextStyles.numeric(
+          AppTextStyles.label,
+        ).copyWith(fontSize: 12.sp, fontWeight: FontWeight.w600, color: p.text),
+      ),
+    );
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   String _trFilter(String f) {
     switch (f) {
-      case 'All':        return context.tr('all');
-      case 'With Codes': return context.tr('with_codes');
-      case 'Clean':      return context.tr('clean_scan');
-      default:           return f;
+      case 'All':
+        return context.tr('all');
+      case 'With Codes':
+        return context.tr('with_codes');
+      case 'Clean':
+        return context.tr('clean_scan');
+      default:
+        return f;
     }
   }
 
   String _formatDate(DateTime d) {
     final now = DateTime.now();
     final diff = now.difference(d);
+    final time =
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     if (diff.inDays == 0) {
-      return '${context.tr('history_today')}  ${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+      return '${context.tr('history_today')} · $time';
     } else if (diff.inDays == 1) {
-      return '${context.tr('history_yesterday')}  ${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+      return '${context.tr('history_yesterday')} · $time';
     }
-    return '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}  '
-        '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')} · $time';
   }
 
   void _confirmClear() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
-        title: Text(context.tr('clear_history'),
-            style: const TextStyle(color: AppColors.textLight)),
-        content: Text(
-          context.tr('clear_history_content'),
-          style: const TextStyle(color: AppColors.textLight),
-        ),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.tr('clear_history')),
+        content: Text(context.tr('clear_history_content')),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.tr('cancel'),
-                style: const TextStyle(color: AppColors.accentCyan)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.tr('cancel')),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await DtcHistoryService.instance.clearHistory();
               if (mounted) setState(() {});
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentOrange,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r)),
+            style: TextButton.styleFrom(
+              foregroundColor: dialogContext.colors.crit,
             ),
             child: Text(context.tr('clear_all')),
           ),

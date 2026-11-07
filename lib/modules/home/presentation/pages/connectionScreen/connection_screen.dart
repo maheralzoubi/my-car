@@ -8,8 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/core.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/obd_service.dart';
 
@@ -72,10 +71,7 @@ class ConnectionScreen extends StatefulWidget {
   State<ConnectionScreen> createState() => _ConnectionScreenState();
 }
 
-class _ConnectionScreenState extends State<ConnectionScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-
+class _ConnectionScreenState extends State<ConnectionScreen> {
   _BtState _btState = _BtState.checkingPermission;
   List<ScanResult> _scanResults = [];
   BluetoothDevice? _connectingDevice;
@@ -88,10 +84,6 @@ class _ConnectionScreenState extends State<ConnectionScreen>
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
     _obdStateSub = OBDService.instance.connectionStateStream.listen(
       _onObdState,
     );
@@ -304,7 +296,6 @@ class _ConnectionScreenState extends State<ConnectionScreen>
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _scanSub?.cancel();
     _adapterSub?.cancel();
     _obdStateSub?.cancel();
@@ -370,155 +361,173 @@ class _ConnectionScreenState extends State<ConnectionScreen>
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
+  bool get _showsDeviceList =>
+      _btState == _BtState.scanning ||
+      _btState == _BtState.connecting ||
+      _btState == _BtState.initFailed ||
+      _btState == _BtState.connectionLost ||
+      _btState == _BtState.connected;
+
   @override
   Widget build(BuildContext context) {
+    final p = context.colors;
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(20.r),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context),
-                SizedBox(height: 40.h),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _buildTitle(context),
-                        SizedBox(height: 30.h),
-                        _buildStatusCard(context),
-                        SizedBox(height: 30.h),
-                        if (_btState == _BtState.scanning ||
-                            _btState == _BtState.connecting ||
-                            _btState == _BtState.initFailed ||
-                            _btState == _BtState.connectionLost ||
-                            _btState == _BtState.connected)
-                          _buildDeviceList(context),
-                        SizedBox(height: 24.h),
-                      ],
-                    ),
-                  ),
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ScreenHeader(
+              title: context.tr('connect_to_vehicle'),
+              subtitle: context.tr('select_obd_adapter'),
+              actions: [
+                HeaderAction(
+                  icon: Icons.settings_outlined,
+                  tooltip: context.tr('settings'),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.settings),
                 ),
-                _buildActionButton(context),
-                SizedBox(height: 12.h),
-                _buildBottomText(context),
               ],
             ),
-          ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  AppSizes.space20.w,
+                  AppSizes.space8.h,
+                  AppSizes.space20.w,
+                  AppSizes.space24.h,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildStatusCard(context),
+                    if (_showsDeviceList) ...[
+                      SizedBox(height: AppSizes.space24.h),
+                      _buildDeviceList(context),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(
+                AppSizes.space20.w,
+                AppSizes.space8.h,
+                AppSizes.space20.w,
+                AppSizes.space12.h,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildActionButton(context),
+                  SizedBox(height: AppSizes.space8.h),
+                  _buildBottomHint(context),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          context.tr('app_name'),
-          style: TextStyle(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.w900,
-            color: AppColors.accentCyan,
-            shadows: const [
-              Shadow(color: AppColors.accentCyan, blurRadius: 20),
-            ],
-          ),
-        ),
-        Container(
-          width: 40.w,
-          height: 40.h,
-          decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.05),
-            border: Border.all(color: AppColors.accentCyan),
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          child: IconButton(
-            icon: Icon(Icons.settings, color: AppColors.accentCyan, size: 20.r),
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Title ─────────────────────────────────────────────────────────────────
-
-  Widget _buildTitle(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          context.tr('connect_to_vehicle'),
-          style: TextStyle(
-            fontSize: 28.sp,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textLight,
-          ),
-        ),
-        SizedBox(height: 10.h),
-        Text(
-          context.tr('select_obd_adapter'),
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: AppColors.accentCyan,
-            fontWeight: FontWeight.w300,
-            letterSpacing: 2,
-          ),
-        ),
-      ],
     );
   }
 
   // ── Status card ───────────────────────────────────────────────────────────
 
+  /// Status tone: blue while working, green once connected, amber when the
+  /// phone needs a setting changed, red when the link failed or dropped.
+  StatusLevel get _level {
+    switch (_btState) {
+      case _BtState.connected:
+        return StatusLevel.ok;
+      case _BtState.permissionDenied:
+      case _BtState.btOff:
+      case _BtState.locationServicesOff:
+        return StatusLevel.warning;
+      case _BtState.initFailed:
+      case _BtState.connectionLost:
+        return StatusLevel.critical;
+      case _BtState.checkingPermission:
+      case _BtState.scanning:
+      case _BtState.connecting:
+        return StatusLevel.info;
+    }
+  }
+
+  IconData get _statusIcon {
+    switch (_btState) {
+      case _BtState.connected:
+        return Icons.bluetooth_connected_rounded;
+      case _BtState.permissionDenied:
+        return Icons.lock_outline_rounded;
+      case _BtState.btOff:
+        return Icons.bluetooth_disabled_rounded;
+      case _BtState.locationServicesOff:
+        return Icons.location_off_outlined;
+      case _BtState.initFailed:
+        // The adapter answered — it's the car that stayed silent (an EV that
+        // is on but shares no standard OBD-II data gets an EV icon).
+        return switch (OBDService.instance.lastError?.reason) {
+          OBDFailureReason.ecuNotResponding => Icons.directions_car,
+          OBDFailureReason.noStandardObdData => Icons.electric_car,
+          _ => Icons.bluetooth_disabled_rounded,
+        };
+      case _BtState.connectionLost:
+        return Icons.link_off_rounded;
+      case _BtState.connecting:
+        return Icons.settings_remote_outlined;
+      case _BtState.scanning:
+      case _BtState.checkingPermission:
+        return Icons.bluetooth_searching_rounded;
+    }
+  }
+
+  bool get _isBusy =>
+      _btState == _BtState.checkingPermission ||
+      _btState == _BtState.scanning ||
+      _btState == _BtState.connecting;
+
   Widget _buildStatusCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(30.r),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.white.withValues(alpha: 0.05),
-            AppColors.white.withValues(alpha: 0.02),
-          ],
-        ),
-        border: Border.all(color: _accentColor.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(20.r),
-      ),
+    final p = context.colors;
+    return AppCard(
+      padding: EdgeInsets.all(AppSizes.space20.r),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildStatusIcon(),
-          SizedBox(height: 20.h),
-          Text(
-            _statusMessage(context),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: _accentColor,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconBox(_statusIcon, color: _level.colorOf(context), size: 48),
+              SizedBox(width: AppSizes.space16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _statusMessage(context),
+                      style: AppTextStyles.title.copyWith(color: p.text),
+                    ),
+                    SizedBox(height: AppSizes.space4.h),
+                    Text(
+                      _statusSubtitle(context),
+                      style: AppTextStyles.body.copyWith(color: p.text2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 10.h),
-          Text(
-            _statusSubtitle(context),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: AppColors.textLight.withValues(alpha: 0.7),
+          if (_isBusy) ...[
+            SizedBox(height: AppSizes.space16.h),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+              child: LinearProgressIndicator(
+                minHeight: 4.h,
+                color: p.primary,
+                backgroundColor: p.track,
+              ),
             ),
-          ),
+          ],
           ..._buildStatusExtras(context),
         ],
       ),
@@ -528,6 +537,7 @@ class _ConnectionScreenState extends State<ConnectionScreen>
   /// Adapter details once connected; clone hint and diagnostic-log actions
   /// when connecting failed or the link dropped.
   List<Widget> _buildStatusExtras(BuildContext context) {
+    final p = context.colors;
     final obd = OBDService.instance;
     if (_btState == _BtState.connected) {
       final info = obd.adapterInfo;
@@ -537,14 +547,22 @@ class _ConnectionScreenState extends State<ConnectionScreen>
       ];
       if (parts.isEmpty) return const [];
       return [
-        SizedBox(height: 10.h),
-        Text(
-          parts.join(' · '),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: AppColors.accentCyan.withValues(alpha: 0.7),
-          ),
+        SizedBox(height: AppSizes.space16.h),
+        Divider(height: 1, thickness: 1, color: p.border),
+        SizedBox(height: AppSizes.space12.h),
+        Row(
+          children: [
+            Icon(Icons.memory_rounded, size: 18.r, color: p.muted),
+            SizedBox(width: AppSizes.space8.w),
+            Expanded(
+              child: Text(
+                parts.join(' · '),
+                style: AppTextStyles.numeric(
+                  AppTextStyles.label,
+                ).copyWith(fontWeight: FontWeight.w400, color: p.text2),
+              ),
+            ),
+          ],
         ),
       ];
     }
@@ -556,179 +574,68 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     return [
       if (_btState == _BtState.initFailed &&
           (error?.suggestsCloneAdapter ?? false)) ...[
-        SizedBox(height: 12.h),
-        Text(
-          context
-              .tr('obd_clone_hint')
-              .replaceAll('{version}', error!.adapterVersion!),
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13.sp, color: AppColors.accentOrange),
+        SizedBox(height: AppSizes.space16.h),
+        Container(
+          padding: EdgeInsets.all(AppSizes.space12.r),
+          decoration: BoxDecoration(
+            color: p.warnSoft,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd.r),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded, size: 18.r, color: p.warn),
+              SizedBox(width: AppSizes.space8.w),
+              Expanded(
+                child: Text(
+                  context
+                      .tr('obd_clone_hint')
+                      .replaceAll('{version}', error!.adapterVersion!),
+                  style: AppTextStyles.label.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: p.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
-      SizedBox(height: 12.h),
+      SizedBox(height: AppSizes.space16.h),
       Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8.w,
+        spacing: AppSizes.space8.w,
+        runSpacing: AppSizes.space8.h,
         children: [
-          TextButton.icon(
+          AppButton.secondary(
+            label: context.tr('copy_diagnostic_log'),
+            icon: Icons.copy_rounded,
             onPressed: _copyLog,
-            icon: Icon(Icons.copy, size: 16.r, color: AppColors.accentCyan),
-            label: Text(
-              context.tr('copy_diagnostic_log'),
-              style: TextStyle(fontSize: 13.sp, color: AppColors.accentCyan),
-            ),
+            compact: true,
+            expand: false,
           ),
-          TextButton.icon(
+          AppButton.secondary(
+            label: context.tr('share_diagnostic_log'),
+            icon: Icons.ios_share_rounded,
             onPressed: _shareLog,
-            icon: Icon(Icons.share, size: 16.r, color: AppColors.accentCyan),
-            label: Text(
-              context.tr('share_diagnostic_log'),
-              style: TextStyle(fontSize: 13.sp, color: AppColors.accentCyan),
-            ),
+            compact: true,
+            expand: false,
           ),
         ],
       ),
     ];
   }
 
-  Color get _accentColor {
-    switch (_btState) {
-      case _BtState.connected:
-        return AppColors.accentOrange;
-      case _BtState.permissionDenied:
-      case _BtState.btOff:
-      case _BtState.locationServicesOff:
-      case _BtState.initFailed:
-      case _BtState.connectionLost:
-        return Colors.redAccent;
-      default:
-        return AppColors.accentCyan;
-    }
-  }
-
-  Widget _buildStatusIcon() {
-    switch (_btState) {
-      case _BtState.connected:
-        return _iconCircle(Icons.bluetooth_connected, AppColors.accentOrange);
-
-      case _BtState.permissionDenied:
-        return _iconCircle(Icons.no_encryption, Colors.redAccent);
-
-      case _BtState.btOff:
-        return _iconCircle(Icons.bluetooth_disabled, Colors.redAccent);
-
-      case _BtState.locationServicesOff:
-        return _iconCircle(Icons.location_off, Colors.redAccent);
-
-      case _BtState.initFailed:
-        // The adapter answered — it's the car that stayed silent (an EV that
-        // is on but shares no standard OBD-II data gets an EV icon).
-        final icon = switch (OBDService.instance.lastError?.reason) {
-          OBDFailureReason.ecuNotResponding => Icons.directions_car,
-          OBDFailureReason.noStandardObdData => Icons.electric_car,
-          _ => Icons.bluetooth_disabled,
-        };
-        return _iconCircle(icon, Colors.redAccent);
-
-      case _BtState.connectionLost:
-        return _iconCircle(Icons.link_off, Colors.redAccent);
-
-      case _BtState.connecting:
-        return SizedBox(
-          width: 80.w,
-          height: 80.h,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                color: AppColors.accentCyan,
-                strokeWidth: 2,
-              ),
-              Icon(
-                Icons.settings_remote,
-                size: 35.r,
-                color: AppColors.accentCyan,
-              ),
-            ],
-          ),
-        );
-
-      case _BtState.scanning:
-      case _BtState.checkingPermission:
-        return SizedBox(
-          width: 120.w,
-          height: 120.h,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              ...List.generate(3, (i) {
-                return AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (_, __) {
-                    final progress = (_pulseController.value + i * 0.33) % 1.0;
-                    return Opacity(
-                      opacity: 1.0 - progress,
-                      child: Transform.scale(
-                        scale: 0.5 + progress,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.accentCyan,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              }),
-              Container(
-                width: 60.w,
-                height: 60.h,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.accentCyan.withValues(alpha: 0.1),
-                ),
-                child: Icon(
-                  Icons.bluetooth_searching,
-                  size: 40.r,
-                  color: AppColors.accentCyan,
-                ),
-              ),
-            ],
-          ),
-        );
-    }
-  }
-
-  Widget _iconCircle(IconData icon, Color color) {
-    return Container(
-      width: 80.w,
-      height: 80.h,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.1),
-        border: Border.all(color: color, width: 2),
-      ),
-      child: Icon(icon, size: 40.r, color: color),
-    );
-  }
-
   // ── Device list ───────────────────────────────────────────────────────────
 
   Widget _buildDeviceList(BuildContext context) {
+    final p = context.colors;
     if (_scanResults.isEmpty && _btState == _BtState.scanning) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
+        padding: EdgeInsets.symmetric(vertical: AppSizes.space8.h),
         child: Text(
           context.tr('no_devices_found'),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: AppColors.textLight.withValues(alpha: 0.5),
-          ),
+          style: AppTextStyles.body.copyWith(color: p.text2),
         ),
       );
     }
@@ -738,7 +645,10 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     final connected = _connectedDevice;
     if (connected != null &&
         !_scanResults.any((r) => r.device.remoteId == connected.remoteId)) {
-      return _buildDeviceItem(context, connected);
+      return AppCard(
+        padding: EdgeInsets.zero,
+        child: _buildDeviceItem(context, connected),
+      );
     }
 
     if (_scanResults.isEmpty) return const SizedBox.shrink();
@@ -756,42 +666,36 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         .length;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Text(
-              context.tr('available_devices'),
-              style: TextStyle(
-                fontSize: 12.sp,
-                letterSpacing: 2,
-                fontWeight: FontWeight.w600,
-                color: AppColors.accentCyan.withValues(alpha: 0.8),
-              ),
-            ),
-            if (obdCount > 0) ...[
-              SizedBox(width: 10.w),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
-                  border: Border.all(color: const Color(0xFF00E676)),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  '$obdCount OBD',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    color: const Color(0xFF00E676),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ],
+        SectionTitle(
+          context.tr('available_devices'),
+          trailing: obdCount > 0
+              ? StatusBadge(label: '$obdCount OBD', level: StatusLevel.info)
+              : null,
         ),
-        SizedBox(height: 12.h),
-        ...sorted.map((r) => _buildDeviceItem(context, r.device, rssi: r.rssi)),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < sorted.length; i++) ...[
+                if (i > 0)
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: AppSizes.space16.w,
+                    endIndent: AppSizes.space16.w,
+                    color: p.border,
+                  ),
+                _buildDeviceItem(
+                  context,
+                  sorted[i].device,
+                  rssi: sorted[i].rssi,
+                ),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -801,166 +705,127 @@ class _ConnectionScreenState extends State<ConnectionScreen>
     BluetoothDevice device, {
     int? rssi,
   }) {
+    final p = context.colors;
     final name = device.platformName.isNotEmpty
         ? device.platformName
         : context.tr('unknown_device');
     final isObd = _isOBDDevice(device.platformName);
     final isConnecting = _connectingDevice?.remoteId == device.remoteId;
     final isConnected = _connectedDevice?.remoteId == device.remoteId;
-    final isActive = isConnecting || isConnected;
 
-    // OBD devices get a green accent; others use the standard cyan.
-    final idleAccent = isObd
-        ? const Color(0xFF00E676)
-        : AppColors.accentCyan.withValues(alpha: 0.2);
+    final Widget leading = isConnected
+        ? IconBox(Icons.bluetooth_connected_rounded, color: p.ok)
+        : isObd || isConnecting
+        ? const IconBox(Icons.bluetooth_rounded)
+        : const IconBox.neutral(Icons.bluetooth_rounded, size: 40);
 
-    return GestureDetector(
+    return InkWell(
       onTap: (_btState == _BtState.connecting || _btState == _BtState.connected)
           ? (isConnected ? _disconnect : null)
           : () => _connectToDevice(device),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.all(16.r),
-        decoration: BoxDecoration(
-          color: isConnected
-              ? AppColors.accentOrange.withValues(alpha: 0.1)
-              : isConnecting
-              ? AppColors.accentCyan.withValues(alpha: 0.1)
-              : isObd
-              ? const Color(0xFF00E676).withValues(alpha: 0.05)
-              : AppColors.white.withValues(alpha: 0.03),
-          border: Border.all(
-            color: isConnected
-                ? AppColors.accentOrange
-                : isConnecting
-                ? AppColors.accentCyan
-                : idleAccent,
-            width: isActive || isObd ? 2 : 1,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: 64.h),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.space16.w,
+            vertical: AppSizes.space12.h,
           ),
-          borderRadius: BorderRadius.circular(15.r),
-        ),
-        child: Row(
-          children: [
-            // Icon container
-            Container(
-              width: 46.w,
-              height: 46.h,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isConnected
-                      ? [AppColors.accentOrange, AppColors.backgroundDarkBlue]
-                      : isObd
-                      ? [const Color(0xFF00E676), AppColors.backgroundDarkBlue]
-                      : [AppColors.accentCyan, AppColors.backgroundDarkBlue],
-                ),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Icon(
-                isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
-                color: AppColors.white,
-                size: 22.r,
-              ),
-            ),
-            SizedBox(width: 14.w),
-            // Name + address + optional OBD badge
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          name,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textLight,
-                          ),
-                        ),
+          child: Row(
+            children: [
+              leading,
+              SizedBox(width: AppSizes.space12.w),
+              // Name + address
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: p.text,
                       ),
-                      if (isObd) ...[
-                        SizedBox(width: 6.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6.w,
-                            vertical: 2.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF00E676,
-                            ).withValues(alpha: 0.15),
-                            border: Border.all(color: const Color(0xFF00E676)),
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                          child: Text(
-                            'ELM327',
-                            style: TextStyle(
-                              fontSize: 9.sp,
-                              color: const Color(0xFF00E676),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    device.remoteId.str,
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      color: AppColors.accentCyan.withValues(alpha: 0.7),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Signal bars (unknown for an adapter connected before this screen)
-            if (rssi != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _buildSignalBars(rssi),
-                  SizedBox(height: 4.h),
-                  Text(
-                    '$rssi dBm',
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      color: AppColors.textLight.withValues(alpha: 0.5),
+                    SizedBox(height: 2.h),
+                    Text(
+                      device.remoteId.str,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.numeric(
+                        AppTextStyles.caption,
+                      ).copyWith(color: p.muted),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-          ],
+              SizedBox(width: AppSizes.space8.w),
+              // Signal (unknown for an adapter connected before this screen)
+              if (rssi != null) ...[
+                _buildSignal(context, rssi),
+                SizedBox(width: AppSizes.space8.w),
+              ],
+              if (isObd)
+                const StatusBadge(label: 'OBD', level: StatusLevel.info),
+              // The connected adapter stays the "connecting" one after
+              // success, so check connected first.
+              if (isConnected) ...[
+                SizedBox(width: AppSizes.space8.w),
+                Icon(Icons.check_circle_rounded, size: 20.r, color: p.ok),
+              ] else if (isConnecting) ...[
+                SizedBox(width: AppSizes.space8.w),
+                SizedBox.square(
+                  dimension: 18.r,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: p.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSignalBars(int rssi) {
+  /// Three bars over the dBm reading.
+  Widget _buildSignal(BuildContext context, int rssi) {
+    final p = context.colors;
     final strength = rssi >= -60
         ? 3
         : rssi >= -75
         ? 2
         : 1;
-    return Row(
-      children: List.generate(3, (i) {
-        final heights = [8.0, 12.0, 16.0];
-        return Container(
-          width: 4.w,
-          height: heights[i].h,
-          margin: EdgeInsets.only(left: 3.w),
-          decoration: BoxDecoration(
-            color: i < strength
-                ? AppColors.accentCyan
-                : AppColors.accentCyan.withValues(alpha: 0.25),
-            borderRadius: BorderRadius.circular(2.r),
-          ),
-        );
-      }),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(3, (i) {
+            const heights = [6.0, 10.0, 14.0];
+            return Container(
+              width: 4.w,
+              height: heights[i].h,
+              margin: EdgeInsetsDirectional.only(start: 2.w),
+              decoration: BoxDecoration(
+                color: i < strength ? p.primary : p.track,
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            );
+          }),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          '$rssi dBm',
+          style: AppTextStyles.numeric(
+            AppTextStyles.caption,
+          ).copyWith(color: p.muted),
+        ),
+      ],
     );
   }
 
@@ -1006,76 +871,30 @@ class _ConnectionScreenState extends State<ConnectionScreen>
         break;
     }
 
-    return Container(
-      width: double.infinity,
-      height: 56.h,
-      decoration: BoxDecoration(
-        gradient: onPressed != null
-            ? const LinearGradient(
-                colors: [AppColors.accentCyan, AppColors.accentOrange],
-              )
-            : null,
-        color: onPressed == null
-            ? AppColors.white.withValues(alpha: 0.1)
-            : null,
-        borderRadius: BorderRadius.circular(15.r),
-        boxShadow: onPressed != null
-            ? [
-                BoxShadow(
-                  color: AppColors.accentCyan.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ]
-            : null,
-      ),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.transparent,
-          shadowColor: AppColors.transparent,
-          disabledBackgroundColor: AppColors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
-            color: AppColors.white,
-          ),
-        ),
-      ),
-    );
+    return AppButton(label: label, onPressed: onPressed);
   }
 
   // ── Bottom hint ───────────────────────────────────────────────────────────
 
-  Widget _buildBottomText(BuildContext context) {
+  Widget _buildBottomHint(BuildContext context) {
     if (_btState == _BtState.scanning) {
-      return GestureDetector(
-        onTap: _startScan,
-        child: Text(
-          context.tr('tap_to_rescan'),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13.sp,
-            color: AppColors.accentCyan.withValues(alpha: 0.7),
-            decoration: TextDecoration.underline,
-            decorationColor: AppColors.accentCyan.withValues(alpha: 0.7),
-          ),
+      return Center(
+        child: AppButton.ghost(
+          label: context.tr('tap_to_rescan'),
+          icon: Icons.refresh_rounded,
+          onPressed: _startScan,
         ),
       );
     }
-    return Text(
-      context.tr('trouble_connecting'),
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 13.sp,
-        color: AppColors.textLight.withValues(alpha: 0.5),
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSizes.space8.h),
+      child: Text(
+        context.tr('trouble_connecting'),
+        textAlign: TextAlign.center,
+        style: AppTextStyles.label.copyWith(
+          fontWeight: FontWeight.w400,
+          color: context.colors.text2,
+        ),
       ),
     );
   }

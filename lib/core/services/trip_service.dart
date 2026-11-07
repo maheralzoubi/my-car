@@ -12,32 +12,31 @@ class TripService {
   @visibleForTesting
   DateTime Function() clock = DateTime.now;
 
-  bool      _running     = false;
+  bool _running = false;
   DateTime? _startTime;
   DateTime? _lastSample;
 
-  double _distanceKm     = 0;
-  double _sumSpeedKmh    = 0;
-  int    _movingSamples  = 0;
+  double _distanceKm = 0;
+  double _sumSpeedKmh = 0;
+  int _movingSamples = 0;
   double _estimatedFuelL = 0;
 
   // ── Drive score tracking ──────────────────────────────────────────────────
-  int    _hardAccelEvents  = 0;  // speed jumped > 15 km/h in one 3-s window
-  int    _overRevEvents    = 0;  // RPM > 5 500 on consecutive samples
-  double _highSpeedSecs    = 0;  // seconds driven > 120 km/h
-  double _prevSpeedKmh     = 0;
-  double _prevRpm          = 0;
+  int _hardAccelEvents = 0; // speed jumped > 15 km/h in one 3-s window
+  int _overRevEvents = 0; // RPM > 5 500 on consecutive samples
+  double _highSpeedSecs = 0; // seconds driven > 120 km/h
+  double _prevSpeedKmh = 0;
+  double _prevRpm = 0;
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  bool   get isRunning   => _running;
-  double get distanceKm  => _distanceKm;
-  double get fuelUsedL   => _estimatedFuelL;
+  bool get isRunning => _running;
+  double get distanceKm => _distanceKm;
+  double get fuelUsedL => _estimatedFuelL;
 
-  Duration get elapsed =>
-      _running && _startTime != null
-          ? clock().difference(_startTime!)
-          : Duration.zero;
+  Duration get elapsed => _running && _startTime != null
+      ? clock().difference(_startTime!)
+      : Duration.zero;
 
   double get avgSpeedKmh =>
       _movingSamples > 0 ? _sumSpeedKmh / _movingSamples : 0;
@@ -58,43 +57,43 @@ class TripService {
 
   String get driveScoreLabel {
     final s = driveScore;
-    if (s >= 85) return 'Eco 🌿';
+    if (s >= 85) return 'Eco';
     if (s >= 65) return 'Normal';
     if (s >= 45) return 'Sporty';
-    return 'Aggressive 🔥';
+    return 'Aggressive';
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   void start() {
-    _running          = true;
-    _startTime        = clock();
-    _lastSample       = _startTime;
-    _distanceKm       = 0;
-    _sumSpeedKmh      = 0;
-    _movingSamples    = 0;
-    _estimatedFuelL   = 0;
-    _hardAccelEvents  = 0;
-    _overRevEvents    = 0;
-    _highSpeedSecs    = 0;
-    _prevSpeedKmh     = 0;
-    _prevRpm          = 0;
+    _running = true;
+    _startTime = clock();
+    _lastSample = _startTime;
+    _distanceKm = 0;
+    _sumSpeedKmh = 0;
+    _movingSamples = 0;
+    _estimatedFuelL = 0;
+    _hardAccelEvents = 0;
+    _overRevEvents = 0;
+    _highSpeedSecs = 0;
+    _prevSpeedKmh = 0;
+    _prevRpm = 0;
   }
 
-  void stop()  => _running = false;
+  void stop() => _running = false;
 
   void reset() {
-    _distanceKm       = 0;
-    _sumSpeedKmh      = 0;
-    _movingSamples    = 0;
-    _estimatedFuelL   = 0;
-    _hardAccelEvents  = 0;
-    _overRevEvents    = 0;
-    _highSpeedSecs    = 0;
-    _prevSpeedKmh     = 0;
-    _prevRpm          = 0;
-    _startTime        = clock();
-    _lastSample       = _startTime;
+    _distanceKm = 0;
+    _sumSpeedKmh = 0;
+    _movingSamples = 0;
+    _estimatedFuelL = 0;
+    _hardAccelEvents = 0;
+    _overRevEvents = 0;
+    _highSpeedSecs = 0;
+    _prevSpeedKmh = 0;
+    _prevRpm = 0;
+    _startTime = clock();
+    _lastSample = _startTime;
   }
 
   // ── Sample processing ─────────────────────────────────────────────────────
@@ -102,14 +101,14 @@ class TripService {
   void addSample(OBDLiveData data) {
     if (!_running) return;
 
-    final now  = clock();
+    final now = clock();
     final dtSec = _lastSample != null
         ? now.difference(_lastSample!).inMilliseconds / 1000.0
         : 0.0;
     _lastSample = now;
 
     final speed = data.speedKmh ?? 0;
-    final rpm   = data.rpm ?? 0;
+    final rpm = data.rpm ?? 0;
 
     // An interval that can't be integrated (duplicate timestamp, or a gap
     // > 10 s such as polling paused for a DTC read) adds nothing, but the
@@ -118,10 +117,10 @@ class TripService {
     // score a phantom hard acceleration or "sustained" over-rev.
     if (dtSec <= 0 || dtSec > 10) {
       _prevSpeedKmh = speed;
-      _prevRpm      = rpm;
+      _prevRpm = rpm;
       return;
     }
-    final load  = (data.engineLoad ?? 30) / 100.0;
+    final load = (data.engineLoad ?? 30) / 100.0;
 
     // Distance
     _distanceKm += speed * dtSec / 3600.0;

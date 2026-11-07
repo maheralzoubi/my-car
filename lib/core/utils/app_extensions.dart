@@ -31,10 +31,8 @@ extension NumX on num {
 
 /// Spacing shorthand using AppSizes.
 extension SpacingX on Widget {
-  Widget paddingAll(double value) => Padding(
-        padding: EdgeInsets.all(value),
-        child: this,
-      );
+  Widget paddingAll(double value) =>
+      Padding(padding: EdgeInsets.all(value), child: this);
 
   Widget paddingSymmetric({double horizontal = 0, double vertical = 0}) =>
       Padding(
@@ -45,8 +43,6 @@ extension SpacingX on Widget {
         child: this,
       );
 
-  Widget get paddingStandard => Padding(
-        padding: const EdgeInsets.all(AppSizes.space16),
-        child: this,
-      );
+  Widget get paddingStandard =>
+      Padding(padding: const EdgeInsets.all(AppSizes.space16), child: this);
 }

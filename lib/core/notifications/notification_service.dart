@@ -35,7 +35,9 @@ class NotificationService {
   /// backend via [onToken], and shows a local notification for any message
   /// that arrives while the app is in the foreground (FCM does not surface
   /// those automatically the way it does for background/terminated states).
-  Future<void> init({required Future<void> Function(String token) onToken}) async {
+  Future<void> init({
+    required Future<void> Function(String token) onToken,
+  }) async {
     if (_initialized) return;
     _initialized = true;
 
@@ -52,16 +54,24 @@ class NotificationService {
         ),
       );
       await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(_jobsChannel);
+
+      // Listeners first: a slow permission answer or token fetch below must
+      // not delay foreground messages or token refreshes.
+      FirebaseMessaging.instance.onTokenRefresh.listen(onToken);
+      FirebaseMessaging.onMessage.listen(_showForegroundNotification);
 
       await FirebaseMessaging.instance.requestPermission();
 
+      // getToken needs the network and Google Play services and can hang on
+      // a weak connection or a phone without Play services. That is fine:
+      // nothing waits for this method (startup and sign-in run it in the
+      // background), and onTokenRefresh delivers a token later.
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await onToken(token);
-      FirebaseMessaging.instance.onTokenRefresh.listen(onToken);
-
-      FirebaseMessaging.onMessage.listen(_showForegroundNotification);
     } catch (_) {
       // No google-services.json configured yet (or permission denied) —
       // push notifications stay off; Socket.IO updates still work while

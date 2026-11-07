@@ -56,12 +56,13 @@ void main() {
       expect(find.text('سائقون معتمدون'), findsOneWidget);
       expect(directionAt(tester, title), TextDirection.rtl);
 
-      // The header icon leads the title, so in RTL it sits to its right.
-      expect(tester.getCenter(find.byIcon(Icons.car_repair)).dx,
-          greaterThan(tester.getCenter(title).dx));
-      // The first card of the grid starts on the right-hand side.
-      final first = find.text(ServiceType.values.first.label);
-      expect(tester.getCenter(first).dx, greaterThan(kPhoneSize.width / 2));
+      // The header title starts on the right-hand side.
+      expect(tester.getTopRight(title).dx, greaterThan(kPhoneSize.width / 2));
+      // Each service card leads with its icon, so in RTL it sits right of the
+      // label.
+      final first = ServiceType.values.first;
+      expect(tester.getCenter(find.byIcon(first.icon)).dx,
+          greaterThan(tester.getCenter(find.text(first.label)).dx));
     });
   });
 
@@ -91,7 +92,7 @@ void main() {
 
       expect(find.byType(LocationPickerScreen, skipOffstage: false), findsOneWidget);
       // Back once returns to the service list, not to a second picker.
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await settle(tester);
       expect(find.byType(LocationPickerScreen, skipOffstage: false), findsNothing);
       expect(find.text('Roadside Assistance'), findsOneWidget);
@@ -117,7 +118,7 @@ void main() {
 
       await tester.tap(find.text(ServiceType.batteryJump.label));
       await settle(tester);
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await settle(tester);
       expect(find.byType(LocationPickerScreen, skipOffstage: false), findsNothing);
 
@@ -134,7 +135,7 @@ void main() {
 
       await tester.tap(find.text(ServiceType.batteryJump.label));
       await settle(tester);
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await settle(tester);
 
       await tester.tap(find.text(ServiceType.batteryJump.label));
@@ -145,12 +146,12 @@ void main() {
   });
 
   group('history', () {
-    testWidgets('history button lists past requests from the live repository',
+    testWidgets('"My Requests" lists past requests from the live repository',
         (tester) async {
       repo.history = [sampleRequest(status: RequestStatus.completed)];
       await pumpHome(tester);
 
-      await tester.tap(find.byIcon(Icons.history_rounded));
+      await tester.tap(find.text('My Requests'));
       await settle(tester);
 
       expect(find.byType(RequestHistoryScreen), findsOneWidget);
@@ -161,7 +162,7 @@ void main() {
     testWidgets('history shows the empty state in Arabic', (tester) async {
       await pumpHome(tester, locale: kAr);
 
-      await tester.tap(find.byIcon(Icons.history_rounded));
+      await tester.tap(find.text('طلباتي'));
       await settle(tester);
 
       expect(tester.takeException(), isNull);

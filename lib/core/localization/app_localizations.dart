@@ -42,14 +42,14 @@ class AppLocalizations {
       'settings': 'Settings',
 
       // Splash
-      'vehicle_diagnostics': 'VEHICLE DIAGNOSTICS',
-      'initializing': 'INITIALIZING...',
+      'vehicle_diagnostics': 'Vehicle Diagnostics',
+      'initializing': 'Initializing...',
 
       // Auth
       'welcome_back': 'Welcome Back',
       'join_cardiag': 'Join CARDIAG',
-      'login_tab': 'LOGIN',
-      'signup_tab': 'SIGN UP',
+      'login_tab': 'Log In',
+      'signup_tab': 'Sign Up',
       'email': 'Email',
       'password': 'Password',
       'confirm_password': 'Confirm Password',
@@ -57,6 +57,19 @@ class AppLocalizations {
       'phone': 'Phone Number',
       'forgot_password': 'Forgot Password?',
       'already_have_account': 'Already have an account?',
+      // Auth redesign
+      'auth_sign_in': 'Sign in',
+      'auth_create_account': 'Create an account',
+      'auth_welcome_subtitle': 'Sign in to check on your car.',
+      'auth_signup_subtitle': 'Create an account to check on your car.',
+      'auth_new_to': 'New to CARDIAG?',
+      'auth_show_password': 'Show password',
+      'auth_hide_password': 'Hide password',
+      // Smart key redesign
+      'smart_key_demo_hint':
+          'Controls are simulated on this phone and do not reach your car.',
+      'smart_key_unlock_first': 'Unlock the car first',
+      'smart_key_controls': 'Controls',
       'dont_have_account': "Don't have an account?",
       'enter_email': 'Enter your email',
       'enter_password': 'Enter your password',
@@ -67,7 +80,7 @@ class AppLocalizations {
 
       // Connection
       'connect_to_vehicle': 'Connect to Vehicle',
-      'select_obd_adapter': 'SELECT OBD-II ADAPTER',
+      'select_obd_adapter': 'Select OBD-II Adapter',
       'checking_permissions': 'Checking permissions...',
       'bt_permission_required': 'Bluetooth permission required',
       'please_turn_on_bt': 'Please turn on Bluetooth',
@@ -76,47 +89,58 @@ class AppLocalizations {
       'connected_to': 'Connected to',
       'connection_failed': 'Connection failed. Tap a device to retry.',
       'unknown_device': 'Unknown Device',
-      'available_devices': 'AVAILABLE DEVICES',
+      'available_devices': 'Available Devices',
       'no_devices_found': 'No devices found yet...',
       'go_to_settings_bt': 'Go to Settings to grant Bluetooth access',
       'enable_bluetooth': 'Enable Bluetooth in your device settings',
       'location_services_required': 'Location Services Required',
-      'location_services_required_sub': 'Enable Location Services in Settings — Android needs it to scan Bluetooth devices',
+      'location_services_required_sub':
+          'Enable Location Services in Settings — Android needs it to scan Bluetooth devices',
       'devices_found_nearby': 'device(s) found nearby',
       'tap_scan_vehicle': 'Tap SCAN VEHICLE to proceed',
-      'scan_vehicle': 'SCAN VEHICLE',
-      'btn_scanning': 'SCANNING...',
-      'btn_connecting': 'CONNECTING...',
-      'open_settings_btn': 'OPEN SETTINGS',
-      'btn_retry': 'RETRY',
-      'btn_please_wait': 'PLEASE WAIT',
+      'scan_vehicle': 'Scan Vehicle',
+      'btn_scanning': 'Scanning...',
+      'btn_connecting': 'Connecting...',
+      'open_settings_btn': 'Open Settings',
+      'btn_retry': 'Retry',
+      'btn_please_wait': 'Please Wait',
       'tap_to_rescan': 'Tap to rescan',
       'trouble_connecting':
           'Having trouble connecting? Check our troubleshooting guide',
       'initializing_obd': 'Initializing ELM327...',
       'obd_init_failed': 'OBD Initialization Failed',
-      'obd_init_failed_sub': 'Turn the ignition ON (engine running or key in ON position) and make sure the device is a BLE ELM327 adapter. Tap RETRY to try again.',
+      'obd_init_failed_sub':
+          'Turn the ignition ON (engine running or key in ON position) and make sure the device is a BLE ELM327 adapter. Tap RETRY to try again.',
       // Connect failures by cause, connection drop, diagnostic log
       'obd_err_ble_failed': "Couldn't connect to the adapter",
-      'obd_err_ble_failed_sub': 'The Bluetooth link to the adapter could not be opened. Make sure it is plugged into the OBD port, close to the phone and not connected to another app, then tap RETRY.',
+      'obd_err_ble_failed_sub':
+          'The Bluetooth link to the adapter could not be opened. Make sure it is plugged into the OBD port, close to the phone and not connected to another app, then tap RETRY.',
       'obd_err_ble_timeout': 'Adapter did not respond over Bluetooth',
-      'obd_err_ble_timeout_sub': 'The connection timed out. Unplug the adapter for 10 seconds, plug it back in, keep the phone near the car and tap RETRY.',
+      'obd_err_ble_timeout_sub':
+          'The connection timed out. Unplug the adapter for 10 seconds, plug it back in, keep the phone near the car and tap RETRY.',
       'obd_err_not_ble_elm': 'Not a BLE OBD adapter',
-      'obd_err_not_ble_elm_sub': "This device has no ELM327 data channel over Bluetooth Low Energy. It may be a Bluetooth Classic ELM327, which this app can't use — you need an adapter labelled BLE or Bluetooth 4.0. Pick another device or tap RETRY to rescan.",
+      'obd_err_not_ble_elm_sub':
+          "This device has no ELM327 data channel over Bluetooth Low Energy. It may be a Bluetooth Classic ELM327, which this app can't use — you need an adapter labelled BLE or Bluetooth 4.0. Pick another device or tap RETRY to rescan.",
       'obd_err_adapter_silent': 'Adapter not answering',
-      'obd_err_adapter_silent_sub': "The device connected but didn't answer ELM327 commands. Close other OBD apps, unplug the adapter for 10 seconds, plug it back in and tap RETRY.",
+      'obd_err_adapter_silent_sub':
+          "The device connected but didn't answer ELM327 commands. Close other OBD apps, unplug the adapter for 10 seconds, plug it back in and tap RETRY.",
       'obd_err_ecu_silent': 'Vehicle not responding',
-      'obd_err_ecu_silent_sub': "The adapter works, but the car's computer didn't answer. Turn the ignition ON (or start the engine; on an electric or hybrid car, switch it to READY) and tap RETRY. If it still fails, the car may use a protocol this adapter doesn't support.",
+      'obd_err_ecu_silent_sub':
+          "The adapter works, but the car's computer didn't answer. Turn the ignition ON (or start the engine; on an electric or hybrid car, switch it to READY) and tap RETRY. If it still fails, the car may use a protocol this adapter doesn't support.",
       'obd_err_no_std_obd': "Car doesn't share standard OBD-II data",
-      'obd_err_no_std_obd_sub': "Your car is on but doesn't share standard OBD-II data. This is common on electric vehicles; hybrids and petrol/diesel cars should work. If this is a petrol/diesel car, check the ignition is ON and tap RETRY.",
-      'obd_clone_hint': 'Your adapter reports "{version}", a version typical of low-cost clones. Many clones lack the J1850 hardware that older Ford and GM vehicles (before 2008) need — a genuine ELM327 or STN-based adapter may work.',
+      'obd_err_no_std_obd_sub':
+          "Your car is on but doesn't share standard OBD-II data. This is common on electric vehicles; hybrids and petrol/diesel cars should work. If this is a petrol/diesel car, check the ignition is ON and tap RETRY.",
+      'obd_clone_hint':
+          'Your adapter reports "{version}", a version typical of low-cost clones. Many clones lack the J1850 hardware that older Ford and GM vehicles (before 2008) need — a genuine ELM327 or STN-based adapter may work.',
       'obd_connection_lost': 'Connection lost',
-      'obd_connection_lost_sub': 'The Bluetooth link to the adapter dropped and live data has stopped. Check the adapter is still plugged in and tap RECONNECT.',
-      'btn_reconnect': 'RECONNECT',
+      'obd_connection_lost_sub':
+          'The Bluetooth link to the adapter dropped and live data has stopped. Check the adapter is still plugged in and tap RECONNECT.',
+      'btn_reconnect': 'Reconnect',
       'copy_diagnostic_log': 'Copy diagnostic log',
       'share_diagnostic_log': 'Share log',
-      'diagnostic_log_copied': 'Diagnostic log copied — paste it into a message to support.',
-      'btn_initializing': 'INITIALIZING...',
+      'diagnostic_log_copied':
+          'Diagnostic log copied — paste it into a message to support.',
+      'btn_initializing': 'Initializing...',
 
       // Dashboard
       'vehicle_health': 'Vehicle Health',
@@ -203,6 +227,15 @@ class AppLocalizations {
       'auto_scan_sub': 'Automatically scan on connection',
       'dark_mode': 'Dark Mode',
       'dark_mode_sub': 'Use dark theme',
+      'appearance': 'Appearance',
+      'theme_light': 'Light',
+      'theme_dark': 'Dark',
+      'theme_system': 'System',
+      'nav_home': 'Home',
+      'nav_diagnose': 'Diagnose',
+      'nav_roadside': 'Roadside',
+      'nav_history': 'History',
+      'nav_profile': 'Profile',
       'sound_effects': 'Sound Effects',
       'sound_effects_sub': 'Play sounds for actions',
       'dash_cam': 'Dash Cam',
@@ -265,6 +298,9 @@ class AppLocalizations {
       'live_data_graph': 'Live Data Graph',
       'live_data': 'Live Data',
       'select_channel': 'Select at least one channel',
+      'graph_window': 'Last {n} min',
+      'graph_now': 'now',
+      'maint_next_service': 'Next: {value}',
 
       // History screen
       'no_scan_history_yet': 'No scan history yet',
@@ -285,8 +321,8 @@ class AppLocalizations {
       'set_current_mileage': 'Set Current Mileage',
       'mileage_km': 'Mileage (km)',
       'never_serviced': 'Never serviced',
-      'status_overdue': 'OVERDUE',
-      'status_due_soon': 'DUE SOON',
+      'status_overdue': 'Overdue',
+      'status_due_soon': 'Due Soon',
       'status_ok': 'OK',
       'log_service_msg_prefix': 'This will record today\'s date and',
       'log_service_msg_suffix': 'km as the last service.',
@@ -351,13 +387,34 @@ class AppLocalizations {
       'dash_avg_speed': 'Avg Speed',
       'dash_fuel_used': 'Fuel Used',
       'dash_efficiency': 'Efficiency',
-      'dash_drive_eco': 'Eco 🌿',
+      'dash_drive_eco': 'Eco',
       'dash_drive_normal': 'Normal',
       'dash_drive_sporty': 'Sporty',
-      'dash_drive_aggressive': 'Aggressive 🔥',
+      'dash_drive_aggressive': 'Aggressive',
       'dash_maintenance_due_one': '{n} maintenance item due — tap to review',
       'dash_maintenance_due_many': '{n} maintenance items due — tap to review',
       'dash_maintenance_sub': 'Oil changes, filters and service intervals',
+      'dash_greeting_morning': 'Good morning',
+      'dash_greeting_afternoon': 'Good afternoon',
+      'dash_greeting_evening': 'Good evening',
+      'dash_my_car': 'My car',
+      'dash_connect': 'Connect',
+      'dash_see_graph': 'See graph',
+      'dash_more_params': 'All parameters',
+      'dash_fewer_params': 'Show fewer',
+      'dash_services': 'Services',
+      'dash_svc_roadside': 'Roadside',
+      'dash_svc_maintenance': 'Maintenance',
+      'dash_svc_tutorials': 'Tutorials',
+      'dash_see_all': 'See all',
+      'dash_lamps_off': 'No warning lights on',
+      'dash_lamps_unknown': 'Connect an adapter to check the warning lights',
+      'dash_recheck_lamps': 'Check warning lights again',
+      'dash_vehicle': 'Vehicle',
+      'dash_vehicle_id': 'Vehicle identity',
+      'dash_fix_video': 'Fix video',
+      'dash_loading_desc': 'Loading description…',
+      'dash_no_desc': 'No description available.',
 
       // Profile screen
       'update': 'Update',
@@ -393,7 +450,13 @@ class AppLocalizations {
       'search_radius_label': 'Search Radius',
       'avg_arrival': 'Avg. Arrival',
       'roadside_error_generic': 'Something went wrong. Please try again.',
-      'roadside_error_photo_upload': "Couldn't upload your photos. Please try again.",
+      'roadside_error_photo_upload':
+          "Couldn't upload your photos. Please try again.",
+      'roadside_services': 'Services',
+      'my_requests': 'My Requests',
+      'price_from': 'From',
+      'call_driver': 'Call driver',
+      'use_my_location': 'Use my location',
 
       // VIN card (VinDecoder fields that cannot be determined)
       'vin_year_unknown': 'Model year unknown',
@@ -427,6 +490,13 @@ class AppLocalizations {
       'freeze_frame_title': 'Freeze Frame — values at fault moment',
       'view_details': 'View Details',
       'export_report': 'Export report',
+      'dtc_last_scan': 'Last scan · {time}',
+      'dtc_clear_codes_action': 'Clear codes',
+      'dtc_monitors_ready': '{ready} of {total} monitors ready',
+      'dtc_show_monitors': 'Show monitors',
+      'dtc_hide_monitors': 'Hide monitors',
+      'dtc_share_code': 'Share code',
+      'dtc_system_label': 'System',
 
       // Diagnostic report (shared text export)
       'report_title': 'VEHICLE DIAGNOSTIC REPORT',
@@ -536,7 +606,7 @@ class AppLocalizations {
       'tools_parts_optional': 'Tools & Parts (Optional)',
       'add_tools_list': 'Add tools and parts list',
       'uploading_progress': '{n}% Uploading...',
-      'publish_tutorial': 'PUBLISH TUTORIAL',
+      'publish_tutorial': 'Publish Tutorial',
       'tutorial_uploaded': 'Your tutorial has been uploaded successfully!',
       'views_count': '{n} views',
       'rating_value': '{n} rating',
@@ -583,8 +653,9 @@ class AppLocalizations {
       'security': 'Security',
       'change_password': 'Change Password',
       'update_your_password': 'Update your password',
-      'save_changes': 'SAVE CHANGES',
+      'save_changes': 'Save Changes',
       'change_profile_picture': 'Change Profile Picture',
+      'change_photo': 'Change Photo',
       'take_photo': 'Take Photo',
       'choose_from_gallery': 'Choose from Gallery',
       'remove_photo': 'Remove Photo',
@@ -599,7 +670,7 @@ class AppLocalizations {
 
       // Parent mode screen
       'parent_mode': 'Parent Mode',
-      'parent_kmh': 'KM/H',
+      'parent_kmh': 'km/h',
       'parent_speed_alert': 'Speed Alert!',
       'parent_current_location': 'Current Location',
       'parent_drive_time': 'Drive Time',
@@ -628,8 +699,8 @@ class AppLocalizations {
       'dashcam_enable_hint': 'Enable to start recording',
       'quick_actions': 'Quick Actions',
       'climate': 'Climate',
-      'splash_tagline': 'PROFESSIONAL DIAGNOSTICS',
-      'splash_initializing': 'INITIALIZING SYSTEM...',
+      'splash_tagline': 'Professional Diagnostics',
+      'splash_initializing': 'Initializing system...',
       // Diagnostic code detail / report (fix agent 5)
       'dtc_no_description': 'No description available for this code',
       'dtc_category_label': 'Category',
@@ -639,9 +710,11 @@ class AppLocalizations {
       'dtc_cat_u': 'Network (communication between control modules)',
       'dtc_type_label': 'Code type',
       'dtc_type_generic': 'Generic (standard): same meaning on every make',
-      'dtc_type_manufacturer': 'Manufacturer-specific: meaning set by the car maker',
+      'dtc_type_manufacturer':
+          'Manufacturer-specific: meaning set by the car maker',
       'dtc_subsystem_label': 'Subsystem',
-      'dtc_sub_fuel_air_aux': 'Fuel and air metering, auxiliary emission controls',
+      'dtc_sub_fuel_air_aux':
+          'Fuel and air metering, auxiliary emission controls',
       'dtc_sub_fuel_air': 'Fuel and air metering',
       'dtc_sub_ignition': 'Ignition system or misfire',
       'dtc_sub_aux_emission': 'Auxiliary emission controls',
@@ -655,20 +728,32 @@ class AppLocalizations {
       'dtc_sub_net_software': 'Control module software incompatibility',
       'dtc_sub_net_data': 'Invalid data received from a control module',
       'dtc_status_label': 'Status',
-      'dtc_status_pending': 'Pending: detected but not yet confirmed by the ECU',
+      'dtc_status_pending':
+          'Pending: detected but not yet confirmed by the ECU',
       'dtc_status_confirmed': 'Confirmed: stored by the ECU',
       'dtc_next_steps': 'General next steps',
-      'dtc_step_record': 'Write down every stored code and its freeze-frame data before clearing anything.',
-      'dtc_step_generic': 'This is a standard code, so general repair guides for it apply to your car too.',
-      'dtc_step_manufacturer': 'Confirm this code\'s meaning with your car maker\'s service information or a dealer-level scan tool.',
-      'dtc_step_pending': 'A pending code is not confirmed yet: drive normally and scan again after a few trips.',
-      'dtc_step_p': 'Check the wiring, connectors and hoses around the part named in the description before replacing parts.',
-      'dtc_step_c': 'Brake, steering and suspension faults affect safety: have them inspected before long or fast drives.',
-      'dtc_step_b': 'If the airbag warning light is on, have the airbag system inspected promptly.',
-      'dtc_step_u': 'Communication faults are often caused by a weak battery, a blown fuse or a loose module connector: check these first.',
-      'dtc_step_bulletins': 'Look for recalls and service bulletins for your vehicle that mention this code.',
-      'dtc_step_clear': 'Clearing the code does not fix the fault: it will come back if the problem remains.',
-      'dtc_step_stop': 'Stop driving and get help if the check-engine light flashes, the engine overheats or loses oil pressure, or the brakes or steering feel wrong.',
+      'dtc_step_record':
+          'Write down every stored code and its freeze-frame data before clearing anything.',
+      'dtc_step_generic':
+          'This is a standard code, so general repair guides for it apply to your car too.',
+      'dtc_step_manufacturer':
+          'Confirm this code\'s meaning with your car maker\'s service information or a dealer-level scan tool.',
+      'dtc_step_pending':
+          'A pending code is not confirmed yet: drive normally and scan again after a few trips.',
+      'dtc_step_p':
+          'Check the wiring, connectors and hoses around the part named in the description before replacing parts.',
+      'dtc_step_c':
+          'Brake, steering and suspension faults affect safety: have them inspected before long or fast drives.',
+      'dtc_step_b':
+          'If the airbag warning light is on, have the airbag system inspected promptly.',
+      'dtc_step_u':
+          'Communication faults are often caused by a weak battery, a blown fuse or a loose module connector: check these first.',
+      'dtc_step_bulletins':
+          'Look for recalls and service bulletins for your vehicle that mention this code.',
+      'dtc_step_clear':
+          'Clearing the code does not fix the fault: it will come back if the problem remains.',
+      'dtc_step_stop':
+          'Stop driving and get help if the check-engine light flashes, the engine overheats or loses oil pressure, or the brakes or steering feel wrong.',
       'ff_fuel_trim': 'Fuel Trim',
       'ff_map': 'Intake Pressure (MAP)',
       'unit_kpa': 'kPa',
@@ -690,28 +775,39 @@ class AppLocalizations {
       'monitor_exhaust_sensor': 'Exhaust Gas Sensor',
       'monitor_pm_filter': 'PM Filter',
       // Account / settings / profile honesty (agent 6)
-      'auth_err_timeout': 'Connection timed out. Please check your internet connection.',
-      'auth_err_offline': 'Could not reach the server. Please check your internet connection.',
+      'auth_err_timeout':
+          'Connection timed out. Please check your internet connection.',
+      'auth_err_offline':
+          'Could not reach the server. Please check your internet connection.',
       'auth_err_tls': 'Could not establish a secure connection to the server.',
       'auth_err_cancelled': 'The request was cancelled.',
-      'auth_err_unauthorized': 'Authentication failed. Please check your details and try again.',
+      'auth_err_unauthorized':
+          'Authentication failed. Please check your details and try again.',
       'auth_err_forbidden': 'You do not have permission to do that.',
       'auth_err_not_found': 'The requested item was not found.',
-      'auth_err_server': 'The server is having trouble right now. Please try again shortly.',
+      'auth_err_server':
+          'The server is having trouble right now. Please try again shortly.',
       'auth_err_generic': 'Something went wrong. Please try again.',
-      'auth_err_bad_response': 'Unexpected response from the server. Please try again.',
+      'auth_err_bad_response':
+          'Unexpected response from the server. Please try again.',
       'forgot_password_title': 'Reset password',
-      'forgot_password_unavailable': 'Password reset is not available in the app yet. Please contact support to regain access to your account.',
+      'forgot_password_unavailable':
+          'Password reset is not available in the app yet. Please contact support to regain access to your account.',
       'profile_guest': 'Guest',
       'profile_not_signed_in': 'Not signed in',
       'profile_not_set': 'Not set',
       'profile_not_available': 'Not available',
-      'profile_no_vehicles': 'No saved vehicles yet. Connect your OBD adapter to read your car\'s details.',
-      'profile_saved_on_device': 'Saved on this device only — syncing profile changes to your account is not available yet.',
-      'password_change_unavailable': 'Changing your password is not available in the app yet.',
+      'profile_no_vehicles':
+          'No saved vehicles yet. Connect your OBD adapter to read your car\'s details.',
+      'profile_saved_on_device':
+          'Saved on this device only — syncing profile changes to your account is not available yet.',
+      'password_change_unavailable':
+          'Changing your password is not available in the app yet.',
       'fill_all_password_fields': 'Please fill in all password fields',
-      'photo_pick_failed': 'Could not open the photo picker. Check the app\'s permissions.',
-      'media_pick_failed': 'Could not open the picker. Check the app\'s permissions.',
+      'photo_pick_failed':
+          'Could not open the photo picker. Check the app\'s permissions.',
+      'media_pick_failed':
+          'Could not open the picker. Check the app\'s permissions.',
       'tut_title_o2_sensor': 'How to Replace an Oxygen Sensor',
       'tut_title_misfire': 'Fix an Engine Misfire - Complete Guide',
       'tut_title_check_engine': 'Check Engine Light Diagnosis',
@@ -719,37 +815,57 @@ class AppLocalizations {
       'tut_title_maf': 'How to Clean a MAF Sensor',
       'tutorial_sample_author': 'CARDIAG (sample)',
       'tutorial_sample_badge': 'Sample content',
-      'tutorial_sample_notice': 'Sample tutorials for preview — the video library is coming soon.',
+      'tutorial_sample_notice':
+          'Sample tutorials for preview — the video library is coming soon.',
       'video_required': 'Please select a video file',
       'tutorial_upload_unavailable_title': 'Coming soon',
-      'tutorial_upload_unavailable': 'Publishing tutorials is not available yet — there is no tutorial server to upload to.',
-      'parent_demo_notice': 'Demo data — live tracking of another driver is not available yet.',
+      'tutorial_upload_unavailable':
+          'Publishing tutorials is not available yet — there is no tutorial server to upload to.',
+      'parent_demo_notice':
+          'Demo data — live tracking of another driver is not available yet.',
       'parent_demo_location': 'Downtown (demo)',
       'parent_duration_hm': '{h}h {m}m',
       'parent_value_km': '{n} km',
       'parent_value_kmh': '{n} km/h',
       'smart_key_demo': 'Demo',
       // Dead-tap / fake-success fixes (agent 7)
-      'profile_save_failed': 'Could not save your changes on this device. Please try again.',
-      'video_playback_unavailable': 'This is sample content — video playback is not available yet.',
+      'profile_save_failed':
+          'Could not save your changes on this device. Please try again.',
+      'video_playback_unavailable':
+          'This is sample content — video playback is not available yet.',
       'pip_unavailable': 'Picture-in-picture is not available yet.',
-      'tutorial_action_unavailable': 'Not available for sample tutorials — the video library is coming soon.',
-      'smart_key_action_unavailable': 'Demo only — remote vehicle control is not available in this version.',
-      'vehicle_profile_unavailable': 'Saved vehicle profiles are coming soon. Connect your OBD adapter to read your car\'s details.',
-      'terms_unavailable': 'The Terms of Service are not available in the app yet.',
-      'privacy_policy_unavailable': 'The full Privacy Policy is not available in the app yet. See Data & Privacy for what the app stores.',
-      'support_unavailable': 'In-app support is not available in this version yet.',
+      'tutorial_action_unavailable':
+          'Not available for sample tutorials — the video library is coming soon.',
+      'saved_tutorials': 'Saved Tutorials',
+      'share_action': 'Share',
+      'play_video': 'Play',
+      'pause_video': 'Pause',
+      'smart_key_action_unavailable':
+          'Demo only — remote vehicle control is not available in this version.',
+      'vehicle_profile_unavailable':
+          'Saved vehicle profiles are coming soon. Connect your OBD adapter to read your car\'s details.',
+      'terms_unavailable':
+          'The Terms of Service are not available in the app yet.',
+      'privacy_policy_unavailable':
+          'The full Privacy Policy is not available in the app yet. See Data & Privacy for what the app stores.',
+      'support_unavailable':
+          'In-app support is not available in this version yet.',
       'dp_intro': 'What this version of the app keeps and shares:',
       'dp_secure_title': 'Secure storage on this device',
-      'dp_secure_body': 'Your sign-in session token, your account details (name, email, phone, location) and your app settings.',
+      'dp_secure_body':
+          'Your sign-in session token, your account details (name, email, phone, location) and your app settings.',
       'dp_local_title': 'App storage on this device',
-      'dp_local_body': 'Your fault-code history, maintenance records and mileage, your profile photo, and cached code descriptions. Profile edits are saved here only and are not synced to your account.',
+      'dp_local_body':
+          'Your fault-code history, maintenance records and mileage, your profile photo, and cached code descriptions. Profile edits are saved here only and are not synced to your account.',
       'dp_server_title': 'Sent to the app\'s server',
-      'dp_server_body': 'Your email and password when you sign in; your name, email, phone and password when you create an account; a push-notification token for this device; and, when you use roadside assistance, the service type, your location and address, your notes and any photos you attach.',
+      'dp_server_body':
+          'Your email and password when you sign in; your name, email, phone and password when you create an account; a push-notification token for this device; and, when you use roadside assistance, the service type, your location and address, your notes and any photos you attach.',
       'dp_lookup_title': 'Online code lookups',
-      'dp_lookup_body': 'If a fault code is not in the built-in database, the code may be looked up online, and its English description may be sent to an online translation service to show it in Arabic.',
+      'dp_lookup_body':
+          'If a fault code is not in the built-in database, the code may be looked up online, and its English description may be sent to an online translation service to show it in Arabic.',
       'dp_signout_title': 'Signing out',
-      'dp_signout_body': 'Erases your session, account details, settings and profile photo from this device. Fault-code history and maintenance records stay on the device.',
+      'dp_signout_body':
+          'Erases your session, account details, settings and profile photo from this device. Fault-code history and maintenance records stay on the device.',
     },
     'ar': {
       // Common
@@ -785,6 +901,19 @@ class AppLocalizations {
       'phone': 'رقم الهاتف',
       'forgot_password': 'نسيت كلمة المرور؟',
       'already_have_account': 'هل لديك حساب بالفعل؟',
+      // Auth redesign
+      'auth_sign_in': 'تسجيل الدخول',
+      'auth_create_account': 'إنشاء حساب',
+      'auth_welcome_subtitle': 'سجّل الدخول لمتابعة حالة سيارتك.',
+      'auth_signup_subtitle': 'أنشئ حساباً لمتابعة حالة سيارتك.',
+      'auth_new_to': 'جديد في كارداياج؟',
+      'auth_show_password': 'إظهار كلمة المرور',
+      'auth_hide_password': 'إخفاء كلمة المرور',
+      // Smart key redesign
+      'smart_key_demo_hint':
+          'الأوامر محاكاة على هذا الهاتف ولا تصل إلى سيارتك.',
+      'smart_key_unlock_first': 'افتح قفل السيارة أولاً',
+      'smart_key_controls': 'التحكم',
       'dont_have_account': 'ليس لديك حساب؟',
       'enter_email': 'أدخل بريدك الإلكتروني',
       'enter_password': 'أدخل كلمة المرور',
@@ -809,7 +938,8 @@ class AppLocalizations {
       'go_to_settings_bt': 'انتقل إلى الإعدادات لمنح الوصول إلى البلوتوث',
       'enable_bluetooth': 'تفعيل البلوتوث في إعدادات جهازك',
       'location_services_required': 'خدمات الموقع مطلوبة',
-      'location_services_required_sub': 'فعّل خدمات الموقع في الإعدادات — يحتاج أندرويد إليها لمسح أجهزة البلوتوث',
+      'location_services_required_sub':
+          'فعّل خدمات الموقع في الإعدادات — يحتاج أندرويد إليها لمسح أجهزة البلوتوث',
       'devices_found_nearby': 'جهاز/أجهزة موجودة بالقرب',
       'tap_scan_vehicle': 'اضغط "فحص المركبة" للمتابعة',
       'scan_vehicle': 'فحص المركبة',
@@ -819,27 +949,35 @@ class AppLocalizations {
       'btn_retry': 'إعادة المحاولة',
       'btn_please_wait': 'يرجى الانتظار',
       'tap_to_rescan': 'اضغط لإعادة المسح',
-      'trouble_connecting':
-          'تواجه مشكلة في الاتصال؟ راجع دليل استكشاف الأخطاء',
+      'trouble_connecting': 'تواجه مشكلة في الاتصال؟ راجع دليل استكشاف الأخطاء',
       'initializing_obd': 'جارٍ تهيئة ELM327...',
       'obd_init_failed': 'فشل تهيئة OBD',
-      'obd_init_failed_sub': 'شغّل السيارة (أو أدر المفتاح إلى وضع ON) وتأكد أن الجهاز محول ELM327 يعمل بتقنية BLE. اضغط إعادة المحاولة للمحاولة مجدداً.',
+      'obd_init_failed_sub':
+          'شغّل السيارة (أو أدر المفتاح إلى وضع ON) وتأكد أن الجهاز محول ELM327 يعمل بتقنية BLE. اضغط إعادة المحاولة للمحاولة مجدداً.',
       // Connect failures by cause, connection drop, diagnostic log
       'obd_err_ble_failed': 'تعذّر الاتصال بالمحوّل',
-      'obd_err_ble_failed_sub': 'تعذّر فتح اتصال البلوتوث بالمحوّل. تأكد أنه موصول بمنفذ OBD وقريب من الهاتف وغير متصل بتطبيق آخر، ثم اضغط إعادة المحاولة.',
+      'obd_err_ble_failed_sub':
+          'تعذّر فتح اتصال البلوتوث بالمحوّل. تأكد أنه موصول بمنفذ OBD وقريب من الهاتف وغير متصل بتطبيق آخر، ثم اضغط إعادة المحاولة.',
       'obd_err_ble_timeout': 'المحوّل لم يستجب عبر البلوتوث',
-      'obd_err_ble_timeout_sub': 'انتهت مهلة الاتصال. افصل المحوّل لمدة 10 ثوانٍ ثم أعد توصيله، وأبقِ الهاتف قريباً من السيارة واضغط إعادة المحاولة.',
+      'obd_err_ble_timeout_sub':
+          'انتهت مهلة الاتصال. افصل المحوّل لمدة 10 ثوانٍ ثم أعد توصيله، وأبقِ الهاتف قريباً من السيارة واضغط إعادة المحاولة.',
       'obd_err_not_ble_elm': 'ليس محوّل OBD يعمل بتقنية BLE',
-      'obd_err_not_ble_elm_sub': 'هذا الجهاز لا يوفّر قناة بيانات ELM327 عبر البلوتوث منخفض الطاقة (BLE). قد يكون محوّل ELM327 يعمل بالبلوتوث الكلاسيكي، وهو غير مدعوم في هذا التطبيق — تحتاج إلى محوّل مكتوب عليه BLE أو Bluetooth 4.0. اختر جهازاً آخر أو اضغط إعادة المحاولة لإعادة البحث.',
+      'obd_err_not_ble_elm_sub':
+          'هذا الجهاز لا يوفّر قناة بيانات ELM327 عبر البلوتوث منخفض الطاقة (BLE). قد يكون محوّل ELM327 يعمل بالبلوتوث الكلاسيكي، وهو غير مدعوم في هذا التطبيق — تحتاج إلى محوّل مكتوب عليه BLE أو Bluetooth 4.0. اختر جهازاً آخر أو اضغط إعادة المحاولة لإعادة البحث.',
       'obd_err_adapter_silent': 'المحوّل لا يستجيب',
-      'obd_err_adapter_silent_sub': 'تم الاتصال بالجهاز لكنه لم يردّ على أوامر ELM327. أغلق تطبيقات OBD الأخرى، وافصل المحوّل لمدة 10 ثوانٍ ثم أعد توصيله واضغط إعادة المحاولة.',
+      'obd_err_adapter_silent_sub':
+          'تم الاتصال بالجهاز لكنه لم يردّ على أوامر ELM327. أغلق تطبيقات OBD الأخرى، وافصل المحوّل لمدة 10 ثوانٍ ثم أعد توصيله واضغط إعادة المحاولة.',
       'obd_err_ecu_silent': 'السيارة لا تستجيب',
-      'obd_err_ecu_silent_sub': 'المحوّل يعمل، لكن كمبيوتر السيارة لم يردّ. شغّل الإشعال (أو المحرك؛ وفي السيارة الكهربائية أو الهجينة فعّل وضع READY) واضغط إعادة المحاولة. إذا استمرت المشكلة فقد تستخدم السيارة بروتوكولاً لا يدعمه هذا المحوّل.',
+      'obd_err_ecu_silent_sub':
+          'المحوّل يعمل، لكن كمبيوتر السيارة لم يردّ. شغّل الإشعال (أو المحرك؛ وفي السيارة الكهربائية أو الهجينة فعّل وضع READY) واضغط إعادة المحاولة. إذا استمرت المشكلة فقد تستخدم السيارة بروتوكولاً لا يدعمه هذا المحوّل.',
       'obd_err_no_std_obd': 'السيارة لا تشارك بيانات OBD-II القياسية',
-      'obd_err_no_std_obd_sub': 'سيارتك تعمل لكنها لا تشارك بيانات OBD-II القياسية. هذا شائع في السيارات الكهربائية؛ أما السيارات الهجينة وسيارات البنزين/الديزل فيُفترض أن تعمل. إذا كانت سيارتك بنزين/ديزل، فتأكد أن الإشعال يعمل واضغط إعادة المحاولة.',
-      'obd_clone_hint': 'يُبلغ المحوّل عن الإصدار "{version}"، وهو إصدار شائع في النسخ المقلّدة الرخيصة. كثير من هذه النسخ يفتقر إلى عتاد J1850 الذي تحتاجه سيارات فورد وجنرال موتورز القديمة (قبل 2008) — قد ينجح محوّل ELM327 أصلي أو محوّل يعتمد على شريحة STN.',
+      'obd_err_no_std_obd_sub':
+          'سيارتك تعمل لكنها لا تشارك بيانات OBD-II القياسية. هذا شائع في السيارات الكهربائية؛ أما السيارات الهجينة وسيارات البنزين/الديزل فيُفترض أن تعمل. إذا كانت سيارتك بنزين/ديزل، فتأكد أن الإشعال يعمل واضغط إعادة المحاولة.',
+      'obd_clone_hint':
+          'يُبلغ المحوّل عن الإصدار "{version}"، وهو إصدار شائع في النسخ المقلّدة الرخيصة. كثير من هذه النسخ يفتقر إلى عتاد J1850 الذي تحتاجه سيارات فورد وجنرال موتورز القديمة (قبل 2008) — قد ينجح محوّل ELM327 أصلي أو محوّل يعتمد على شريحة STN.',
       'obd_connection_lost': 'انقطع الاتصال',
-      'obd_connection_lost_sub': 'انقطع اتصال البلوتوث بالمحوّل وتوقفت البيانات المباشرة. تأكد أن المحوّل ما زال موصولاً واضغط إعادة الاتصال.',
+      'obd_connection_lost_sub':
+          'انقطع اتصال البلوتوث بالمحوّل وتوقفت البيانات المباشرة. تأكد أن المحوّل ما زال موصولاً واضغط إعادة الاتصال.',
       'btn_reconnect': 'إعادة الاتصال',
       'copy_diagnostic_log': 'نسخ سجل التشخيص',
       'share_diagnostic_log': 'مشاركة السجل',
@@ -854,7 +992,8 @@ class AppLocalizations {
       'brakes': 'الفرامل',
       'warning_lights': 'أضواء التحذير',
       'recent_scans': 'عمليات الفحص الأخيرة',
-      'no_scans_yet': 'لا توجد عمليات فحص بعد. قم بتشغيل تشخيص لرؤية النتائج هنا.',
+      'no_scans_yet':
+          'لا توجد عمليات فحص بعد. قم بتشغيل تشخيص لرؤية النتائج هنا.',
       'connected': 'متصل',
       'disconnected': 'غير متصل',
       'quick_scan': 'فحص سريع',
@@ -931,6 +1070,15 @@ class AppLocalizations {
       'auto_scan_sub': 'فحص تلقائي عند الاتصال',
       'dark_mode': 'الوضع الداكن',
       'dark_mode_sub': 'استخدام المظهر الداكن',
+      'appearance': 'المظهر',
+      'theme_light': 'فاتح',
+      'theme_dark': 'داكن',
+      'theme_system': 'النظام',
+      'nav_home': 'الرئيسية',
+      'nav_diagnose': 'التشخيص',
+      'nav_roadside': 'الطريق',
+      'nav_history': 'السجل',
+      'nav_profile': 'حسابي',
       'sound_effects': 'المؤثرات الصوتية',
       'sound_effects_sub': 'تشغيل الأصوات للإجراءات',
       'dash_cam': 'كاميرا لوحة القيادة',
@@ -993,6 +1141,9 @@ class AppLocalizations {
       'live_data_graph': 'رسم البيانات الحية',
       'live_data': 'البيانات الحية',
       'select_channel': 'اختر قناة واحدة على الأقل',
+      'graph_window': 'آخر {n} دقائق',
+      'graph_now': 'الآن',
+      'maint_next_service': 'القادمة: {value}',
 
       // History screen
       'no_scan_history_yet': 'لا يوجد سجل فحص بعد',
@@ -1079,13 +1230,34 @@ class AppLocalizations {
       'dash_avg_speed': 'متوسط السرعة',
       'dash_fuel_used': 'الوقود المستهلك',
       'dash_efficiency': 'الكفاءة',
-      'dash_drive_eco': 'اقتصادي 🌿',
+      'dash_drive_eco': 'اقتصادي',
       'dash_drive_normal': 'عادي',
       'dash_drive_sporty': 'رياضي',
-      'dash_drive_aggressive': 'عدواني 🔥',
+      'dash_drive_aggressive': 'عدواني',
       'dash_maintenance_due_one': '{n} عنصر صيانة مستحق — اضغط للمراجعة',
       'dash_maintenance_due_many': '{n} عناصر صيانة مستحقة — اضغط للمراجعة',
       'dash_maintenance_sub': 'تغيير الزيت والفلاتر ومواعيد الصيانة',
+      'dash_greeting_morning': 'صباح الخير',
+      'dash_greeting_afternoon': 'مساء الخير',
+      'dash_greeting_evening': 'مساء الخير',
+      'dash_my_car': 'سيارتي',
+      'dash_connect': 'اتصال',
+      'dash_see_graph': 'عرض الرسم',
+      'dash_more_params': 'كل القراءات',
+      'dash_fewer_params': 'عرض أقل',
+      'dash_services': 'الخدمات',
+      'dash_svc_roadside': 'المساعدة',
+      'dash_svc_maintenance': 'الصيانة',
+      'dash_svc_tutorials': 'الشروحات',
+      'dash_see_all': 'عرض الكل',
+      'dash_lamps_off': 'لا توجد أضواء تحذير مضاءة',
+      'dash_lamps_unknown': 'وصّل المحول لفحص أضواء التحذير',
+      'dash_recheck_lamps': 'إعادة فحص أضواء التحذير',
+      'dash_vehicle': 'المركبة',
+      'dash_vehicle_id': 'هوية المركبة',
+      'dash_fix_video': 'فيديو الإصلاح',
+      'dash_loading_desc': 'جارٍ تحميل الوصف…',
+      'dash_no_desc': 'لا يوجد وصف متاح.',
 
       // Profile screen
       'update': 'تحديث',
@@ -1122,6 +1294,11 @@ class AppLocalizations {
       'avg_arrival': 'متوسط وقت الوصول',
       'roadside_error_generic': 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
       'roadside_error_photo_upload': 'تعذّر رفع الصور. يرجى المحاولة مرة أخرى.',
+      'roadside_services': 'الخدمات',
+      'my_requests': 'طلباتي',
+      'price_from': 'يبدأ من',
+      'call_driver': 'اتصال بالسائق',
+      'use_my_location': 'استخدام موقعي',
 
       // VIN card (VinDecoder fields that cannot be determined)
       'vin_year_unknown': 'سنة الطراز غير معروفة',
@@ -1155,6 +1332,13 @@ class AppLocalizations {
       'freeze_frame_title': 'لقطة التجميد — القيم لحظة حدوث العطل',
       'view_details': 'عرض التفاصيل',
       'export_report': 'تصدير التقرير',
+      'dtc_last_scan': 'آخر فحص · {time}',
+      'dtc_clear_codes_action': 'مسح الرموز',
+      'dtc_monitors_ready': '{ready} من {total} أنظمة جاهزة',
+      'dtc_show_monitors': 'عرض الأنظمة',
+      'dtc_hide_monitors': 'إخفاء الأنظمة',
+      'dtc_share_code': 'مشاركة الرمز',
+      'dtc_system_label': 'النظام',
 
       // Diagnostic report (shared text export)
       'report_title': 'تقرير تشخيص المركبة',
@@ -1312,6 +1496,7 @@ class AppLocalizations {
       'update_your_password': 'حدّث كلمة المرور الخاصة بك',
       'save_changes': 'حفظ التغييرات',
       'change_profile_picture': 'تغيير صورة الملف الشخصي',
+      'change_photo': 'تغيير الصورة',
       'take_photo': 'التقاط صورة',
       'choose_from_gallery': 'اختيار من المعرض',
       'remove_photo': 'إزالة الصورة',
@@ -1372,7 +1557,8 @@ class AppLocalizations {
       'dtc_sub_fuel_air': 'قياس الوقود والهواء',
       'dtc_sub_ignition': 'نظام الإشعال أو تقطيع الاحتراق',
       'dtc_sub_aux_emission': 'أنظمة التحكم بالانبعاثات المساعدة',
-      'dtc_sub_speed_idle': 'سرعة المركبة والتحكم بالسرعة الخاملة والمدخلات المساعدة',
+      'dtc_sub_speed_idle':
+          'سرعة المركبة والتحكم بالسرعة الخاملة والمدخلات المساعدة',
       'dtc_sub_aux_inputs': 'المدخلات المساعدة',
       'dtc_sub_computer': 'كمبيوتر المحرك ودوائر الخرج',
       'dtc_sub_transmission': 'ناقل الحركة',
@@ -1385,17 +1571,27 @@ class AppLocalizations {
       'dtc_status_pending': 'معلّقة: تم رصدها ولم تؤكدها وحدة التحكم بعد',
       'dtc_status_confirmed': 'مؤكدة: مخزّنة في وحدة التحكم',
       'dtc_next_steps': 'خطوات عامة تالية',
-      'dtc_step_record': 'دوّن جميع الرموز المخزّنة وبيانات لقطة التجميد قبل مسح أي شيء.',
-      'dtc_step_generic': 'هذا رمز قياسي، لذا تنطبق أدلة الإصلاح العامة الخاصة به على سيارتك أيضاً.',
-      'dtc_step_manufacturer': 'تأكد من معنى هذا الرمز من معلومات الصيانة الخاصة بالشركة المصنّعة أو بجهاز فحص الوكالة.',
-      'dtc_step_pending': 'الرمز المعلّق لم يتأكد بعد: قُد بشكل طبيعي وأعد الفحص بعد عدة رحلات.',
-      'dtc_step_p': 'افحص الأسلاك والموصلات والخراطيم حول القطعة المذكورة في الوصف قبل استبدال أي قطعة.',
-      'dtc_step_c': 'أعطال المكابح والتوجيه والتعليق تؤثر على السلامة: افحصها قبل الرحلات الطويلة أو السريعة.',
-      'dtc_step_b': 'إذا كان مصباح تحذير الوسائد الهوائية مضاءً، افحص نظام الوسائد الهوائية في أقرب وقت.',
-      'dtc_step_u': 'غالباً ما تنتج أعطال الاتصال عن بطارية ضعيفة أو فيوز تالف أو موصل وحدة غير محكم: افحصها أولاً.',
-      'dtc_step_bulletins': 'ابحث عن حملات الاستدعاء ونشرات الصيانة الخاصة بمركبتك التي تذكر هذا الرمز.',
+      'dtc_step_record':
+          'دوّن جميع الرموز المخزّنة وبيانات لقطة التجميد قبل مسح أي شيء.',
+      'dtc_step_generic':
+          'هذا رمز قياسي، لذا تنطبق أدلة الإصلاح العامة الخاصة به على سيارتك أيضاً.',
+      'dtc_step_manufacturer':
+          'تأكد من معنى هذا الرمز من معلومات الصيانة الخاصة بالشركة المصنّعة أو بجهاز فحص الوكالة.',
+      'dtc_step_pending':
+          'الرمز المعلّق لم يتأكد بعد: قُد بشكل طبيعي وأعد الفحص بعد عدة رحلات.',
+      'dtc_step_p':
+          'افحص الأسلاك والموصلات والخراطيم حول القطعة المذكورة في الوصف قبل استبدال أي قطعة.',
+      'dtc_step_c':
+          'أعطال المكابح والتوجيه والتعليق تؤثر على السلامة: افحصها قبل الرحلات الطويلة أو السريعة.',
+      'dtc_step_b':
+          'إذا كان مصباح تحذير الوسائد الهوائية مضاءً، افحص نظام الوسائد الهوائية في أقرب وقت.',
+      'dtc_step_u':
+          'غالباً ما تنتج أعطال الاتصال عن بطارية ضعيفة أو فيوز تالف أو موصل وحدة غير محكم: افحصها أولاً.',
+      'dtc_step_bulletins':
+          'ابحث عن حملات الاستدعاء ونشرات الصيانة الخاصة بمركبتك التي تذكر هذا الرمز.',
       'dtc_step_clear': 'مسح الرمز لا يصلح العطل: سيعود إذا استمرت المشكلة.',
-      'dtc_step_stop': 'توقف عن القيادة واطلب المساعدة إذا ومض مصباح فحص المحرك، أو ارتفعت حرارة المحرك أو انخفض ضغط الزيت، أو شعرت بخلل في المكابح أو التوجيه.',
+      'dtc_step_stop':
+          'توقف عن القيادة واطلب المساعدة إذا ومض مصباح فحص المحرك، أو ارتفعت حرارة المحرك أو انخفض ضغط الزيت، أو شعرت بخلل في المكابح أو التوجيه.',
       'ff_fuel_trim': 'تصحيح الوقود',
       'ff_map': 'ضغط مشعب السحب',
       'unit_kpa': 'ك.باسكال',
@@ -1417,25 +1613,33 @@ class AppLocalizations {
       'monitor_exhaust_sensor': 'حساس غازات العادم',
       'monitor_pm_filter': 'فلتر الجسيمات',
       // Account / settings / profile honesty (agent 6)
-      'auth_err_timeout': 'انتهت مهلة الاتصال. يرجى التحقق من اتصالك بالإنترنت.',
-      'auth_err_offline': 'تعذّر الوصول إلى الخادم. يرجى التحقق من اتصالك بالإنترنت.',
+      'auth_err_timeout':
+          'انتهت مهلة الاتصال. يرجى التحقق من اتصالك بالإنترنت.',
+      'auth_err_offline':
+          'تعذّر الوصول إلى الخادم. يرجى التحقق من اتصالك بالإنترنت.',
       'auth_err_tls': 'تعذّر إنشاء اتصال آمن بالخادم.',
       'auth_err_cancelled': 'تم إلغاء الطلب.',
-      'auth_err_unauthorized': 'فشل التحقق من الهوية. يرجى التحقق من بياناتك والمحاولة مجدداً.',
+      'auth_err_unauthorized':
+          'فشل التحقق من الهوية. يرجى التحقق من بياناتك والمحاولة مجدداً.',
       'auth_err_forbidden': 'ليست لديك صلاحية للقيام بذلك.',
       'auth_err_not_found': 'العنصر المطلوب غير موجود.',
       'auth_err_server': 'يواجه الخادم مشكلة حالياً. يرجى المحاولة بعد قليل.',
       'auth_err_generic': 'حدث خطأ ما. يرجى المحاولة مجدداً.',
-      'auth_err_bad_response': 'استجابة غير متوقعة من الخادم. يرجى المحاولة مجدداً.',
+      'auth_err_bad_response':
+          'استجابة غير متوقعة من الخادم. يرجى المحاولة مجدداً.',
       'forgot_password_title': 'إعادة تعيين كلمة المرور',
-      'forgot_password_unavailable': 'إعادة تعيين كلمة المرور غير متاحة في التطبيق بعد. يرجى التواصل مع الدعم لاستعادة الوصول إلى حسابك.',
+      'forgot_password_unavailable':
+          'إعادة تعيين كلمة المرور غير متاحة في التطبيق بعد. يرجى التواصل مع الدعم لاستعادة الوصول إلى حسابك.',
       'profile_guest': 'زائر',
       'profile_not_signed_in': 'لم يتم تسجيل الدخول',
       'profile_not_set': 'غير محدد',
       'profile_not_available': 'غير متوفر',
-      'profile_no_vehicles': 'لا توجد مركبات محفوظة بعد. وصّل محوّل OBD لقراءة بيانات سيارتك.',
-      'profile_saved_on_device': 'تم الحفظ على هذا الجهاز فقط — مزامنة تغييرات الملف الشخصي مع حسابك غير متاحة بعد.',
-      'password_change_unavailable': 'تغيير كلمة المرور غير متاح في التطبيق بعد.',
+      'profile_no_vehicles':
+          'لا توجد مركبات محفوظة بعد. وصّل محوّل OBD لقراءة بيانات سيارتك.',
+      'profile_saved_on_device':
+          'تم الحفظ على هذا الجهاز فقط — مزامنة تغييرات الملف الشخصي مع حسابك غير متاحة بعد.',
+      'password_change_unavailable':
+          'تغيير كلمة المرور غير متاح في التطبيق بعد.',
       'fill_all_password_fields': 'يرجى تعبئة جميع حقول كلمة المرور',
       'photo_pick_failed': 'تعذّر فتح منتقي الصور. تحقّق من أذونات التطبيق.',
       'media_pick_failed': 'تعذّر فتح المنتقي. تحقّق من أذونات التطبيق.',
@@ -1446,37 +1650,55 @@ class AppLocalizations {
       'tut_title_maf': 'كيفية تنظيف حساس تدفق الهواء الكتلي',
       'tutorial_sample_author': 'CARDIAG (نموذج)',
       'tutorial_sample_badge': 'محتوى تجريبي',
-      'tutorial_sample_notice': 'دروس تجريبية للمعاينة — مكتبة الفيديو قادمة قريباً.',
+      'tutorial_sample_notice':
+          'دروس تجريبية للمعاينة — مكتبة الفيديو قادمة قريباً.',
       'video_required': 'يرجى اختيار ملف فيديو',
       'tutorial_upload_unavailable_title': 'قريباً',
-      'tutorial_upload_unavailable': 'نشر الدروس غير متاح بعد — لا يوجد خادم دروس للرفع إليه.',
-      'parent_demo_notice': 'بيانات تجريبية — التتبع المباشر لسائق آخر غير متاح بعد.',
+      'tutorial_upload_unavailable':
+          'نشر الدروس غير متاح بعد — لا يوجد خادم دروس للرفع إليه.',
+      'parent_demo_notice':
+          'بيانات تجريبية — التتبع المباشر لسائق آخر غير متاح بعد.',
       'parent_demo_location': 'وسط المدينة (تجريبي)',
       'parent_duration_hm': '{h} س {m} د',
       'parent_value_km': '{n} كم',
       'parent_value_kmh': '{n} كم/س',
       'smart_key_demo': 'تجريبي',
       // Dead-tap / fake-success fixes (agent 7)
-      'profile_save_failed': 'تعذّر حفظ تغييراتك على هذا الجهاز. يرجى المحاولة مجدداً.',
-      'video_playback_unavailable': 'هذا محتوى تجريبي — تشغيل الفيديو غير متاح بعد.',
+      'profile_save_failed':
+          'تعذّر حفظ تغييراتك على هذا الجهاز. يرجى المحاولة مجدداً.',
+      'video_playback_unavailable':
+          'هذا محتوى تجريبي — تشغيل الفيديو غير متاح بعد.',
       'pip_unavailable': 'وضع صورة داخل صورة غير متاح بعد.',
-      'tutorial_action_unavailable': 'غير متاح للدروس التجريبية — مكتبة الفيديو قادمة قريباً.',
-      'smart_key_action_unavailable': 'للعرض فقط — التحكم بالمركبة عن بُعد غير متاح في هذا الإصدار.',
-      'vehicle_profile_unavailable': 'ملفات المركبات المحفوظة قادمة قريباً. وصّل محوّل OBD لقراءة بيانات سيارتك.',
+      'tutorial_action_unavailable':
+          'غير متاح للدروس التجريبية — مكتبة الفيديو قادمة قريباً.',
+      'saved_tutorials': 'الشروحات المحفوظة',
+      'share_action': 'مشاركة',
+      'play_video': 'تشغيل',
+      'pause_video': 'إيقاف مؤقت',
+      'smart_key_action_unavailable':
+          'للعرض فقط — التحكم بالمركبة عن بُعد غير متاح في هذا الإصدار.',
+      'vehicle_profile_unavailable':
+          'ملفات المركبات المحفوظة قادمة قريباً. وصّل محوّل OBD لقراءة بيانات سيارتك.',
       'terms_unavailable': 'شروط الخدمة غير متاحة في التطبيق بعد.',
-      'privacy_policy_unavailable': 'سياسة الخصوصية الكاملة غير متاحة في التطبيق بعد. راجع «البيانات والخصوصية» لمعرفة ما يحفظه التطبيق.',
+      'privacy_policy_unavailable':
+          'سياسة الخصوصية الكاملة غير متاحة في التطبيق بعد. راجع «البيانات والخصوصية» لمعرفة ما يحفظه التطبيق.',
       'support_unavailable': 'الدعم داخل التطبيق غير متاح في هذا الإصدار بعد.',
       'dp_intro': 'ما يحفظه هذا الإصدار من التطبيق وما يرسله:',
       'dp_secure_title': 'التخزين الآمن على هذا الجهاز',
-      'dp_secure_body': 'رمز جلسة تسجيل الدخول، وبيانات حسابك (الاسم والبريد الإلكتروني والهاتف والموقع)، وإعدادات التطبيق.',
+      'dp_secure_body':
+          'رمز جلسة تسجيل الدخول، وبيانات حسابك (الاسم والبريد الإلكتروني والهاتف والموقع)، وإعدادات التطبيق.',
       'dp_local_title': 'تخزين التطبيق على هذا الجهاز',
-      'dp_local_body': 'سجل رموز الأعطال، وسجلات الصيانة وعدد الكيلومترات، وصورة ملفك الشخصي، وأوصاف الرموز المخزّنة مؤقتاً. تُحفظ تعديلات الملف الشخصي هنا فقط ولا تتم مزامنتها مع حسابك.',
+      'dp_local_body':
+          'سجل رموز الأعطال، وسجلات الصيانة وعدد الكيلومترات، وصورة ملفك الشخصي، وأوصاف الرموز المخزّنة مؤقتاً. تُحفظ تعديلات الملف الشخصي هنا فقط ولا تتم مزامنتها مع حسابك.',
       'dp_server_title': 'ما يُرسل إلى خادم التطبيق',
-      'dp_server_body': 'بريدك الإلكتروني وكلمة المرور عند تسجيل الدخول؛ واسمك وبريدك الإلكتروني وهاتفك وكلمة المرور عند إنشاء حساب؛ ورمز الإشعارات لهذا الجهاز؛ وعند استخدام المساعدة على الطريق: نوع الخدمة وموقعك وعنوانك وملاحظاتك وأي صور ترفقها.',
+      'dp_server_body':
+          'بريدك الإلكتروني وكلمة المرور عند تسجيل الدخول؛ واسمك وبريدك الإلكتروني وهاتفك وكلمة المرور عند إنشاء حساب؛ ورمز الإشعارات لهذا الجهاز؛ وعند استخدام المساعدة على الطريق: نوع الخدمة وموقعك وعنوانك وملاحظاتك وأي صور ترفقها.',
       'dp_lookup_title': 'البحث عن الرموز عبر الإنترنت',
-      'dp_lookup_body': 'إذا لم يكن رمز العطل في قاعدة البيانات المدمجة، فقد يتم البحث عنه عبر الإنترنت، وقد يُرسل وصفه الإنجليزي إلى خدمة ترجمة عبر الإنترنت لعرضه بالعربية.',
+      'dp_lookup_body':
+          'إذا لم يكن رمز العطل في قاعدة البيانات المدمجة، فقد يتم البحث عنه عبر الإنترنت، وقد يُرسل وصفه الإنجليزي إلى خدمة ترجمة عبر الإنترنت لعرضه بالعربية.',
       'dp_signout_title': 'تسجيل الخروج',
-      'dp_signout_body': 'يمسح جلستك وبيانات حسابك وإعداداتك وصورة ملفك الشخصي من هذا الجهاز. يبقى سجل رموز الأعطال وسجلات الصيانة على الجهاز.',
+      'dp_signout_body':
+          'يمسح جلستك وبيانات حسابك وإعداداتك وصورة ملفك الشخصي من هذا الجهاز. يبقى سجل رموز الأعطال وسجلات الصيانة على الجهاز.',
     },
   };
 }
@@ -1491,8 +1713,7 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      ['en', 'ar'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => ['en', 'ar'].contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) =>
