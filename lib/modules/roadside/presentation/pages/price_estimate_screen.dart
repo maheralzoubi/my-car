@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,6 +11,7 @@ import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
+import 'roadside_error_snackbar.dart';
 import 'searching_driver_screen.dart';
 
 class PriceEstimateScreen extends StatefulWidget {
@@ -52,11 +55,17 @@ class _PriceEstimateScreenState extends State<PriceEstimateScreen> {
       listener: (context, state) {
         if (state.phase == RoadsidePhase.idle) {
           Navigator.of(context).popUntil((r) => r.isFirst);
+        } else if (state.phase == RoadsidePhase.estimate && state.error != null) {
+          showRoadsideError(context, state.error!);
         }
       },
       child: BlocBuilder<RoadsideBloc, RoadsideState>(
         builder: (context, state) {
-          final service = state.selectedService!;
+          // ResetFlow / CancelRequest clear the service while this screen is
+          // still mounted under searching/tracking; the idle listener above
+          // pops it, so draw nothing for that last frame instead of crashing.
+          final service = state.selectedService;
+          if (service == null) return const SizedBox.shrink();
           final price = state.estimatedPrice ?? service.basePrice;
           final color = service.color;
 
@@ -86,7 +95,10 @@ class _PriceEstimateScreenState extends State<PriceEstimateScreen> {
                   SizedBox(height: 16.h),
                   _PhotosSection(
                     paths: state.photoPaths,
-                    onAdd: _addPhoto,
+                    // The bloc ignores photos past the limit.
+                    onAdd: state.photoPaths.length < RoadsideState.maxPhotos
+                        ? _addPhoto
+                        : null,
                   ),
                   SizedBox(height: 24.h),
                   _RequestButton(
@@ -288,9 +300,11 @@ class _PriceBreakdownCard extends StatelessWidget {
                 Icon(Icons.payments_rounded,
                     color: AppColors.success, size: 14.r),
                 SizedBox(width: 6.w),
-                Text(context.tr('cash_payment'),
-                    style: TextStyle(
-                        color: AppColors.success, fontSize: 11.sp)),
+                Flexible(
+                  child: Text(context.tr('cash_payment'),
+                      style: TextStyle(
+                          color: AppColors.success, fontSize: 11.sp)),
+                ),
               ],
             ),
           ),
@@ -356,7 +370,7 @@ class _NotesField extends StatelessWidget {
 
 class _PhotosSection extends StatelessWidget {
   final List<String> paths;
-  final VoidCallback onAdd;
+  final VoidCallback? onAdd;
 
   const _PhotosSection({required this.paths, required this.onAdd});
 
@@ -373,14 +387,15 @@ class _PhotosSection extends StatelessWidget {
                     color: AppColors.white,
                     fontSize: 14.sp,
                     fontWeight: FontWeight.bold)),
-            TextButton.icon(
-              onPressed: onAdd,
-              icon: Icon(Icons.add_a_photo_rounded,
-                  color: AppColors.accentCyan, size: 16.r),
-              label: Text(context.tr('add'),
-                  style: TextStyle(
-                      color: AppColors.accentCyan, fontSize: 13.sp)),
-            ),
+            if (onAdd != null)
+              TextButton.icon(
+                onPressed: onAdd,
+                icon: Icon(Icons.add_a_photo_rounded,
+                    color: AppColors.accentCyan, size: 16.r),
+                label: Text(context.tr('add'),
+                    style: TextStyle(
+                        color: AppColors.accentCyan, fontSize: 13.sp)),
+              ),
           ],
         ),
         if (paths.isNotEmpty)
@@ -392,8 +407,9 @@ class _PhotosSection extends StatelessWidget {
               separatorBuilder: (_, __) => SizedBox(width: 8.w),
               itemBuilder: (_, i) => ClipRRect(
                 borderRadius: BorderRadius.circular(10.r),
-                child: Image.asset(
-                  paths[i],
+                // Camera captures are files on the device, not bundled assets.
+                child: Image.file(
+                  File(paths[i]),
                   width: 80.w,
                   height: 80.h,
                   fit: BoxFit.cover,

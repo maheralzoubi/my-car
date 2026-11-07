@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
+import 'dtc_code_info.dart';
 
 class CodeDetailScreen extends StatefulWidget {
   const CodeDetailScreen({super.key, required this.code});
 
+  /// Route arguments: `code`, `title`, `description`, `system`, `severity`
+  /// (+ optional `title_ar`, `description_ar`, `system_ar`) and `pending`
+  /// (true for a mode-07 code the ECU has not confirmed yet).
   final Map<String, dynamic> code;
 
   @override
@@ -14,11 +20,10 @@ class CodeDetailScreen extends StatefulWidget {
 }
 
 class _CodeDetailScreenState extends State<CodeDetailScreen> {
-  final List<String> images = ['🔧', '🔩', '⚙️', '🛠️'];
-
   static const Color _severityCritical = Color(0xFFFF1744);
   static const Color _severityWarning = Color(0xFFFF6B35);
   static const Color _severityInfo = Color(0xFFFFD600);
+  static const Color _pendingColor = Color(0xFFFFD600);
 
   Color getSeverityColor() {
     switch (widget.code['severity']) {
@@ -32,6 +37,76 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
         return AppColors.accentCyan;
     }
   }
+
+  // ── Argument accessors ────────────────────────────────────────────────────
+
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
+  /// The localized field [key], falling back to the English one.
+  String? _field(String key) {
+    final v = _isArabic
+        ? (widget.code['${key}_ar'] ?? widget.code[key])
+        : widget.code[key];
+    final s = (v as String?)?.trim();
+    return (s == null || s.isEmpty) ? null : s;
+  }
+
+  String? get _codeStr {
+    final raw = (widget.code['code'] as String?)?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    return raw.startsWith('~') ? raw.substring(1) : raw;
+  }
+
+  /// null when the caller did not say (e.g. opened from a lookup).
+  bool? get _isPending => widget.code['pending'] as bool?;
+
+  String get _title => _field('title') ?? '—';
+
+  /// The description, unless it only repeats the title.
+  String? get _description {
+    final d = _field('description');
+    if (d == null) return _field('title') == null ? '—' : null;
+    return d == _field('title') ? null : d;
+  }
+
+  DtcCodeInfo get _info => DtcCodeInfo(_codeStr ?? '');
+
+  // ── Share ─────────────────────────────────────────────────────────────────
+
+  Future<void> _share(BuildContext buttonContext) async {
+    final code = _codeStr ?? context.tr('diagnostic_code_fallback');
+    final info = _info;
+    final buf = StringBuffer('$code — $_title');
+    final desc = _description;
+    if (desc != null && desc != '—') buf.write('\n$desc');
+    if (info.categoryKey != null) {
+      buf.write('\n${context.tr('dtc_category_label')}: '
+          '${context.tr(info.categoryKey!)}');
+    }
+    if (info.typeKey != null) {
+      buf.write('\n${context.tr('dtc_type_label')}: '
+          '${context.tr(info.typeKey!)}');
+    }
+    if (info.subsystemKey != null) {
+      buf.write('\n${context.tr('dtc_subsystem_label')}: '
+          '${context.tr(info.subsystemKey!)}');
+    }
+    if (_isPending != null) {
+      buf.write('\n${context.tr('dtc_status_label')}: ${context.tr(
+          _isPending! ? 'dtc_status_pending' : 'dtc_status_confirmed')}');
+    }
+    buf.write('\n\n${context.tr('report_generated_by')}');
+
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    await Share.share(
+      buf.toString(),
+      subject: '$code — $_title',
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +138,7 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                       SizedBox(height: 25.h),
                       _buildDetailsSection(),
                       SizedBox(height: 25.h),
-                      _buildImageGallery(),
-                      SizedBox(height: 25.h),
-                      _buildRelatedCodes(),
+                      _buildNextSteps(),
                       SizedBox(height: 25.h),
                       _buildActionButton(),
                     ],
@@ -88,20 +161,23 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
             icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          Text(
-            'Code Details',
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
+          Expanded(
+            child: Text(
+              context.tr('code_details'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
           ),
-          const Spacer(),
-          IconButton(
-            icon: Icon(Icons.share, color: AppColors.accentCyan),
-            onPressed: () {
-              // Share functionality
-            },
+          Builder(
+            builder: (buttonContext) => IconButton(
+              icon: Icon(Icons.share, color: AppColors.accentCyan),
+              onPressed: () => _share(buttonContext),
+            ),
           ),
         ],
       ),
@@ -109,16 +185,8 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
   }
 
   Widget _buildCodeCard(Color severityColor) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final title = isArabic
-        ? (widget.code['title_ar'] ?? widget.code['title']) as String? ?? '—'
-        : widget.code['title'] as String? ?? '—';
-    final description = isArabic
-        ? (widget.code['description_ar'] ?? widget.code['description']) as String? ?? '—'
-        : widget.code['description'] as String? ?? '—';
-    final system = isArabic
-        ? (widget.code['system_ar'] ?? widget.code['system']) as String? ?? '—'
-        : widget.code['system'] as String? ?? '—';
+    final system = _field('system') ?? '—';
+    final description = _description;
     return Container(
       padding: EdgeInsets.all(25.r),
       decoration: BoxDecoration(
@@ -158,7 +226,7 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Text(
-                  widget.code['code'] as String? ?? '—',
+                  _codeStr ?? '—',
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w900,
@@ -179,6 +247,8 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                   ),
                   child: Text(
                     system,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13.sp,
                       color: AppColors.accentCyan,
@@ -187,11 +257,31 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
                   ),
                 ),
               ),
+              if (_isPending == true) ...[
+                SizedBox(width: 8.w),
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: _pendingColor.withValues(alpha: 0.15),
+                    border: Border.all(color: _pendingColor),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    context.tr('dtc_pending'),
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: _pendingColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           SizedBox(height: 20.h),
           Text(
-            title,
+            _title,
             style: TextStyle(
               fontSize: 20.sp,
               fontWeight: FontWeight.w700,
@@ -199,72 +289,97 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
               height: 1.3,
             ),
           ),
-          SizedBox(height: 12.h),
-          Text(
-            description,
-            style: TextStyle(
-              fontSize: 15.sp,
-              color: AppColors.textLight.withValues(alpha: 0.7),
-              height: 1.5,
+          if (description != null) ...[
+            SizedBox(height: 12.h),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: AppColors.textLight.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
+  Widget _sectionTitle(String text) {
+    return Row(
+      children: [
+        Container(
+          width: 4.w,
+          height: 20.h,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.accentCyan, AppColors.accentOrange],
+            ),
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textLight,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Facts derived from the code itself (SAE J2012 structure) plus the
+  /// status reported by the ECU — nothing guessed about the root cause.
   Widget _buildDetailsSection() {
+    final info = _info;
+    final pending = _isPending;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              'What This Means',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
+        _sectionTitle(context.tr('what_this_means')),
         SizedBox(height: 15.h),
         _buildDetailCard(
           '⚠️',
-          'Severity',
-          (widget.code['severity'] as String? ?? 'info').toUpperCase(),
+          context.tr('severity_label'),
+          context
+              .tr('severity_${widget.code['severity'] as String? ?? 'info'}')
+              .toUpperCase(),
           getSeverityColor(),
         ),
-        _buildDetailCard(
-          '🔍',
-          'Cause',
-          'Faulty oxygen sensor or catalytic converter malfunction',
-          AppColors.accentCyan,
-        ),
-        _buildDetailCard(
-          '💰',
-          'Estimated Cost',
-          '\$200 - \$800',
-          _severityInfo,
-        ),
-        _buildDetailCard(
-          '⏱️',
-          'Repair Time',
-          '2-4 hours',
-          AppColors.accentCyan,
-        ),
+        if (pending != null)
+          _buildDetailCard(
+            pending ? '⏳' : '📌',
+            context.tr('dtc_status_label'),
+            context.tr(
+                pending ? 'dtc_status_pending' : 'dtc_status_confirmed'),
+            pending ? _pendingColor : AppColors.accentCyan,
+          ),
+        if (info.categoryKey != null)
+          _buildDetailCard(
+            '🚗',
+            context.tr('dtc_category_label'),
+            context.tr(info.categoryKey!),
+            AppColors.accentCyan,
+          ),
+        if (info.typeKey != null)
+          _buildDetailCard(
+            info.isManufacturerSpecific ? '🏭' : '📘',
+            context.tr('dtc_type_label'),
+            context.tr(info.typeKey!),
+            AppColors.accentCyan,
+          ),
+        if (info.subsystemKey != null)
+          _buildDetailCard(
+            '🔍',
+            context.tr('dtc_subsystem_label'),
+            context.tr(info.subsystemKey!),
+            AppColors.accentCyan,
+          ),
       ],
     );
   }
@@ -327,125 +442,58 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
     );
   }
 
-  Widget _buildImageGallery() {
+  Widget _buildNextSteps() {
+    final steps = _info.nextStepKeys(isPending: _isPending ?? false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              'Related Images',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
+        _sectionTitle(context.tr('dtc_next_steps')),
         SizedBox(height: 15.h),
-        SizedBox(
-          height: 120.h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: images.length,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 120.w,
-                margin: EdgeInsets.only(right: 15.w),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.accentCyan.withValues(alpha: 0.2),
-                      AppColors.accentOrange.withValues(alpha: 0.1),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(18.r),
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.05),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(15.r),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < steps.length; i++)
+                Padding(
+                  padding: EdgeInsets.only(
+                      bottom: i == steps.length - 1 ? 0 : 12.h),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(top: 3.h),
+                        child: Icon(
+                          steps[i] == 'dtc_step_stop'
+                              ? Icons.warning_amber_rounded
+                              : Icons.check_circle_outline,
+                          size: 16.r,
+                          color: steps[i] == 'dtc_step_stop'
+                              ? _severityWarning
+                              : AppColors.accentCyan,
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: Text(
+                          context.tr(steps[i]),
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppColors.textLight.withValues(alpha: 0.85),
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  border: Border.all(
-                    color: AppColors.accentCyan.withValues(alpha: 0.3),
-                  ),
-                  borderRadius: BorderRadius.circular(15.r),
                 ),
-                child: Center(
-                  child: Text(
-                    images[index],
-                    style: TextStyle(fontSize: 48.sp),
-                  ),
-                ),
-              );
-            },
+            ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRelatedCodes() {
-    final relatedCodes = ['P0171', 'P0174', 'P0430'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4.w,
-              height: 20.h,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.accentCyan, AppColors.accentOrange],
-                ),
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              'Related Codes',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 15.h),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: relatedCodes.map((code) {
-            return Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 16.w,
-                vertical: 10.h,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.05),
-                border: Border.all(
-                  color: AppColors.accentCyan.withValues(alpha: 0.3),
-                ),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Text(
-                code,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accentCyan,
-                ),
-              ),
-            );
-          }).toList(),
         ),
       ],
     );
@@ -484,11 +532,11 @@ class _CodeDetailScreenState extends State<CodeDetailScreen> {
           ),
         ),
         child: Text(
-          'VIEW SOLUTION',
+          context.tr('view_solution').toUpperCase(),
           style: TextStyle(
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
-            letterSpacing: 2,
+            letterSpacing: _isArabic ? 0 : 2,
             color: AppColors.white,
           ),
         ),

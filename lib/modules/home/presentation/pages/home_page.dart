@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../widgets/counter_card.dart';
 import '../widgets/welcome_header.dart';
 
@@ -50,7 +51,7 @@ class _RoadsideBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Roadside Assistance',
+                    context.tr('roadside_assistance'),
                     style: TextStyle(
                       color: AppColors.white,
                       fontSize: 15.sp,
@@ -59,7 +60,7 @@ class _RoadsideBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 3.h),
                   Text(
-                    'Towing, battery, tire, fuel & more\nAvg. response in 15 minutes',
+                    context.tr('roadside_banner_sub'),
                     style: TextStyle(
                       color: AppColors.textLight.withValues(alpha: 0.6),
                       fontSize: 11.sp,
@@ -85,14 +86,14 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.homeTitle),
+        title: Text(context.tr('home')),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.only(
+          padding: EdgeInsetsDirectional.only(
             top: AppSizes.space8.h,
-            left: AppSizes.space16.w,
-            right: AppSizes.space16.w,
+            start: AppSizes.space16.w,
+            end: AppSizes.space16.w,
             bottom: AppSizes.space24.h,
           ),
           child: Column(

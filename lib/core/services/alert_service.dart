@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -33,6 +33,11 @@ class AlertService {
   AlertService._();
   static final AlertService instance = AlertService._();
 
+  /// Time source for cooldowns. Tests replace it with a fake clock so cooldown
+  /// expiry can be exercised without real waits.
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
+
   final FlutterLocalNotificationsPlugin _notif =
       FlutterLocalNotificationsPlugin();
   final AudioPlayer _player = AudioPlayer();
@@ -52,8 +57,11 @@ class AlertService {
 
   Future<void> init() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // iOS settings are mandatory — without them initialize() throws and,
+    // since main() awaits init() before runApp, the iOS app never starts.
+    const darwin = DarwinInitializationSettings();
     await _notif.initialize(
-      const InitializationSettings(android: android),
+      const InitializationSettings(android: android, iOS: darwin),
     );
 
     // Create high-priority notification channel (Android 8+).
@@ -81,6 +89,14 @@ class AlertService {
   void stopMonitoring() {
     _sub?.cancel();
     _sub = null;
+  }
+
+  /// Clears all cooldown state and restores the real clock, so each test
+  /// starts from a fresh singleton.
+  @visibleForTesting
+  void resetForTesting() {
+    _lastFired.clear();
+    clock = DateTime.now;
   }
 
   void dispose() {
@@ -124,6 +140,7 @@ class AlertService {
       message: '${d.rpm?.toStringAsFixed(0)} RPM — Reduce throttle',
       severity: AlertSeverity.warning,
       cooldown: const Duration(seconds: 10),
+      rearm: d.rpm != null && d.rpm! <= 6000,
     );
 
     _check(
@@ -132,6 +149,7 @@ class AlertService {
       title: '⚡ Knock Detected!',
       message: 'Timing retarded to ${d.timingAdvanceDeg?.toStringAsFixed(1)}° — Possible bad fuel',
       severity: AlertSeverity.warning,
+      rearm: d.timingAdvanceDeg != null && d.timingAdvanceDeg! >= -5,
     );
 
     _check(
@@ -141,6 +159,9 @@ class AlertService {
       message: '${d.fuelLevelPct?.toStringAsFixed(0)}% remaining — Refuel soon',
       severity: AlertSeverity.warning,
       cooldown: const Duration(minutes: 5),
+      // Fuel sloshes several % around the threshold — only a real rise
+      // (refuel) starts a new episode.
+      rearm: d.fuelLevelPct != null && d.fuelLevelPct! >= 12,
     );
 
     _check(
@@ -149,11 +170,16 @@ class AlertService {
       title: '💨 Intake Heat Soak',
       message: 'Air temp ${d.intakeAirTempC?.toStringAsFixed(0)}°C — Possible intercooler issue',
       severity: AlertSeverity.warning,
+      rearm: d.intakeAirTempC != null && d.intakeAirTempC! <= 60,
     );
   }
 
   // ── Core alert logic ──────────────────────────────────────────────────────
 
+  /// [rearm] is the hysteresis band: a warning only starts a new episode
+  /// (clearing its cooldown) once the value is clearly back to normal, so a
+  /// reading flapping around the threshold can't re-fire every other poll.
+  /// Critical alerts never re-arm early — they always wait out the cooldown.
   Future<void> _check({
     required String id,
     required bool condition,
@@ -161,26 +187,28 @@ class AlertService {
     required String message,
     required AlertSeverity severity,
     Duration? cooldown,
+    bool rearm = true,
   }) async {
     if (!condition) {
-      if (!_isCritical(id)) { _lastFired.remove(id); }
+      if (rearm && !_isCritical(id)) { _lastFired.remove(id); }
       return;
     }
 
+    final now = clock();
     final effective = cooldown ?? _cooldown;
     final last = _lastFired[id];
-    if (last != null && DateTime.now().difference(last) < effective) {
+    if (last != null && now.difference(last) < effective) {
       return;
     }
 
-    _lastFired[id] = DateTime.now();
+    _lastFired[id] = now;
 
     final alert = OBDAlert(
       id: id,
       title: title,
       message: message,
       severity: severity,
-      triggeredAt: DateTime.now(),
+      triggeredAt: now,
     );
 
     // Broadcast to in-app listeners (dashboard overlay).
@@ -243,6 +271,12 @@ class AlertService {
             : const Color(0xFFFF6B35),
       ),
     );
-    await _notif.show(alert.id.hashCode, alert.title, alert.message, details);
+    try {
+      await _notif.show(alert.id.hashCode, alert.title, alert.message, details);
+    } catch (_) {
+      // _check runs un-awaited, so a plugin error (e.g. notification
+      // permission denied) would otherwise surface as an unhandled async
+      // error. The in-app alert has already been delivered.
+    }
   }
 }

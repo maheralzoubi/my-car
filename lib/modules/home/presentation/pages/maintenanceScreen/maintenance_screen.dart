@@ -73,12 +73,16 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          Text(
-            context.tr('maintenance_tracker'),
-            style: TextStyle(
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textLight,
+          Expanded(
+            child: Text(
+              context.tr('maintenance_tracker'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
           ),
         ],
@@ -112,7 +116,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                       color: AppColors.textLight.withValues(alpha: 0.6)),
                 ),
                 Text(
-                  '${_svc.currentMileageKm.toStringAsFixed(0)} km',
+                  '${_svc.currentMileageKm.toStringAsFixed(0)} ${context.tr('unit_km')}',
                   style: TextStyle(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.w800,
@@ -143,7 +147,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
 
     final Color statusColor;
     final String statusText;
-    if (overdue) {
+    if (!item.hasHistory) {
+      // Status unknown until the user logs a service — neutral, no badge;
+      // the "Never serviced" line + Log button prompt them instead.
+      statusColor = AppColors.textLight.withValues(alpha: 0.4);
+      statusText  = '';
+    } else if (overdue) {
       statusColor = const Color(0xFFFF1744);
       statusText  = context.tr('status_overdue');
     } else if (due) {
@@ -170,8 +179,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             children: [
               Text(item.icon, style: TextStyle(fontSize: 32.sp)),
               if (overdue || due)
-                Positioned(
-                  top: -4, right: -6,
+                PositionedDirectional(
+                  top: -4, end: -6,
                   child: Container(
                     width: 10.r, height: 10.r,
                     decoration: BoxDecoration(
@@ -191,7 +200,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        item.name,
+                        _itemName(item),
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w700,
@@ -199,28 +208,33 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 8.w, vertical: 2.h),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          fontSize: 9.sp,
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
+                    if (item.hasHistory)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 9.sp,
+                            color: statusColor,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   hasLog
-                      ? 'Last: ${_formatDate(item.lastServiceDate!)}  •  ${item.lastMileageKm!.toStringAsFixed(0)} km'
+                      ? context.tr('maint_last_service').replaceAll(
+                              '{date}', _formatDate(item.lastServiceDate!)) +
+                          (item.lastMileageKm != null
+                              ? '  •  ${item.lastMileageKm!.toStringAsFixed(0)} ${context.tr('unit_km')}'
+                              : '')
                       : context.tr('never_serviced'),
                   style: TextStyle(
                     fontSize: 11.sp,
@@ -229,7 +243,9 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  'Every ${item.intervalKm.toStringAsFixed(0)} km / ${item.intervalDays} days',
+                  context.tr('maint_interval')
+                      .replaceAll('{km}', item.intervalKm.toStringAsFixed(0))
+                      .replaceAll('{days}', '${item.intervalDays}'),
                   style: TextStyle(
                     fontSize: 11.sp,
                     color: AppColors.accentCyan.withValues(alpha: 0.7),
@@ -274,11 +290,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         backgroundColor: AppColors.surfaceDark,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text('${context.tr('log_label')} ${item.name}?',
+        title: Text(
+            context.tr('maint_log_title').replaceAll('{name}', _itemName(item)),
             style: const TextStyle(color: AppColors.textLight)),
         content: Text(
-          '${context.tr('log_service_msg_prefix')} '
-          '${_svc.currentMileageKm.toStringAsFixed(0)} ${context.tr('log_service_msg_suffix')}',
+          context.tr('maint_log_msg').replaceAll(
+              '{km}', _svc.currentMileageKm.toStringAsFixed(0)),
           style:
               TextStyle(color: AppColors.textLight.withValues(alpha: 0.8)),
         ),
@@ -357,6 +374,13 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Localized name for a built-in item; falls back to the stored name.
+  String _itemName(MaintenanceItem item) {
+    final key = 'maint_item_${item.id}';
+    final label = context.tr(key);
+    return label == key ? item.name : label;
+  }
 
   String _formatDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

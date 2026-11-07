@@ -44,7 +44,7 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
                     children: [
                       _buildStatusCard(),
                       SizedBox(height: 24.h),
-                      _buildSectionTitle('Recording'),
+                      _buildSectionTitle(context.tr('dashcam_section_recording')),
                       _buildToggle(
                         '📹',
                         context.tr('dash_cam'),
@@ -67,7 +67,7 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
                         _enabled ? (v) => setState(() => _autoStart = v) : null,
                       ),
                       SizedBox(height: 24.h),
-                      _buildSectionTitle('Quality'),
+                      _buildSectionTitle(context.tr('dashcam_section_quality')),
                       _buildSelector(
                         '🎥',
                         context.tr('video_quality'),
@@ -77,7 +77,7 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
                         _enabled ? (v) => setState(() => _videoQuality = v) : null,
                       ),
                       SizedBox(height: 24.h),
-                      _buildSectionTitle('Safety'),
+                      _buildSectionTitle(context.tr('dashcam_section_safety')),
                       _buildToggle(
                         '🛑',
                         context.tr('incident_detection'),
@@ -163,7 +163,7 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _enabled ? 'Dash Cam Active' : 'Dash Cam Disabled',
+                  context.tr(_enabled ? 'dashcam_active' : 'dashcam_disabled'),
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -173,8 +173,8 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   _enabled
-                      ? '$_videoQuality · ${_loopRecording ? "Loop on" : "Loop off"}'
-                      : 'Enable to start recording',
+                      ? '$_videoQuality · ${context.tr(_loopRecording ? 'dashcam_loop_on' : 'dashcam_loop_off')}'
+                      : context.tr('dashcam_enable_hint'),
                   style: TextStyle(
                     fontSize: 12.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
@@ -331,7 +331,7 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
                 return GestureDetector(
                   onTap: () => onChanged(opt),
                   child: Container(
-                    margin: EdgeInsets.only(right: 10.w),
+                    margin: EdgeInsetsDirectional.only(end: 10.w),
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     decoration: BoxDecoration(
                       gradient: selected
@@ -383,7 +383,9 @@ class _DashCamSettingsScreenState extends State<DashCamSettingsScreen> {
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          alignment: value
+              ? AlignmentDirectional.centerEnd
+              : AlignmentDirectional.centerStart,
           child: Container(
             width: 26.w,
             height: 26.h,

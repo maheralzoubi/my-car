@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/app_services.dart';
+import '../../../../../core/auth/api_auth_repository.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/network/api_exception.dart';
@@ -71,7 +72,7 @@ class _AuthScreenState extends State<AuthScreen>
         Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
       }
     } on ApiException catch (e) {
-      _showError(e.message);
+      _showError(e);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -93,17 +94,54 @@ class _AuthScreenState extends State<AuthScreen>
         Navigator.pushReplacementNamed(context, AppRoutes.modeSelection);
       }
     } on ApiException catch (e) {
-      _showError(e.message);
+      _showError(e);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  void _showError(String message) {
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
+  /// Server-provided messages are shown as sent; transport and generic
+  /// failures carry a localization key instead of fixed English.
+  String _errorText(ApiException e) =>
+      e is AuthException ? context.tr(e.l10nKey) : e.message;
+
+  /// The backend has no password-reset endpoint (only /auth/login and
+  /// /auth/register), so this explains how to recover instead of faking a
+  /// reset email.
+  void _showForgotPassword() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0A1929),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        title: Text(
+          ctx.tr('forgot_password_title'),
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          ctx.tr('forgot_password_unavailable'),
+          style: const TextStyle(color: Color(0xFFE8EAED)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              ctx.tr('ok'),
+              style: const TextStyle(color: Color(0xFF00D9FF)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(ApiException error) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(_errorText(error)),
         backgroundColor: const Color(0xFFB3261E),
       ),
     );
@@ -189,12 +227,12 @@ class _AuthScreenState extends State<AuthScreen>
         ),
         SizedBox(height: 8.h),
         Text(
-          'Professional Vehicle Diagnostics',
+          context.tr('professional_vehicle_diagnostics'),
           style: TextStyle(
             fontSize: 14.sp,
             color: const Color(0xFF00D9FF),
             fontWeight: FontWeight.w300,
-            letterSpacing: 1,
+            letterSpacing: _isArabic ? 0 : 1,
           ),
         ),
       ],
@@ -226,7 +264,7 @@ class _AuthScreenState extends State<AuthScreen>
         labelStyle: TextStyle(
           fontSize: 16.sp,
           fontWeight: FontWeight.w700,
-          letterSpacing: 1,
+          letterSpacing: _isArabic ? 0 : 1,
         ),
         tabs: [
           Tab(text: context.tr('login_tab')),
@@ -257,9 +295,10 @@ class _AuthScreenState extends State<AuthScreen>
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
-              if (value == null || value.isEmpty)
+              if (value == null || value.isEmpty) {
                 return context.tr('enter_email');
-              if (!value.contains('@')) return context.tr('enter_email');
+              }
+              if (!value.contains('@')) return context.tr('invalid_email');
               return null;
             },
           ),
@@ -276,16 +315,17 @@ class _AuthScreenState extends State<AuthScreen>
               );
             },
             validator: (value) {
-              if (value == null || value.isEmpty)
+              if (value == null || value.isEmpty) {
                 return context.tr('enter_password');
+              }
               return null;
             },
           ),
           SizedBox(height: 15.h),
           Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
-              onPressed: () {},
+              onPressed: _showForgotPassword,
               child: Text(
                 context.tr('forgot_password'),
                 style: TextStyle(
@@ -317,8 +357,9 @@ class _AuthScreenState extends State<AuthScreen>
               label: context.tr('full_name'),
               icon: Icons.person_outline,
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return context.tr('enter_full_name');
+                }
                 return null;
               },
             ),
@@ -329,9 +370,10 @@ class _AuthScreenState extends State<AuthScreen>
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return context.tr('enter_email');
-                if (!value.contains('@')) return context.tr('enter_email');
+                }
+                if (!value.contains('@')) return context.tr('invalid_email');
                 return null;
               },
             ),
@@ -342,8 +384,9 @@ class _AuthScreenState extends State<AuthScreen>
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return context.tr('enter_phone');
+                }
                 return null;
               },
             ),
@@ -360,9 +403,10 @@ class _AuthScreenState extends State<AuthScreen>
                 );
               },
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return context.tr('enter_password');
-                if (value.length < 6) return context.tr('enter_password');
+                }
+                if (value.length < 6) return context.tr('password_too_short');
                 return null;
               },
             ),
@@ -380,10 +424,12 @@ class _AuthScreenState extends State<AuthScreen>
                 );
               },
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return context.tr('confirm_your_password');
-                if (value != _signupPasswordController.text)
-                  return context.tr('confirm_your_password');
+                }
+                if (value != _signupPasswordController.text) {
+                  return context.tr('passwords_do_not_match');
+                }
                 return null;
               },
             ),
@@ -504,7 +550,7 @@ class _AuthScreenState extends State<AuthScreen>
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
+                  letterSpacing: _isArabic ? 0 : 2,
                   color: Colors.white,
                 ),
               ),

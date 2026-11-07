@@ -44,8 +44,11 @@ class NotificationService {
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
       await _localNotifications.initialize(
+        // iOS settings are mandatory — without them initialize() throws on iOS
+        // and the rest of push setup (permission, token) is skipped.
         const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          iOS: DarwinInitializationSettings(),
         ),
       );
       await _localNotifications

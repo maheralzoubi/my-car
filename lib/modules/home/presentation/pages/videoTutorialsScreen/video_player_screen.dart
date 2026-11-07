@@ -111,7 +111,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ),
           IconButton(
             icon: Icon(Icons.share, color: AppColors.accentCyan, size: 24.r),
-            onPressed: () {},
+            onPressed: () => _showSnack('tutorial_action_unavailable'),
           ),
         ],
       ),
@@ -160,6 +160,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 setState(() {
                   isPlaying = !isPlaying;
                 });
+                // There is no video source behind the sample catalogue.
+                if (isPlaying) _showSnack('video_playback_unavailable');
               },
               child: Container(
                 width: 70.w,
@@ -290,7 +292,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             Icon(Icons.visibility, color: AppColors.accentCyan, size: 18.r),
             SizedBox(width: 8.w),
             Text(
-              '$views views',
+              context.tr('views_count').replaceAll('{n}', views),
               style: TextStyle(
                 fontSize: 14.sp,
                 color: AppColors.textLight.withValues(alpha: 0.7),
@@ -300,7 +302,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             Icon(Icons.star, color: _ratingYellow, size: 18.r),
             SizedBox(width: 8.w),
             Text(
-              '$rating rating',
+              context.tr('rating_value').replaceAll('{n}', rating),
               style: TextStyle(
                 fontSize: 14.sp,
                 color: AppColors.textLight.withValues(alpha: 0.7),
@@ -313,7 +315,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => _showSnack('tutorial_action_unavailable'),
                 icon: const Icon(Icons.thumb_up_outlined),
                 label: Text(context.tr('like')),
                 style: ElevatedButton.styleFrom(
@@ -329,7 +331,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             SizedBox(width: 10.w),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => _showSnack('tutorial_action_unavailable'),
                 icon: const Icon(Icons.bookmark_border),
                 label: Text(context.tr('save')),
                 style: ElevatedButton.styleFrom(
@@ -408,7 +410,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           Flexible(
             fit: FlexFit.loose,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _showSnack('tutorial_action_unavailable'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentCyan,
                 foregroundColor: AppColors.white,
@@ -416,9 +418,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   borderRadius: BorderRadius.circular(20.r),
                 ),
               ),
-              child: const Text(
-                'Subscribe',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              child: Text(
+                context.tr('subscribe'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -447,7 +449,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
             SizedBox(width: 10.w),
             Text(
-              'Description',
+              context.tr('description_label'),
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
@@ -458,7 +460,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         ),
         SizedBox(height: 15.h),
         Text(
-          'Learn how to properly diagnose and fix the $code error code. This comprehensive tutorial covers everything you need to know, from identifying the problem to completing the repair.',
+          context.tr('tutorial_description_body').replaceAll('{code}', code),
           style: TextStyle(
             fontSize: 15.sp,
             color: AppColors.textLight.withValues(alpha: 0.8),
@@ -487,7 +489,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
             SizedBox(width: 10.w),
             Text(
-              'Tools & Parts Needed',
+              context.tr('tools_parts_needed'),
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
@@ -501,10 +503,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            _buildToolChip('Socket Set'),
-            _buildToolChip('O2 Sensor'),
-            _buildToolChip('Anti-Seize'),
-            _buildToolChip('Safety Gloves'),
+            _buildToolChip(context.tr('tool_socket_set')),
+            _buildToolChip(context.tr('tool_o2_sensor')),
+            _buildToolChip(context.tr('tool_anti_seize')),
+            _buildToolChip(context.tr('tool_safety_gloves')),
           ],
         ),
       ],
@@ -548,7 +550,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
             SizedBox(width: 10.w),
             Text(
-              'Related Videos',
+              context.tr('related_videos'),
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
@@ -566,7 +568,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             itemBuilder: (context, index) {
               return Container(
                 width: 200.w,
-                margin: EdgeInsets.only(right: 15.w),
+                margin: EdgeInsetsDirectional.only(end: 15.w),
                 decoration: BoxDecoration(
                   color: AppColors.white.withValues(alpha: 0.05),
                   border: Border.all(
@@ -607,7 +609,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Related Tutorial ${index + 1}',
+                              context.tr('related_tutorial_n')
+                                  .replaceAll('{n}', '${index + 1}'),
                               style: TextStyle(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w600,
@@ -618,7 +621,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             ),
                             SizedBox(height: 4.h),
                             Text(
-                              '12 min',
+                              context.tr('minutes_n').replaceAll('{n}', '12'),
                               style: TextStyle(
                                 fontSize: 11.sp,
                                 color: AppColors.textLight.withValues(alpha: 0.6),
@@ -638,6 +641,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
+  /// Honest feedback for controls with nothing behind them yet (sample
+  /// catalogue, no video plugin or tutorial backend).
+  void _showSnack(String key) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(context.tr(key))));
+  }
+
   void _showPIPDialog() {
     showDialog(
       context: context,
@@ -646,25 +658,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20.r),
         ),
-        title: const Text(
-          'Picture-in-Picture Mode',
-          style: TextStyle(color: AppColors.textLight),
+        title: Text(
+          context.tr('pip_mode'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
-        content: const Text(
-          'Continue watching while browsing other screens?',
-          style: TextStyle(color: AppColors.textLight),
+        content: Text(
+          context.tr('pip_prompt'),
+          style: const TextStyle(color: AppColors.textLight),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.accentCyan),
+            child: Text(
+              context.tr('cancel'),
+              style: const TextStyle(color: AppColors.accentCyan),
             ),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              _showSnack('pip_unavailable');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCyan,

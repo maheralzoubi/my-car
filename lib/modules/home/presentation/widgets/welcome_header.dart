@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_extensions.dart';
 
 /// Header section for the home screen with title and subtitle.
@@ -19,7 +20,7 @@ class WelcomeHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppStrings.homeWelcome,
+            context.tr('home_welcome'),
             style: textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: context.colorScheme.primary,
@@ -27,7 +28,7 @@ class WelcomeHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSizes.space8),
           Text(
-            AppStrings.homeSubtitle,
+            context.tr('home_subtitle'),
             style: textTheme.bodyLarge?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),

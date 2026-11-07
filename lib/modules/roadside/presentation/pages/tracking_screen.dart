@@ -16,6 +16,7 @@ import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
 import 'rating_screen.dart';
+import 'roadside_error_snackbar.dart';
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -28,7 +29,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   final Completer<GoogleMapController> _mapCtrl = Completer();
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  int _etaMinutes = 0;
+  bool _cancelling = false;
 
   BitmapDescriptor? _customerPin;
   BitmapDescriptor? _driverPin;
@@ -69,6 +70,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
         if (state.phase == RoadsidePhase.idle) {
           Navigator.of(context).popUntil((r) => r.isFirst);
           return;
+        }
+        if (state.error != null) {
+          if (_cancelling) setState(() => _cancelling = false);
+          showRoadsideError(context, state.error!);
         }
         if (state.activeRequest != null) {
           await _updateMap(state.activeRequest!);
@@ -114,13 +119,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     child: _StatusBanner(
                       request: req,
                       color: color,
-                      onCancel: req?.status == RequestStatus.driverEnRoute
+                      cancelling: _cancelling,
+                      onCancel: req?.status == RequestStatus.driverEnRoute &&
+                              !_cancelling
                           ? () {
+                              // The idle listener pops once the backend
+                              // confirms; a refusal shows an error instead.
+                              setState(() => _cancelling = true);
                               context
                                   .read<RoadsideBloc>()
                                   .add(const CancelRequest());
-                              Navigator.of(context)
-                                  .popUntil((r) => r.isFirst);
                             }
                           : null,
                     ),
@@ -137,7 +145,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   child: _DriverCard(
                     driver: driver,
                     request: req!,
-                    etaMinutes: _etaMinutes,
+                    etaMinutes: _etaMinutesFor(req),
                     color: color,
                   ),
                 ),
@@ -151,12 +159,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
   Future<void> _updateMap(ServiceRequest req) async {
     final customer = req.customerLocation;
     final driverPos = req.driverLocation ?? customer;
-
-    final dist = _haversine(
-      driverPos.latitude, driverPos.longitude,
-      customer.latitude, customer.longitude,
-    );
-    setState(() => _etaMinutes = max(1, (dist / 0.5).ceil()));
 
     final markers = <Marker>{
       Marker(
@@ -204,6 +206,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
+  // Derived from the request on every build, so the card is right from the
+  // first frame instead of "0 min" until the next update arrives.
+  int _etaMinutesFor(ServiceRequest req) {
+    final customer = req.customerLocation;
+    final driverPos = req.driverLocation ?? customer;
+    final dist = _haversine(
+      driverPos.latitude, driverPos.longitude,
+      customer.latitude, customer.longitude,
+    );
+    return max(1, (dist / 0.5).ceil());
+  }
+
   double _haversine(double lat1, double lng1, double lat2, double lng2) {
     const r = 6371.0;
     final dLat = (lat2 - lat1) * pi / 180;
@@ -221,11 +235,13 @@ class _StatusBanner extends StatelessWidget {
   final ServiceRequest? request;
   final Color color;
   final VoidCallback? onCancel;
+  final bool cancelling;
 
   const _StatusBanner({
     required this.request,
     required this.color,
     this.onCancel,
+    this.cancelling = false,
   });
 
   String get _statusText {
@@ -282,7 +298,14 @@ class _StatusBanner extends StatelessWidget {
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w600)),
           ),
-          if (onCancel != null)
+          if (cancelling)
+            SizedBox(
+              width: 14.r,
+              height: 14.r,
+              child: const CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.error),
+            )
+          else if (onCancel != null)
             GestureDetector(
               onTap: onCancel,
               child: Text(context.tr('cancel'),

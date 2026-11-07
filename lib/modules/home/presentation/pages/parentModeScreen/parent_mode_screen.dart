@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 class ParentModeScreen extends StatefulWidget {
   const ParentModeScreen({super.key});
@@ -18,12 +19,13 @@ class _ParentModeScreenState extends State<ParentModeScreen>
   bool geoFence = false;
   int speedLimit = 100;
 
-  // Simulated data
+  // DEMO data: there is no live source (no GPS trip feed or backend for a
+  // tracked driver), so the screen shows fixed sample values and says so via
+  // [_buildDemoNotice]. Display strings are localized in [_buildStatsGrid].
   int currentSpeed = 120;
-  String location = 'Downtown';
-  String driveTime = '2h 15m';
-  String distance = '145km';
-  String avgSpeed = '95km/h';
+  static const int _demoDriveMinutes = 135;
+  static const int _demoDistanceKm = 145;
+  static const int _demoAvgSpeedKmh = 95;
 
   static const Color _speedAlertRed = Color(0xFFFF1744);
   static const Color _successGreen = Color(0xFF00E676);
@@ -68,6 +70,8 @@ class _ParentModeScreenState extends State<ParentModeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildDemoNotice(),
+                      SizedBox(height: 15.h),
                       _buildMapCard(),
                       SizedBox(height: 25.h),
                       _buildStatsGrid(),
@@ -94,7 +98,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            'Parent Mode',
+            context.tr('parent_mode'),
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
@@ -153,7 +157,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             ),
             _buildCarMarker(),
             _buildSpeedBadge(),
-            if (currentSpeed > speedLimit) _buildAlertBadge(),
+            if (speedAlerts && currentSpeed > speedLimit) _buildAlertBadge(),
           ],
         ),
       ),
@@ -213,9 +217,9 @@ class _ParentModeScreenState extends State<ParentModeScreen>
   }
 
   Widget _buildSpeedBadge() {
-    return Positioned(
+    return PositionedDirectional(
       top: 20,
-      right: 20,
+      end: 20,
       child: Container(
         width: 80.w,
         height: 80.h,
@@ -245,7 +249,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
               ),
             ),
             Text(
-              'KM/H',
+              context.tr('parent_kmh'),
               style: TextStyle(
                 fontSize: 11.sp,
                 color: const Color(0xFF666666),
@@ -259,9 +263,9 @@ class _ParentModeScreenState extends State<ParentModeScreen>
   }
 
   Widget _buildAlertBadge() {
-    return Positioned(
+    return PositionedDirectional(
       bottom: 20,
-      left: 20,
+      start: 20,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         decoration: BoxDecoration(
@@ -280,7 +284,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             Icon(Icons.warning, color: AppColors.white, size: 20.r),
             SizedBox(width: 8.w),
             Text(
-              'Speed Alert!',
+              context.tr('parent_speed_alert'),
               style: TextStyle(
                 color: AppColors.white,
                 fontWeight: FontWeight.w700,
@@ -293,26 +297,84 @@ class _ParentModeScreenState extends State<ParentModeScreen>
     );
   }
 
+  Widget _buildDemoNotice() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12.r),
+      decoration: BoxDecoration(
+        color: AppColors.accentOrange.withValues(alpha: 0.1),
+        border: Border.all(
+          color: AppColors.accentOrange.withValues(alpha: 0.4),
+        ),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: AppColors.accentOrange, size: 20.r),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Text(
+              context.tr('parent_demo_notice'),
+              style: TextStyle(fontSize: 13.sp, color: AppColors.textLight),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Two rows of two cards whose height follows their content (a fixed
+  /// GridView aspect ratio overflowed by ~22 px at phone width).
   Widget _buildStatsGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 15,
-      mainAxisSpacing: 15,
-      childAspectRatio: 1.3,
+    final hours = _demoDriveMinutes ~/ 60;
+    final minutes = _demoDriveMinutes % 60;
+    final cards = [
+      _buildStatCard(
+        '📍',
+        context.tr('parent_current_location'),
+        context.tr('parent_demo_location'),
+      ),
+      _buildStatCard(
+        '⏱️',
+        context.tr('parent_drive_time'),
+        context
+            .tr('parent_duration_hm')
+            .replaceAll('{h}', '$hours')
+            .replaceAll('{m}', '$minutes'),
+      ),
+      _buildStatCard(
+        '🛣️',
+        context.tr('parent_distance'),
+        context.tr('parent_value_km').replaceAll('{n}', '$_demoDistanceKm'),
+      ),
+      _buildStatCard(
+        '⚡',
+        context.tr('parent_avg_speed'),
+        context.tr('parent_value_kmh').replaceAll('{n}', '$_demoAvgSpeedKmh'),
+      ),
+    ];
+    Widget row(Widget a, Widget b) => IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: a),
+              const SizedBox(width: 15),
+              Expanded(child: b),
+            ],
+          ),
+        );
+    return Column(
       children: [
-        _buildStatCard('📍', 'Current Location', location),
-        _buildStatCard('⏱️', 'Drive Time', driveTime),
-        _buildStatCard('🛣️', 'Distance', distance),
-        _buildStatCard('⚡', 'Avg Speed', avgSpeed),
+        row(cards[0], cards[1]),
+        const SizedBox(height: 15),
+        row(cards[2], cards[3]),
       ],
     );
   }
 
   Widget _buildStatCard(String icon, String label, String value) {
     return Container(
-      padding: EdgeInsets.all(20.r),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.05),
         border: Border.all(
@@ -368,7 +430,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
             ),
             SizedBox(width: 10.w),
             Text(
-              'Tracking Settings',
+              context.tr('parent_tracking_settings'),
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
@@ -379,21 +441,21 @@ class _ParentModeScreenState extends State<ParentModeScreen>
         ),
         SizedBox(height: 15.h),
         _buildSettingCard(
-          'Location Tracking',
-          'Real-time GPS monitoring',
+          context.tr('parent_location_tracking'),
+          context.tr('parent_location_tracking_sub'),
           locationTracking,
           (value) => setState(() => locationTracking = value),
         ),
         _buildSpeedLimitCard(),
         _buildSettingCard(
-          'Speed Alerts',
-          'Notify when limit is exceeded',
+          context.tr('parent_speed_alerts'),
+          context.tr('parent_speed_alerts_sub'),
           speedAlerts,
           (value) => setState(() => speedAlerts = value),
         ),
         _buildSettingCard(
-          'Geo-Fence',
-          'Alert when leaving safe zone',
+          context.tr('parent_geo_fence'),
+          context.tr('parent_geo_fence_sub'),
           geoFence,
           (value) => setState(() => geoFence = value),
         ),
@@ -466,7 +528,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Speed Limit',
+                  context.tr('parent_speed_limit'),
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
@@ -475,7 +537,7 @@ class _ParentModeScreenState extends State<ParentModeScreen>
                 ),
                 SizedBox(height: 5.h),
                 Text(
-                  'Alert when exceeded',
+                  context.tr('parent_alert_when_exceeded'),
                   style: TextStyle(
                     fontSize: 13.sp,
                     color: AppColors.textLight.withValues(alpha: 0.6),
@@ -537,7 +599,9 @@ class _ParentModeScreenState extends State<ParentModeScreen>
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          alignment: value
+              ? AlignmentDirectional.centerEnd
+              : AlignmentDirectional.centerStart,
           child: Container(
             width: 28.w,
             height: 28.h,

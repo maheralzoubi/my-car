@@ -12,6 +12,7 @@ import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
 import 'price_estimate_screen.dart';
+import 'roadside_error_snackbar.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -26,6 +27,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   String _address = 'Move map to set location';
   bool _loadingLocation = false;
   bool _resolvingAddress = false;
+  bool _confirming = false;
   Timer? _addressDebounce;
 
   @override
@@ -54,13 +56,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               const LocationSettings(accuracy: LocationAccuracy.high),
         );
         final latLng = LatLng(pos.latitude, pos.longitude);
+        if (!mounted) return;
         setState(() => _center = latLng);
         final ctrl = await _mapController.future;
         ctrl.animateCamera(CameraUpdate.newLatLngZoom(latLng, 16));
         _resolveAddress(latLng);
       }
     } catch (_) {}
-    setState(() => _loadingLocation = false);
+    // The user may have left while the GPS fix / permission prompt was open.
+    if (mounted) setState(() => _loadingLocation = false);
   }
 
   void _onCameraMove(CameraPosition position) {
@@ -72,6 +76,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Future<void> _resolveAddress(LatLng pos) async {
+    if (!mounted) return;
     setState(() => _resolvingAddress = true);
     try {
       final address = await context.read<RoadsideBloc>().repository.reverseGeocode(pos);
@@ -92,22 +97,29 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
+  // Navigation happens in the listener once the price estimate arrives, so
+  // a failed estimate keeps the user here with an error.
   void _confirm() {
+    setState(() => _confirming = true);
     context
         .read<RoadsideBloc>()
         .add(ConfirmLocation(_center, _address));
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const PriceEstimateScreen()),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<RoadsideBloc, RoadsideState>(
+      listenWhen: (prev, curr) => prev.phase != curr.phase || curr.error != null,
       listener: (context, state) {
         if (state.phase == RoadsidePhase.idle) {
           Navigator.of(context).popUntil((r) => r.isFirst);
+        } else if (state.phase == RoadsidePhase.estimate) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const PriceEstimateScreen()),
+          );
+        } else if (state.error != null) {
+          setState(() => _confirming = false);
+          showRoadsideError(context, state.error!);
         }
       },
       child: Scaffold(
@@ -283,7 +295,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _confirm,
+                        onPressed: _confirming ? null : _confirm,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentOrange,
                           foregroundColor: AppColors.white,
@@ -292,11 +304,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                             borderRadius: BorderRadius.circular(14.r),
                           ),
                         ),
-                        child: Text(
-                          'Confirm Location',
-                          style: TextStyle(
-                              fontSize: 15.sp, fontWeight: FontWeight.bold),
-                        ),
+                        child: _confirming
+                            ? SizedBox(
+                                width: 18.r,
+                                height: 18.r,
+                                child: const CircularProgressIndicator(
+                                    strokeWidth: 2, color: AppColors.white),
+                              )
+                            : Text(
+                                'Confirm Location',
+                                style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
                   ],

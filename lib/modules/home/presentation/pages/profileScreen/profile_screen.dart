@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/app_services.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/dtc_history_service.dart';
+import 'profile_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,44 +16,33 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const Color _successGreen = Color(0xFF00E676);
   static const Color _ratingYellow = Color(0xFFFFD600);
 
-  final Map<String, dynamic> userProfile = {
-    'name': 'John Doe',
-    'email': 'john.doe@email.com',
-    'phone': '+1 (555) 123-4567',
-    'location': 'San Francisco, CA',
-    'memberSince': 'January 2024',
-    'totalScans': 47,
-    'tutorialsWatched': 23,
-    'savedCodes': 12,
-  };
+  // Only what the app actually knows is shown: the session user (the
+  // backend has no profile endpoint beyond login/register), this device's
+  // scan history, and nothing invented for the rest.
+  final _session = AppServices.instance.session;
+  int? _totalScans;
 
-  final List<Map<String, dynamic>> vehicles = [
-    {
-      'name': 'Toyota Camry 2020',
-      'vin': '4T1B11HK...8901',
-      'mileage': '45,230 miles',
-      'health': 78,
-      'isPrimary': true,
-    },
-    {
-      'name': 'Honda Civic 2018',
-      'vin': '2HGFC2F5...3456',
-      'mileage': '62,450 miles',
-      'health': 82,
-      'isPrimary': false,
-    },
-  ];
-
-  String get _initials {
-    final name = userProfile['name'] as String? ?? '';
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
-    return parts.take(2).map((n) => n.isNotEmpty ? n[0].toUpperCase() : '').join();
+  @override
+  void initState() {
+    super.initState();
+    _loadScanCount();
   }
+
+  Future<void> _loadScanCount() async {
+    try {
+      await DtcHistoryService.instance.load();
+    } catch (_) {
+      // No stored history (or storage unavailable): count what is in memory.
+    }
+    if (!mounted) return;
+    setState(() => _totalScans = DtcHistoryService.instance.entries.length);
+  }
+
+  /// [value], or a localized "not set" when empty.
+  String _orNotSet(String? value) =>
+      value == null || value.trim().isEmpty ? context.tr('profile_not_set') : value;
 
   @override
   Widget build(BuildContext context) {
@@ -106,17 +99,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            'My Profile',
+            context.tr('my_profile'),
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: Icon(Icons.share, color: AppColors.accentCyan, size: 24.r),
-            onPressed: () {},
           ),
         ],
       ),
@@ -147,85 +135,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          Stack(
-            children: [
-              Container(
-                width: 100.w,
-                height: 100.h,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentCyan, AppColors.accentOrange],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentCyan.withValues(alpha: 0.4),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    _initials,
-                    style: TextStyle(
-                      fontSize: 36.sp,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
+          // No "verified" badge: nothing in the app or backend verifies an
+          // account.
+          Container(
+            width: 100.w,
+            height: 100.h,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.accentCyan, AppColors.accentOrange],
               ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 32.w,
-                  height: 32.h,
-                  decoration: BoxDecoration(
-                    color: _successGreen,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.backgroundDark,
-                      width: 3,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.verified,
-                    color: AppColors.white,
-                    size: 18.r,
-                  ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accentCyan.withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 5,
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: ProfileAvatarContent(fontSize: 36.sp),
           ),
           SizedBox(height: 20.h),
           Text(
-            userProfile['name'] as String? ?? '',
+            _session.name?.trim().isNotEmpty == true
+                ? _session.name!
+                : context.tr('profile_guest'),
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.textLight,
             ),
           ),
-          SizedBox(height: 8.h),
-          Text(
-            userProfile['email'] as String? ?? '',
-            style: TextStyle(
-              fontSize: 15.sp,
-              color: AppColors.textLight.withValues(alpha: 0.7),
-            ),
-          ),
           SizedBox(height: 20.h),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.editProfile);
+              onPressed: () async {
+                await Navigator.pushNamed(context, AppRoutes.editProfile);
+                // Pick up edits saved on the edit screen.
+                if (mounted) setState(() {});
               },
               icon: const Icon(Icons.edit),
               label: Text(
-                'Edit Profile',
+                context.tr('edit_profile'),
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               style: ElevatedButton.styleFrom(
@@ -270,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SizedBox(width: 10.w),
               Text(
-                'Activity Stats',
+                context.tr('activity_stats'),
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w700,
@@ -284,18 +237,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildStatItem(
                 '🔍',
-                'Total Scans',
-                (userProfile['totalScans'] ?? 0).toString(),
+                context.tr('total_scans'),
+                _totalScans?.toString() ?? '—',
               ),
               _buildStatItem(
                 '📹',
-                'Videos Watched',
-                (userProfile['tutorialsWatched'] ?? 0).toString(),
+                context.tr('videos_watched'),
+                // Not tracked anywhere in the app yet.
+                '—',
               ),
               _buildStatItem(
                 '🔖',
-                'Saved Codes',
-                (userProfile['savedCodes'] ?? 0).toString(),
+                context.tr('saved_codes'),
+                // There is no "save code" feature yet.
+                '—',
               ),
             ],
           ),
@@ -350,7 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             SizedBox(width: 10.w),
             Text(
-              'Personal Information',
+              context.tr('personal_information'),
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
@@ -360,17 +315,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         SizedBox(height: 15.h),
-        _buildInfoCard('📧', 'Email', userProfile['email'] as String? ?? ''),
-        _buildInfoCard('📱', 'Phone', userProfile['phone'] as String? ?? ''),
+        _buildInfoCard('📧', context.tr('email'), _orNotSet(_session.email)),
+        _buildInfoCard('📱', context.tr('phone_short'), _orNotSet(_session.phone)),
         _buildInfoCard(
           '📍',
-          'Location',
-          userProfile['location'] as String? ?? '',
+          context.tr('location_label'),
+          _orNotSet(_session.location),
         ),
+        // The login response carries no account creation date.
         _buildInfoCard(
           '📅',
-          'Member Since',
-          userProfile['memberSince'] as String? ?? '',
+          context.tr('member_since'),
+          context.tr('profile_not_available'),
         ),
       ],
     );
@@ -419,196 +375,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// No vehicle garage exists in the app (nothing stores the user's cars),
+  /// so this explains where vehicle data comes from instead of listing
+  /// placeholder cars.
   Widget _buildVehiclesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 4.w,
-                  height: 20.h,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.accentCyan, AppColors.accentOrange],
-                    ),
-                    borderRadius: BorderRadius.all(Radius.circular(10.r)),
-                  ),
+            Container(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accentCyan, AppColors.accentOrange],
                 ),
-                SizedBox(width: 10.w),
-                Text(
-                  'My Vehicles',
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textLight,
-                  ),
-                ),
-              ],
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
+              ),
             ),
-            TextButton.icon(
-              onPressed: () {},
-              icon: Icon(Icons.add, color: AppColors.accentCyan, size: 24.r),
-              label: Text(
-                'Add',
-                style: TextStyle(color: AppColors.accentCyan),
+            SizedBox(width: 10.w),
+            Text(
+              context.tr('my_vehicles'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
               ),
             ),
           ],
         ),
         SizedBox(height: 15.h),
-        ...vehicles.map((vehicle) => _buildVehicleCard(vehicle)),
-      ],
-    );
-  }
-
-  Widget _buildVehicleCard(Map<String, dynamic> vehicle) {
-    final isPrimary = vehicle['isPrimary'] as bool? ?? false;
-    final name = vehicle['name'] as String? ?? '';
-    final vin = vehicle['vin'] as String? ?? '';
-    final mileage = vehicle['mileage'] as String? ?? '';
-    final health = vehicle['health'] ?? 0;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(18.r),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.05),
-        border: Border.all(
-          color: isPrimary
-              ? AppColors.accentCyan
-              : AppColors.white.withValues(alpha: 0.1),
-          width: isPrimary ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(15.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(18.r),
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.05),
+            border: Border.all(
+              color: AppColors.white.withValues(alpha: 0.1),
+            ),
+            borderRadius: BorderRadius.circular(15.r),
+          ),
+          child: Row(
             children: [
-              Container(
-                width: 50.w,
-                height: 50.h,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentCyan, AppColors.accentOrange],
-                  ),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  Icons.directions_car,
-                  color: AppColors.white,
-                  size: 28.r,
-                ),
+              Icon(
+                Icons.directions_car,
+                color: AppColors.accentCyan.withValues(alpha: 0.7),
+                size: 28.r,
               ),
               SizedBox(width: 15.w),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textLight,
-                            ),
-                          ),
-                        ),
-                        if (isPrimary)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentCyan.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Text(
-                              'Primary',
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.accentCyan,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      vin,
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: AppColors.textLight.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  context.tr('profile_no_vehicles'),
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: AppColors.textLight.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 15.h),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mileage',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: AppColors.textLight.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      mileage,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Health Score',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: AppColors.textLight.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '$health%',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: _successGreen,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -630,7 +458,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             SizedBox(width: 10.w),
             Text(
-              'Achievements',
+              context.tr('achievements'),
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
@@ -640,16 +468,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         SizedBox(height: 15.h),
+        // Tall enough for the emoji + a two-line label at any text scale the
+        // design size produces (was 100.h: overflowed by 8 px EN / 14 px AR).
         SizedBox(
-          height: 100.h,
+          height: 112.h,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              _buildAchievementBadge('🏆', 'First Scan', true),
-              _buildAchievementBadge('🔧', 'DIY Master', true),
-              _buildAchievementBadge('📹', 'Video Learner', true),
-              _buildAchievementBadge('⭐', 'Pro User', false),
-              _buildAchievementBadge('🚗', 'Fleet Owner', true),
+              // Only "first scan" has real data behind it (scan history);
+              // the others stay locked until the app tracks them.
+              _buildAchievementBadge(
+                '🏆',
+                context.tr('ach_first_scan'),
+                (_totalScans ?? 0) > 0,
+              ),
+              _buildAchievementBadge('🔧', context.tr('ach_diy_master'), false),
+              _buildAchievementBadge('📹', context.tr('ach_video_learner'), false),
+              _buildAchievementBadge('⭐', context.tr('ach_pro_user'), false),
+              _buildAchievementBadge('🚗', context.tr('ach_fleet_owner'), false),
             ],
           ),
         ),
@@ -660,8 +496,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildAchievementBadge(String icon, String label, bool unlocked) {
     return Container(
       width: 80.w,
-      margin: EdgeInsets.only(right: 12.w),
-      padding: EdgeInsets.all(12.r),
+      margin: EdgeInsetsDirectional.only(end: 12.w),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: unlocked
             ? _ratingYellow.withValues(alpha: 0.1)
@@ -678,9 +514,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Opacity(
             opacity: unlocked ? 1.0 : 0.3,
-            child: Text(icon, style: TextStyle(fontSize: 32.sp)),
+            child: Text(icon, style: TextStyle(fontSize: 28.sp)),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           Text(
             label,
             textAlign: TextAlign.center,

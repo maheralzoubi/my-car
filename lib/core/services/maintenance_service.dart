@@ -37,11 +37,17 @@ class MaintenanceItem {
     return daysSince - intervalDays;
   }
 
+  /// True once a service has been logged. Without history the due state is
+  /// unknown — the 0 returned by [overdueKm]/[overdueDays] is not "on time".
+  bool get hasHistory => lastMileageKm != null || lastServiceDate != null;
+
   bool isDue(double currentMileage) =>
-      overdueKm(currentMileage) >= -200 || overdueDays() >= -7;
+      (lastMileageKm != null && overdueKm(currentMileage) >= -200) ||
+      (lastServiceDate != null && overdueDays() >= -7);
 
   bool isOverdue(double currentMileage) =>
-      overdueKm(currentMileage) > 0 || overdueDays() > 0;
+      (lastMileageKm != null && overdueKm(currentMileage) > 0) ||
+      (lastServiceDate != null && overdueDays() > 0);
 
   MaintenanceItem copyWith({
     double? lastMileageKm,
@@ -101,6 +107,7 @@ class MaintenanceService {
   List<MaintenanceItem> get items => List.unmodifiable(_items);
   double get currentMileageKm => _currentMileageKm;
 
+  /// Logged items inside their due window. Never-serviced items don't count.
   int get dueCount => _items.where((i) => i.isDue(_currentMileageKm)).length;
 
   Future<void> load() async {

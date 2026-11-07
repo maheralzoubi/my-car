@@ -31,12 +31,17 @@ android {
         }
     }
 
+    // key.properties is git-ignored. Only create the release signing config
+    // when it exists — the old unconditional `as String` casts threw during
+    // Gradle configuration on a fresh clone/CI, breaking even debug builds.
     signingConfigs {
-        create("release") {
-            keyAlias     = keyProperties["keyAlias"]    as String
-            keyPassword  = keyProperties["keyPassword"] as String
-            storeFile    = file(keyProperties["storeFile"] as String)
-            storePassword = keyProperties["storePassword"] as String
+        if (keyPropertiesFile.exists()) {
+            create("release") {
+                keyAlias      = keyProperties["keyAlias"]      as String
+                keyPassword   = keyProperties["keyPassword"]   as String
+                storeFile     = file(keyProperties["storeFile"] as String)
+                storePassword = keyProperties["storePassword"] as String
+            }
         }
     }
 
@@ -50,10 +55,36 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // null when key.properties is absent — the taskGraph check below
+            // then stops the release build instead of shipping a debug-signed
+            // "release" by mistake.
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled   = false
             isShrinkResources = false
+            // Only applied if minify is ever turned on; keeps plugin classes
+            // (flutter_blue_plus, notifications/Gson) from being stripped by R8.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
+    }
+}
+
+// Release builds must be signed with the release key; debug builds don't
+// need key.properties at all.
+gradle.taskGraph.whenReady {
+    val releasePackaging = allTasks.any {
+        it.project == project &&
+            (it.name.startsWith("assemble") || it.name.startsWith("bundle")) &&
+            it.name.endsWith("Release")
+    }
+    if (releasePackaging && !keyPropertiesFile.exists()) {
+        throw GradleException(
+            "android/key.properties not found: release builds must be signed " +
+                "with the release key (keyAlias, keyPassword, storeFile, " +
+                "storePassword).",
+        )
     }
 }
 

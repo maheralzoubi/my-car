@@ -46,8 +46,7 @@ class App extends StatelessWidget {
               child: MaterialApp(
                 title: AppStrings.appName,
                 debugShowCheckedModeBanner: false,
-                theme: AppTheme.light,
-                darkTheme: AppTheme.dark,
+                theme: AppTheme.dark,
                 themeMode: ThemeMode.dark,
                 locale: localeState.locale,
                 supportedLocales: AppLocalizations.supportedLocales,

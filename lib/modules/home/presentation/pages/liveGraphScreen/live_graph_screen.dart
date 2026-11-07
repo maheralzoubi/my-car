@@ -52,6 +52,11 @@ class _LiveGraphScreenState extends State<LiveGraphScreen> {
     _Channel(id: 'timing', label: 'Timing',   unit: '°',    color: const Color(0xFFCDDC39), maxY: 40,   extract: (d) => d.timingAdvanceDeg),
     _Channel(id: 'o2b1s1', label: 'O2 B1S1',  unit: 'V',    color: const Color(0xFFE91E63), maxY: 1.3,  extract: (d) => d.o2B1S1Voltage),
     _Channel(id: 'o2b1s2', label: 'O2 B1S2',  unit: 'V',    color: const Color(0xFFF48FB1), maxY: 1.3,  extract: (d) => d.o2B1S2Voltage),
+    // Wide-band upstream sensor (0124/0134) and diesel channels; they only
+    // collect points on cars that advertise those PIDs.
+    _Channel(id: 'lambda', label: 'λ B1S1',   unit: 'λ',    color: const Color(0xFFAB47BC), maxY: 2,    extract: (d) => d.lambdaB1S1),
+    _Channel(id: 'rail',   label: 'Rail',     unit: 'MPa',  color: const Color(0xFF26A69A), maxY: 250,  extract: (d) => d.fuelRailPressureKpa == null ? null : d.fuelRailPressureKpa! / 1000),
+    _Channel(id: 'pedal',  label: 'Pedal',    unit: '%',    color: const Color(0xFFFFA726), maxY: 100,  extract: (d) => d.acceleratorPedalPct),
   ];
 
   // Which channels are toggled on

@@ -48,6 +48,7 @@ ServiceRequest serviceRequestFromJson(Map<String, dynamic> json) {
     createdAt: DateTime.parse(json['createdAt'] as String),
     notes: json['notes'] as String?,
     photoPaths: const [],
+    photoUrls: List<String>.from(json['photoUrls'] as List? ?? const []),
     rating: (json['rating'] as num?)?.toInt(),
     review: json['review'] as String?,
     cashCollected: json['cashCollected'] as bool? ?? false,

@@ -74,9 +74,11 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
   // ── Export report ─────────────────────────────────────────────────────────
 
-  Future<void> _exportReport() async {
+  Future<void> _exportReport(BuildContext shareContext) async {
+    String t(String key) => context.tr(key);
     final d = OBDService.instance.currentData;
-    final device = OBDService.instance.connectedDeviceName ?? 'OBD-II Adapter';
+    final device =
+        OBDService.instance.connectedDeviceName ?? t('report_default_adapter');
     final now = DateTime.now();
     final dateStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-'
         '${now.day.toString().padLeft(2,'0')} '
@@ -84,33 +86,34 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
     final buf = StringBuffer();
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  VEHICLE DIAGNOSTIC REPORT');
+    buf.writeln('  ${t('report_title')}');
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('Date     : $dateStr');
-    buf.writeln('Adapter  : $device');
+    buf.writeln('${t('report_date')}     : $dateStr');
+    buf.writeln('${t('report_adapter')}  : $device');
     buf.writeln();
 
     // ── Fault codes ──────────────────────────────────────────────────────
     final confirmed = _dtcItems.where((i) => !i.isPending).toList();
     final pending   = _dtcItems.where((i) =>  i.isPending).toList();
 
-    buf.writeln('── FAULT CODES (${_dtcItems.length} total) ──────────────');
+    buf.writeln('── ${t('report_fault_codes').replaceAll('{n}', '${_dtcItems.length}')} ──────────────');
     if (_dtcItems.isEmpty) {
-      buf.writeln('  No fault codes stored.');
+      buf.writeln('  ${t('report_no_codes')}');
     } else {
       for (final item in confirmed) {
-        buf.writeln('  [${item.severity.toUpperCase()}] ${item.code}');
+        buf.writeln('  [${t('severity_${item.severity}').toUpperCase()}] ${item.code}');
         buf.writeln('    ${item.description}');
         if (item.freezeFrame.isNotEmpty) {
-          buf.writeln('    Freeze Frame:');
-          item.freezeFrame.forEach((k, v) => buf.writeln('      $k: $v'));
+          buf.writeln('    ${t('report_freeze_frame')}');
+          item.freezeFrame.forEach((k, v) => buf.writeln(
+              '      ${_freezeFrameLabel(k)}: ${_freezeFrameValue(v)}'));
         }
       }
       if (pending.isNotEmpty) {
         buf.writeln();
-        buf.writeln('  PENDING CODES:');
+        buf.writeln('  ${t('report_pending_codes')}');
         for (final item in pending) {
-          buf.writeln('  [PENDING] ${item.code}  ${item.description}');
+          buf.writeln('  [${t('report_pending_tag')}] ${item.code}  ${item.description}');
         }
       }
     }
@@ -118,51 +121,117 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     // ── Readiness monitors ───────────────────────────────────────────────
     if (_readiness != null && _readiness!.monitors.isNotEmpty) {
       buf.writeln();
-      buf.writeln('── EMISSIONS READINESS ─────────────────────────');
-      buf.writeln('  MIL: ${_readiness!.milOn ? "ON" : "OFF"}   DTCs stored: ${_readiness!.dtcCount}');
+      buf.writeln('── ${t('report_emissions')} ─────────────────────────');
+      buf.writeln('  ${t('report_mil_line')
+          .replaceAll('{state}', t(_readiness!.milOn ? 'report_on' : 'report_off'))
+          .replaceAll('{n}', '${_readiness!.dtcCount}')}');
       for (final m in _readiness!.monitors) {
         final status = switch (m.status) {
-          MonitorStatus.ready          => '✓ Ready',
-          MonitorStatus.notReady       => '✗ Not ready',
-          MonitorStatus.notApplicable  => '⬜ N/A',
+          MonitorStatus.ready          => '✓ ${t('monitor_ready')}',
+          MonitorStatus.notReady       => '✗ ${t('monitor_not_ready')}',
+          MonitorStatus.notApplicable  => '⬜ ${t('monitor_na')}',
         };
-        buf.writeln('  $status  ${m.name}');
+        buf.writeln('  $status  ${_monitorLabel(m.name)}');
       }
     }
 
     // ── Live sensor readings ─────────────────────────────────────────────
     buf.writeln();
-    buf.writeln('── LIVE SENSOR READINGS ────────────────────────');
+    buf.writeln('── ${t('report_live_sensors')} ────────────────────────');
     void sensor(String label, double? v, String unit) {
-      final val = v != null ? '${v.toStringAsFixed(1)} $unit' : 'N/A';
+      final val = v != null ? '${v.toStringAsFixed(1)} $unit' : t('monitor_na');
       buf.writeln('  $label: $val');
     }
-    sensor('RPM',              d.rpm,              'rpm');
-    sensor('Speed',            d.speedKmh,         'km/h');
-    sensor('Coolant Temp',     d.coolantTempC,     '°C');
-    sensor('Engine Load',      d.engineLoad,       '%');
-    sensor('Throttle',         d.throttlePct,      '%');
-    sensor('Fuel Level',       d.fuelLevelPct,     '%');
-    sensor('Battery Voltage',  d.batteryVoltage,   'V');
-    sensor('Oil Temp',         d.oilTempC,         '°C');
-    sensor('Intake Air Temp',  d.intakeAirTempC,   '°C');
-    sensor('STFT Bank 1',      d.fuelTrimShortPct, '%');
-    sensor('LTFT Bank 1',      d.fuelTrimLongPct,  '%');
-    if (d.fuelTrimShortB2 != null) sensor('STFT Bank 2', d.fuelTrimShortB2, '%');
-    if (d.fuelTrimLongB2  != null) sensor('LTFT Bank 2', d.fuelTrimLongB2,  '%');
-    if (d.o2B1S1Voltage   != null) sensor('O2 B1S1',     d.o2B1S1Voltage,   'V');
-    if (d.o2B1S2Voltage   != null) sensor('O2 B1S2',     d.o2B1S2Voltage,   'V');
-    if (d.o2B2S1Voltage   != null) sensor('O2 B2S1',     d.o2B2S1Voltage,   'V');
+    String bank(String key, int n) => t(key).replaceAll('{n}', '$n');
+    sensor(t('report_sensor_rpm'),      d.rpm,              t('report_unit_rpm'));
+    sensor(t('report_sensor_speed'),    d.speedKmh,         t('unit_kmh'));
+    sensor(t('report_sensor_coolant'),  d.coolantTempC,     '°C');
+    sensor(t('report_sensor_load'),     d.engineLoad,       '%');
+    sensor(t('report_sensor_throttle'), d.throttlePct,      '%');
+    sensor(t('report_sensor_fuel'),     d.fuelLevelPct,     '%');
+    sensor(t('report_sensor_battery'),  d.batteryVoltage,   'V');
+    sensor(t('report_sensor_oil'),      d.oilTempC,         '°C');
+    sensor(t('report_sensor_iat'),      d.intakeAirTempC,   '°C');
+    sensor(bank('report_sensor_stft', 1), d.fuelTrimShortPct, '%');
+    sensor(bank('report_sensor_ltft', 1), d.fuelTrimLongPct,  '%');
+    if (d.fuelTrimShortB2 != null) sensor(bank('report_sensor_stft', 2), d.fuelTrimShortB2, '%');
+    if (d.fuelTrimLongB2  != null) sensor(bank('report_sensor_ltft', 2), d.fuelTrimLongB2,  '%');
+    String o2(int b, int s) => t('report_sensor_o2')
+        .replaceAll('{b}', '$b')
+        .replaceAll('{s}', '$s');
+    if (d.o2B1S1Voltage   != null) sensor(o2(1, 1),      d.o2B1S1Voltage,   'V');
+    if (d.o2B1S2Voltage   != null) sensor(o2(1, 2),      d.o2B1S2Voltage,   'V');
+    if (d.o2B2S1Voltage   != null) sensor(o2(2, 1),      d.o2B2S1Voltage,   'V');
 
     buf.writeln();
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('Generated by MyCar Diagnostics');
+    buf.writeln(t('report_generated_by'));
+    final subject = t('report_subject').replaceAll('{date}', dateStr);
 
-    await Share.shareXFiles(
-      [],
-      text: buf.toString(),
-      subject: 'Vehicle Diagnostic Report – $dateStr',
+    // Text-only share: shareXFiles asserts a non-empty file list.
+    final box = shareContext.findRenderObject() as RenderBox?;
+    await Share.share(
+      buf.toString(),
+      subject: subject,
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
     );
+  }
+
+  /// Localized name of a readiness monitor (the adapter reports English).
+  String _monitorLabel(String name) {
+    const keys = {
+      'Misfire': 'monitor_misfire',
+      'Fuel System': 'monitor_fuel_system',
+      'Components': 'monitor_components',
+      'Catalyst': 'monitor_catalyst',
+      'Heated Catalyst': 'monitor_heated_catalyst',
+      'Evap System': 'monitor_evap',
+      'Secondary Air': 'monitor_secondary_air',
+      'A/C System': 'monitor_ac',
+      'O2 Sensor': 'monitor_o2',
+      'O2 Sensor Heater': 'monitor_o2_heater',
+      'EGR / VVT': 'monitor_egr_vvt',
+      'NMHC Catalyst': 'monitor_nmhc',
+      'NOx / SCR': 'monitor_nox_scr',
+      'Boost Pressure': 'monitor_boost',
+      'Exhaust Gas Sensor': 'monitor_exhaust_sensor',
+      'PM Filter': 'monitor_pm_filter',
+    };
+    final key = keys[name];
+    return key == null ? name : context.tr(key);
+  }
+
+  /// Localized freeze-frame label (the adapter reports English keys).
+  String _freezeFrameLabel(String name) {
+    const keys = {
+      'RPM': 'report_sensor_rpm',
+      'Speed': 'report_sensor_speed',
+      'Coolant': 'report_sensor_coolant',
+      'Engine Load': 'report_sensor_load',
+      'Air Temp': 'report_sensor_iat',
+      'Throttle': 'report_sensor_throttle',
+      'Fuel Trim': 'ff_fuel_trim',
+      'MAP': 'ff_map',
+    };
+    final key = keys[name];
+    return key == null ? name : context.tr(key);
+  }
+
+  /// Localizes the unit suffix of a freeze-frame value ("850 rpm" …).
+  String _freezeFrameValue(String value) {
+    const units = {
+      ' rpm': 'report_unit_rpm',
+      ' km/h': 'unit_kmh',
+      ' kPa': 'unit_kpa',
+    };
+    for (final e in units.entries) {
+      if (value.endsWith(e.key)) {
+        return '${value.substring(0, value.length - e.key.length)} '
+            '${context.tr(e.value)}';
+      }
+    }
+    return value;
   }
 
   // ── Data loading ──────────────────────────────────────────────────────────
@@ -187,6 +256,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
       final isArabic = Localizations.localeOf(context).languageCode == 'ar';
       final lang = isArabic ? 'ar' : 'en';
+      final noDescription = context.tr('dtc_no_description');
 
       final items = await Future.wait(codes.map((raw) async {
         // Codes prefixed with '~' are mode-07 pending codes.
@@ -195,7 +265,10 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
         final desc = await _repo.getDtcDescription(code, languageCode: lang);
         return _DtcItem(
           code: code,
-          description: desc ?? code,
+          // Never repeat the bare code as its own description.
+          description: (desc == null || desc.trim().isEmpty)
+              ? noDescription
+              : desc,
           system: _systemFromCode(code),
           severity: _severityFromCode(code),
           isPending: isPending,
@@ -243,12 +316,16 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     if (ok) {
       // Re-scan immediately to confirm all codes were erased.
       await _fetchDtcs();
+      if (mounted) setState(() => _clearing = false);
     } else {
       setState(() => _clearing = false);
+      // Most often the ECU refused mode 04 ("7F 04 22", conditions not
+      // correct) because the engine is running — tell the user how to retry.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.tr('failed_clear_codes')),
+          content: Text(context.tr('failed_clear_codes_hint')),
           backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 8),
         ),
       );
     }
@@ -280,6 +357,24 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     if (digit == '0') return 'critical';
     if (digit == '1') return 'info';
     return 'warning';
+  }
+
+  /// Localized label for an internal system / filter id ('All', 'Engine', …).
+  String _systemLabel(String system) {
+    switch (system) {
+      case 'All':
+        return context.tr('all');
+      case 'Engine':
+        return context.tr('engine');
+      case 'Chassis':
+        return context.tr('system_chassis');
+      case 'Body':
+        return context.tr('body');
+      case 'Network':
+        return context.tr('network');
+      default:
+        return context.tr('system_unknown');
+    }
   }
 
   Color _severityColor(String severity) {
@@ -362,7 +457,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           const Spacer(),
           if (_loading || _clearing)
             Padding(
-              padding: EdgeInsets.only(right: 8.w),
+              padding: EdgeInsetsDirectional.only(end: 8.w),
               child: SizedBox(
                 width: 20.r,
                 height: 20.r,
@@ -377,10 +472,12 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             onPressed: _loading ? null : _fetchDtcs,
           ),
           if (_dtcItems.isNotEmpty) ...[
-            IconButton(
-              icon: Icon(Icons.share_outlined, color: AppColors.accentCyan),
-              onPressed: _exportReport,
-              tooltip: 'Export report',
+            Builder(
+              builder: (shareContext) => IconButton(
+                icon: Icon(Icons.share_outlined, color: AppColors.accentCyan),
+                onPressed: () => _exportReport(shareContext),
+                tooltip: context.tr('export_report'),
+              ),
             ),
             IconButton(
               icon: Icon(Icons.clear_all, color: AppColors.accentCyan),
@@ -416,9 +513,9 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _summaryItem('Confirmed', confirmed, _colCritical),
-          _summaryItem('Pending',   pending,   const Color(0xFFFFD600)),
-          _summaryItem('Critical',  critical,  _colWarning),
+          _summaryItem(context.tr('dtc_confirmed'), confirmed, _colCritical),
+          _summaryItem(context.tr('dtc_pending'), pending, const Color(0xFFFFD600)),
+          _summaryItem(context.tr('severity_critical'), critical, _colWarning),
         ],
       ),
     );
@@ -464,7 +561,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               Icon(Icons.checklist_rtl, color: AppColors.accentCyan, size: 16.r),
               SizedBox(width: 8.w),
               Text(
-                'Emissions Readiness',
+                context.tr('emissions_readiness'),
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w700,
@@ -481,7 +578,10 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               _milBadge(_readiness!.milOn),
               SizedBox(width: 10.w),
               Text(
-                '${_readiness!.dtcCount} DTC${_readiness!.dtcCount == 1 ? '' : 's'} stored',
+                _readiness!.dtcCount == 1
+                    ? context.tr('dtc_stored_one')
+                    : context.tr('dtcs_stored')
+                        .replaceAll('{n}', '${_readiness!.dtcCount}'),
                 style: TextStyle(fontSize: 12.sp, color: AppColors.textLight.withValues(alpha: 0.7)),
               ),
             ],
@@ -527,7 +627,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               color: color, size: 13.r),
           SizedBox(width: 4.w),
           Text(
-            'MIL ${on ? "ON" : "OFF"}',
+            context.tr(on ? 'mil_on' : 'mil_off'),
             style: TextStyle(fontSize: 11.sp, color: color, fontWeight: FontWeight.w700),
           ),
         ],
@@ -543,17 +643,17 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       case MonitorStatus.ready:
         color = const Color(0xFF00E676);
         icon  = Icons.check_circle;
-        label = 'Ready';
+        label = context.tr('monitor_ready');
         break;
       case MonitorStatus.notReady:
         color = const Color(0xFFFF6B35);
         icon  = Icons.cancel;
-        label = 'Not ready';
+        label = context.tr('monitor_not_ready');
         break;
       case MonitorStatus.notApplicable:
         color = Colors.white24;
         icon  = Icons.remove_circle_outline;
-        label = 'N/A';
+        label = context.tr('monitor_na');
         break;
     }
     return Container(
@@ -572,7 +672,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  m.name,
+                  _monitorLabel(m.name),
                   style: TextStyle(
                     fontSize: 11.sp,
                     color: AppColors.textLight.withValues(alpha: m.isApplicable ? 0.9 : 0.4),
@@ -604,7 +704,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           return GestureDetector(
             onTap: () => setState(() => _selectedFilter = f),
             child: Container(
-              margin: EdgeInsets.only(right: 10.w),
+              margin: EdgeInsetsDirectional.only(end: 10.w),
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               decoration: BoxDecoration(
                 gradient: sel
@@ -621,7 +721,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               ),
               child: Center(
                 child: Text(
-                  f,
+                  _systemLabel(f),
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
@@ -652,7 +752,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           CircularProgressIndicator(color: AppColors.accentCyan),
           SizedBox(height: 20.h),
           Text(
-            'Reading diagnostic codes...',
+            context.tr('reading_codes'),
             style: TextStyle(fontSize: 14.sp, color: AppColors.textLight),
           ),
         ],
@@ -669,12 +769,12 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
               size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
           SizedBox(height: 20.h),
           Text(
-            'No OBD device connected',
+            context.tr('no_obd_connected'),
             style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
           ),
           SizedBox(height: 10.h),
           Text(
-            'Connect your ELM327 adapter first',
+            context.tr('connect_elm_first'),
             style: TextStyle(
               fontSize: 14.sp,
               color: AppColors.textLight.withValues(alpha: 0.5),
@@ -737,7 +837,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Your vehicle has no stored fault codes.',
+            context.tr('no_stored_codes'),
             style: TextStyle(
               fontSize: 14.sp,
               color: AppColors.textLight.withValues(alpha: 0.5),
@@ -775,9 +875,10 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
             'title_ar': item.description,
             'severity': item.severity,
             'system': item.system,
-            'system_ar': item.system,
+            'system_ar': _systemLabel(item.system),
             'description': item.description,
             'description_ar': item.description,
+            'pending': item.isPending,
           },
         ),
         child: Container(
@@ -806,7 +907,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                         borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Text(
-                        'Pending',
+                        context.tr('dtc_pending'),
                         style: TextStyle(
                           fontSize: 9.sp,
                           color: const Color(0xFFFFD600),
@@ -849,7 +950,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                               color: AppColors.accentCyan, size: 13.r),
                           SizedBox(width: 5.w),
                           Text(
-                            'Freeze Frame — values at fault moment',
+                            context.tr('freeze_frame_title'),
                             style: TextStyle(
                               fontSize: 10.sp,
                               color: AppColors.accentCyan,
@@ -872,7 +973,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                               borderRadius: BorderRadius.circular(6.r),
                             ),
                             child: Text(
-                              '${e.key}: ${e.value}',
+                              '${_freezeFrameLabel(e.key)}: '
+                              '${_freezeFrameValue(e.value)}',
                               style: TextStyle(
                                 fontSize: 11.sp,
                                 color: AppColors.textLight.withValues(alpha: 0.85),
@@ -890,7 +992,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    'View Details',
+                    context.tr('view_details'),
                     style: TextStyle(
                       fontSize: 13.sp,
                       color: AppColors.accentCyan,
@@ -936,7 +1038,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: Text(
-        system,
+        _systemLabel(system),
         style: TextStyle(
           fontSize: 11.sp,
           color: AppColors.accentCyan,
