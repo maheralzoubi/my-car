@@ -18,7 +18,11 @@ class RoadsideHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<RoadsideBloc, RoadsideState>(
       listener: (context, state) {
-        if (state.phase == RoadsidePhase.locationPicker) {
+        // Only while this screen is on top: the bloc keeps emitting
+        // locationPicker states (a repeated tap, a failed price estimate)
+        // after the picker is already open.
+        if (state.phase == RoadsidePhase.locationPicker &&
+            (ModalRoute.of(context)?.isCurrent ?? true)) {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
           );
@@ -100,49 +104,60 @@ class _Header extends StatelessWidget {
                     color: AppColors.accentOrange, size: 24.r),
               ),
               SizedBox(width: 12.w),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.tr('roadside_assistance'),
-                    style: TextStyle(
-                      color: AppColors.white,
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.tr('roadside_assistance'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    context.tr('select_service_needed'),
-                    style: TextStyle(
-                      color: AppColors.textLight.withValues(alpha: 0.6),
-                      fontSize: 12.sp,
+                    Text(
+                      context.tr('select_service_needed'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textLight.withValues(alpha: 0.6),
+                        fontSize: 12.sp,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
           SizedBox(height: 16.h),
-          Row(
-            children: [
-              _StatChip(
-                icon: Icons.access_time_rounded,
-                label: context.tr('avg_15_min'),
-                color: AppColors.accentCyan,
-              ),
-              SizedBox(width: 8.w),
-              _StatChip(
-                icon: Icons.verified_rounded,
-                label: context.tr('certified_drivers'),
-                color: AppColors.accentOrange,
-              ),
-              SizedBox(width: 8.w),
-              _StatChip(
-                icon: Icons.star_rounded,
-                label: context.tr('rating_48'),
-                color: const Color(0xFFFFD700),
-              ),
-            ],
+          // Shrinks rather than overflows on narrow phones / long translations.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Row(
+              children: [
+                _StatChip(
+                  icon: Icons.access_time_rounded,
+                  label: context.tr('avg_15_min'),
+                  color: AppColors.accentCyan,
+                ),
+                SizedBox(width: 8.w),
+                _StatChip(
+                  icon: Icons.verified_rounded,
+                  label: context.tr('certified_drivers'),
+                  color: AppColors.accentOrange,
+                ),
+                SizedBox(width: 8.w),
+                _StatChip(
+                  icon: Icons.star_rounded,
+                  label: context.tr('rating_48'),
+                  color: const Color(0xFFFFD700),
+                ),
+              ],
+            ),
           ),
         ],
       ),

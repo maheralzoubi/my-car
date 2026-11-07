@@ -28,6 +28,11 @@ class ServiceRequest {
   final DateTime createdAt;
   final String? notes;
   final List<String> photoPaths;
+
+  /// Photos the backend has on file for this request (`photoUrls` in the API
+  /// response), as returned — server-relative paths like `/uploads/...`.
+  /// Distinct from [photoPaths], which are local files picked on this device.
+  final List<String> photoUrls;
   final int? rating;
   final String? review;
   final bool cashCollected;
@@ -47,6 +52,7 @@ class ServiceRequest {
     required this.createdAt,
     this.notes,
     this.photoPaths = const [],
+    this.photoUrls = const [],
     this.rating,
     this.review,
     this.cashCollected = false,
@@ -80,6 +86,7 @@ class ServiceRequest {
       createdAt: createdAt,
       notes: notes ?? this.notes,
       photoPaths: photoPaths ?? this.photoPaths,
+      photoUrls: photoUrls,
       rating: rating ?? this.rating,
       review: review ?? this.review,
       cashCollected: cashCollected,

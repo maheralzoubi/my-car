@@ -10,6 +10,7 @@ import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
+import 'roadside_error_snackbar.dart';
 import 'tracking_screen.dart';
 
 class SearchingDriverScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
     with TickerProviderStateMixin {
   late final AnimationController _pulseCtrl;
   late final AnimationController _rotateCtrl;
+  bool _cancelling = false;
 
   @override
   void initState() {
@@ -35,6 +37,16 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+    // A submit that fails fast (offline, photo upload rejected) can finish
+    // before this screen subscribes, so the listener never sees the
+    // searching -> estimate transition. Leave the same way it would.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<RoadsideBloc>().state;
+      if (state.phase == RoadsidePhase.estimate && state.error != null) {
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   @override
@@ -47,6 +59,10 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
   @override
   Widget build(BuildContext context) {
     return BlocListener<RoadsideBloc, RoadsideState>(
+      // Only a searching -> estimate transition (submit failed) means leave;
+      // draft edits still in the queue when this screen opens don't.
+      listenWhen: (prev, curr) =>
+          curr.phase != RoadsidePhase.estimate || prev.phase == RoadsidePhase.searching,
       listener: (context, state) {
         if (state.phase == RoadsidePhase.tracking) {
           Navigator.of(context).pushReplacement(
@@ -54,6 +70,13 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
           );
         } else if (state.phase == RoadsidePhase.idle) {
           Navigator.of(context).popUntil((r) => r.isFirst);
+        } else if (state.phase == RoadsidePhase.estimate) {
+          // Submit failed; the estimate screen underneath shows the error.
+          Navigator.of(context).pop();
+        } else if (state.error != null) {
+          // The backend refused to cancel; the request is still live.
+          setState(() => _cancelling = false);
+          showRoadsideError(context, state.error!);
         }
       },
       child: BlocBuilder<RoadsideBloc, RoadsideState>(
@@ -74,16 +97,28 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                       children: [
                         const Spacer(),
                         TextButton(
-                          onPressed: () {
-                            context
-                                .read<RoadsideBloc>()
-                                .add(const CancelRequest());
-                            Navigator.of(context)
-                                .popUntil((r) => r.isFirst);
-                          },
-                          child: Text(context.tr('cancel'),
-                              style: TextStyle(
-                                  color: AppColors.error, fontSize: 14.sp)),
+                          // Waits for the backend (the idle listener pops);
+                          // also held until the request exists, so a cancel
+                          // can't race the create call.
+                          onPressed: _cancelling || state.isSubmitting
+                              ? null
+                              : () {
+                                  setState(() => _cancelling = true);
+                                  context
+                                      .read<RoadsideBloc>()
+                                      .add(const CancelRequest());
+                                },
+                          child: _cancelling
+                              ? SizedBox(
+                                  width: 16.r,
+                                  height: 16.r,
+                                  child: const CircularProgressIndicator(
+                                      strokeWidth: 2, color: AppColors.error),
+                                )
+                              : Text(context.tr('cancel'),
+                                  style: TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 14.sp)),
                         ),
                       ],
                     ),
@@ -183,28 +218,34 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _StatItem(
-                          value: '12',
-                          label: context.tr('drivers_online'),
-                          color: AppColors.accentCyan,
+                        Expanded(
+                          child: _StatItem(
+                            value: '12',
+                            label: context.tr('drivers_online'),
+                            color: AppColors.accentCyan,
+                          ),
                         ),
                         Container(
                             width: 1,
                             height: 32.h,
                             color: AppColors.outline.withValues(alpha: 0.3)),
-                        _StatItem(
-                          value: '< 5 km',
-                          label: context.tr('search_radius_label'),
-                          color: AppColors.accentOrange,
+                        Expanded(
+                          child: _StatItem(
+                            value: '< 5 km',
+                            label: context.tr('search_radius_label'),
+                            color: AppColors.accentOrange,
+                          ),
                         ),
                         Container(
                             width: 1,
                             height: 32.h,
                             color: AppColors.outline.withValues(alpha: 0.3)),
-                        _StatItem(
-                          value: '~${service?.etaMinutes ?? 15} min',
-                          label: context.tr('avg_arrival'),
-                          color: color,
+                        Expanded(
+                          child: _StatItem(
+                            value: '~${service?.etaMinutes ?? 15} min',
+                            label: context.tr('avg_arrival'),
+                            color: color,
+                          ),
                         ),
                       ],
                     ),
@@ -270,6 +311,7 @@ class _StatItem extends StatelessWidget {
                 color: color, fontSize: 16.sp, fontWeight: FontWeight.bold)),
         SizedBox(height: 4.h),
         Text(label,
+            textAlign: TextAlign.center,
             style: TextStyle(
                 color: AppColors.textLight.withValues(alpha: 0.5),
                 fontSize: 11.sp)),

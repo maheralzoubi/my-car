@@ -14,6 +14,9 @@ enum RoadsidePhase {
 }
 
 class RoadsideState {
+  /// Most photos a request can carry (the backend rejects more).
+  static const maxPhotos = 5;
+
   final RoadsidePhase phase;
   final ServiceType? selectedService;
   final LatLng? customerLocation;
@@ -23,6 +26,10 @@ class RoadsideState {
   final String notes;
   final List<String> photoPaths;
   final bool isSubmitting;
+
+  /// User-facing error from the last action, cleared by the next state
+  /// change. Either an API message or a localization key, so display it via
+  /// `context.tr(error)`.
   final String? error;
 
   const RoadsideState({

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/models/service_request.dart';
 import '../../data/models/service_type.dart';
-import '../../roadside_service.dart';
+import '../bloc/roadside_bloc.dart';
 
 class RequestHistoryScreen extends StatefulWidget {
   const RequestHistoryScreen({super.key});
@@ -20,7 +21,9 @@ class _RequestHistoryScreenState extends State<RequestHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _historyFuture = RoadsideService.instance.repository.getHistory();
+    // Same repository as the request flow (the live backend), not the
+    // RoadsideService mock.
+    _historyFuture = context.read<RoadsideBloc>().repository.getHistory();
   }
 
   @override

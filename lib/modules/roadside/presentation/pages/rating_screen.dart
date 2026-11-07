@@ -8,6 +8,7 @@ import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
+import 'roadside_error_snackbar.dart';
 
 class RatingScreen extends StatefulWidget {
   const RatingScreen({super.key});
@@ -19,6 +20,7 @@ class RatingScreen extends StatefulWidget {
 class _RatingScreenState extends State<RatingScreen>
     with SingleTickerProviderStateMixin {
   int _stars = 0;
+  bool _submitting = false;
   final _reviewCtrl = TextEditingController();
   late final AnimationController _checkCtrl;
   late final Animation<double> _checkScale;
@@ -42,16 +44,26 @@ class _RatingScreenState extends State<RatingScreen>
   }
 
   void _submit() {
+    // The listener resets and leaves once the rating is saved (phase done),
+    // so a failed rating keeps the user here with an error.
+    setState(() => _submitting = true);
     context
         .read<RoadsideBloc>()
         .add(SubmitRating(_stars == 0 ? 5 : _stars, _reviewCtrl.text.isEmpty ? null : _reviewCtrl.text));
-    context.read<RoadsideBloc>().add(const ResetFlow());
-    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<RoadsideBloc, RoadsideState>(
+    return BlocConsumer<RoadsideBloc, RoadsideState>(
+      listener: (context, state) {
+        if (state.phase == RoadsidePhase.done) {
+          context.read<RoadsideBloc>().add(const ResetFlow());
+          Navigator.of(context).popUntil((r) => r.isFirst);
+        } else if (state.error != null) {
+          setState(() => _submitting = false);
+          showRoadsideError(context, state.error!);
+        }
+      },
       builder: (context, state) {
         final driver = state.activeRequest?.assignedDriver;
         final service = state.selectedService;
@@ -154,20 +166,22 @@ class _RatingScreenState extends State<RatingScreen>
                                         fontWeight: FontWeight.bold)),
                               ),
                               SizedBox(width: 12.w),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(driver.name,
-                                      style: TextStyle(
-                                          color: AppColors.white,
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w600)),
-                                  Text(driver.vehicleType,
-                                      style: TextStyle(
-                                          color: AppColors.textLight
-                                              .withValues(alpha: 0.5),
-                                          fontSize: 12.sp)),
-                                ],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(driver.name,
+                                        style: TextStyle(
+                                            color: AppColors.white,
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w600)),
+                                    Text(driver.vehicleType,
+                                        style: TextStyle(
+                                            color: AppColors.textLight
+                                                .withValues(alpha: 0.5),
+                                            fontSize: 12.sp)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -246,7 +260,7 @@ class _RatingScreenState extends State<RatingScreen>
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _submit,
+                      onPressed: _submitting ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentOrange,
                         foregroundColor: AppColors.white,
@@ -254,11 +268,19 @@ class _RatingScreenState extends State<RatingScreen>
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14.r)),
                       ),
-                      child: Text(
-                        _stars > 0 ? 'Submit Rating' : 'Skip & Done',
-                        style: TextStyle(
-                            fontSize: 15.sp, fontWeight: FontWeight.bold),
-                      ),
+                      child: _submitting
+                          ? SizedBox(
+                              width: 18.r,
+                              height: 18.r,
+                              child: const CircularProgressIndicator(
+                                  strokeWidth: 2, color: AppColors.white),
+                            )
+                          : Text(
+                              _stars > 0 ? 'Submit Rating' : 'Skip & Done',
+                              style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                 ],

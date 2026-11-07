@@ -37,6 +37,13 @@ class RequestUpdated extends RoadsideEvent {
   const RequestUpdated(this.request);
 }
 
+/// The tracking stream reported an error (e.g. the request could not be
+/// re-fetched).
+class RequestUpdateFailed extends RoadsideEvent {
+  final Object error;
+  const RequestUpdateFailed(this.error);
+}
+
 class CancelRequest extends RoadsideEvent {
   const CancelRequest();
 }
