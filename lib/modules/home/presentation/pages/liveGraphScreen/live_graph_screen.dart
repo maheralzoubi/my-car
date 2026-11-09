@@ -209,9 +209,14 @@ class _LiveGraphScreenState extends State<LiveGraphScreen> {
 
     // Determine Y range from the first active channel (normalise all to 0–1 for multi-axis)
     final lines = <LineChartBarData>[];
+    // lineChannels[i] is the channel drawn as lines[i]. Channels without data
+    // yet are skipped, so this is NOT activeChannels — the tooltip must look
+    // the channel up by the touched line's barIndex, not by list position.
+    final lineChannels = <_Channel>[];
     for (final ch in activeChannels) {
       final pts = _buffers[ch.id]!.toList();
       if (pts.isEmpty) continue;
+      lineChannels.add(ch);
 
       // Normalise to 0–100 scale for unified Y axis
       final normalised = pts.map((p) => FlSpot(p.x, (p.y / ch.maxY) * 100)).toList();
@@ -293,7 +298,7 @@ class _LiveGraphScreenState extends State<LiveGraphScreen> {
               getTooltipColor: (_) => AppColors.surfaceDark,
               getTooltipItems: (spots) {
                 return spots.map((s) {
-                  final ch = activeChannels[spots.indexOf(s)];
+                  final ch = lineChannels[s.barIndex];
                   final real = (s.y / 100) * ch.maxY;
                   return LineTooltipItem(
                     '${ch.label}: ${real.toStringAsFixed(1)} ${ch.unit}',

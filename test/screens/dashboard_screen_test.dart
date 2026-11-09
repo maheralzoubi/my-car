@@ -604,6 +604,49 @@ void main() {
         await unmount(tester);
       });
 
+      // ── 6b. Lamps a standard OBD-II scan can't read ──
+
+      testWidgets('[$lang] airbag / ABS are never shown as OK: with no codes '
+          'they read "N/A" with an explanation; a reported B00 code still '
+          'lights the airbag lamp', (tester) async {
+        Finder na(String key) => find.byKey(ValueKey('dash_lamp_na_$key'));
+
+        fake.dtcsToReturn = [];
+        await mountConnected(tester, locale: locale);
+        for (final key in ['airbag', 'abs', 'traction', 'steering', 'body']) {
+          expect(na(key), findsOneWidget, reason: key);
+        }
+        expect(na('check_engine'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('dash_lamps_limited_note')),
+          findsOneWidget,
+        );
+        expect(find.text(tr('dash_lamp_na', locale)), findsNWidgets(5));
+        expect(lit(tester, 'airbag', locale), isFalse);
+
+        // Tapping an N/A lamp explains why instead of doing nothing.
+        await tester.ensureVisible(na('airbag'));
+        await tester.tap(na('airbag'));
+        await tester.pump();
+        expect(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.text(tr('dash_lamps_limited_body', locale)),
+          ),
+          findsOneWidget,
+        );
+        await unmount(tester);
+
+        await OBDService.instance.disconnect();
+        fake.dtcsToReturn = ['B0012'];
+        await mountConnected(tester, locale: locale);
+        expect(lit(tester, 'airbag', locale), isTrue);
+        expect(na('airbag'), findsNothing,
+            reason: 'a lamp with a reported code is readable, not "N/A"');
+        expect(na('abs'), findsOneWidget);
+        await unmount(tester);
+      });
+
       // ── 7. Chassis codes → lamps ──
 
       testWidgets('[$lang] manufacturer chassis code C1201 lights no steering '

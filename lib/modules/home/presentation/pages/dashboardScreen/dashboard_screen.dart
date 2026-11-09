@@ -393,6 +393,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  /// Lamps whose codes live in modules a standard OBD-II scan (modes 03/07,
+  /// answered by the engine / transmission computers) does not reach. They
+  /// light up when the engine computer happens to report one of their codes;
+  /// otherwise they show "N/A" — never a plain "off" that reads as OK.
+  static const Set<String> _notStandardObdLamps = {
+    'airbag',
+    'abs',
+    'traction',
+    'steering',
+    'body',
+  };
+
   bool _matchPrefix(String code, List<String> prefixes) =>
       prefixes.any((p) => code.startsWith(p));
 
@@ -1837,6 +1849,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           },
         ),
+        if (OBDService.instance.isInitialized) ...[
+          SizedBox(height: 12.h),
+          Row(
+            key: const ValueKey('dash_lamps_limited_note'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: const Color(0xFF00D9FF),
+                size: 16.r,
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  context.tr('dash_lamps_limited_body'),
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    height: 1.4,
+                    color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1849,9 +1886,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final active = label == 'service'
         ? MaintenanceService.instance.dueCount > 0
         : dtcActive || sensorActive;
+    // Not reachable by a standard scan and nothing reported: "N/A", not OK.
+    final unreadable =
+        !active &&
+        OBDService.instance.isInitialized &&
+        _notStandardObdLamps.contains(label);
     return GestureDetector(
+      key: unreadable ? ValueKey('dash_lamp_na_$label') : null,
       onTap: active && codes.isNotEmpty
           ? () => _showDtcBottomSheet(context, icon, label, codes)
+          : unreadable
+          ? () => ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(content: Text(context.tr('dash_lamps_limited_body'))),
+            )
           : null,
       child: Container(
         decoration: BoxDecoration(
@@ -1871,11 +1920,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(
               icon,
               style: TextStyle(
-                fontSize: 28.sp,
+                // Smaller on "N/A" tiles so the extra line fits the square.
+                fontSize: unreadable ? 20.sp : 28.sp,
                 color: active ? null : Colors.grey,
               ),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: unreadable ? 4.h : 8.h),
             Text(
               context.tr(label),
               textAlign: TextAlign.center,
@@ -1886,6 +1936,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     : const Color(0xFFE8EAED).withValues(alpha: 0.5),
               ),
             ),
+            if (unreadable)
+              Text(
+                context.tr('dash_lamp_na'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 8.sp,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF00D9FF).withValues(alpha: 0.8),
+                ),
+              ),
           ],
         ),
       ),
@@ -1951,7 +2012,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         Text(
-                          '${codes.length} ${codes.length == 1 ? 'code' : 'codes'} detected',
+                          '${codes.length} ${ctx.tr(codes.length == 1 ? 'code_detected' : 'codes_detected')}',
                           style: TextStyle(
                             fontSize: 12.sp,
                             color: Colors.white54,

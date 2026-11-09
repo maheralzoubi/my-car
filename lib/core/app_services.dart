@@ -23,9 +23,14 @@ class AppServices {
   final Session session = Session(const FlutterSecureStorage());
   late final ApiClient apiClient = ApiClient(session);
   late final SocketClient socketClient = SocketClient(session);
-  late final AuthRepository authRepository = ApiAuthRepository(apiClient, session);
-  late final RoadsideRepository roadsideRepository =
-      ApiRoadsideRepository(apiClient, socketClient);
+  late final AuthRepository authRepository = ApiAuthRepository(
+    apiClient,
+    session,
+  );
+  late final RoadsideRepository roadsideRepository = ApiRoadsideRepository(
+    apiClient,
+    socketClient,
+  );
 
   /// Settings-screen preferences (same secure storage as [session]).
   late final AppSettingsStore settings = AppSettingsStore();
@@ -33,12 +38,40 @@ class AppServices {
   /// The user's on-device profile picture (no backend avatar endpoint).
   final ProfilePhotoStore profilePhoto = ProfilePhotoStore();
 
-  Future<void> init() async {
-    await session.load();
-    await profilePhoto.load();
+  Future<void>? _ready;
+
+  /// Completes once the saved session and profile photo are loaded. Loading
+  /// starts on first access and runs once; it never throws.
+  ///
+  /// main() calls [start] and draws the first frame right away — nothing
+  /// here may block startup. The session loads first; the splash screen
+  /// waits for `session.loaded` (not for all of this) before it decides
+  /// between sign-in and the app. Push registration is NOT awaited: it can
+  /// wait on a permission dialog or the network, so it runs in the
+  /// background.
+  Future<void> get ready => _ready ??= _load();
+
+  /// Kicks off [ready] without waiting for it.
+  void start() => unawaited(ready);
+
+  /// Same as [ready] (kept for existing callers).
+  Future<void> init() => ready;
+
+  Future<void> _load() async {
+    // Session first: the splash is waiting on it.
+    try {
+      await session.load();
+    } catch (_) {
+      // Unreadable storage = signed out; the user can sign in again.
+    }
+    try {
+      await profilePhoto.load();
+    } catch (_) {
+      // A missing photo must not stop the app from starting.
+    }
     if (session.isLoggedIn) {
       socketClient.connect();
-      await registerPushNotifications();
+      unawaited(registerPushNotifications());
     }
   }
 
@@ -48,7 +81,10 @@ class AppServices {
     await NotificationService.instance.init(
       onToken: (token) async {
         try {
-          await apiClient.dio.post('/users/me/fcm-token', data: {'token': token});
+          await apiClient.dio.post(
+            '/users/me/fcm-token',
+            data: {'token': token},
+          );
         } catch (_) {
           // Non-fatal — live updates still work over Socket.IO while open.
         }

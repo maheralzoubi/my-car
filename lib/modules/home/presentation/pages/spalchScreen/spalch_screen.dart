@@ -18,6 +18,27 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
+  // Leaving the splash waits for the 5 s intro AND the saved session; if the
+  // session is still loading after the intro, wait at most 3 s more. Both
+  // timers are cancelled in dispose().
+  Timer? _introTimer;
+  Timer? _capTimer;
+  bool _introDone = false;
+  bool _servicesReady = false;
+  bool _left = false;
+
+  /// Goes to the app when already signed in, otherwise to sign-in.
+  void _leave() {
+    if (!mounted || _left) return;
+    _left = true;
+    _capTimer?.cancel();
+    final isLoggedIn = AppServices.instance.session.isLoggedIn;
+    Navigator.pushReplacementNamed(
+      context,
+      isLoggedIn ? AppRoutes.modeSelection : AppRoutes.auth,
+    );
+  }
+
   late AnimationController _carController;
   late AnimationController _titleController;
   late AnimationController _loadingController;
@@ -107,14 +128,36 @@ class _SplashScreenState extends State<SplashScreen>
     // Start animations
     _startAnimations();
 
-    // Navigate after 5 seconds, skipping auth if already logged in
-    Timer(const Duration(seconds: 5), () {
-      if (!mounted) return;
-      final isLoggedIn = AppServices.instance.session.isLoggedIn;
-      Navigator.pushReplacementNamed(
-        context,
-        isLoggedIn ? AppRoutes.modeSelection : AppRoutes.auth,
-      );
+    // Leave after the 5 s intro AND once the saved session has loaded
+
+    // (main() no longer waits for it before drawing). Only observe:
+
+    // main() starts the loading (AppServices.start).
+
+    AppServices.instance.session.loaded.then((_) {
+
+      _servicesReady = true;
+
+      if (_introDone) _leave();
+
+    });
+
+    _introTimer = Timer(const Duration(seconds: 5), () {
+
+      _introDone = true;
+
+      if (_servicesReady || AppServices.instance.session.isLoaded) {
+
+        _leave();
+
+      } else {
+
+        // A stuck storage read must never trap the user here.
+
+        _capTimer = Timer(const Duration(seconds: 3), _leave);
+
+      }
+
     });
   }
 
@@ -132,6 +175,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _introTimer?.cancel();
+    _capTimer?.cancel();
     _carController.dispose();
     _titleController.dispose();
     _loadingController.dispose();

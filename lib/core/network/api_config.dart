@@ -4,7 +4,7 @@ class ApiConfig {
   ApiConfig._();
 
   /// The deployed backend. Used unless overridden below.
-  static const String defaultBaseUrl = 'https://mycar-backend-r5p3.onrender.com';
+  static const String defaultBaseUrl = 'https://mycar-backend-j037.onrender.com';
 
   /// Override at build/run time with:
   /// flutter run --dart-define=API_BASE_URL=http://192.168.1.50:3000
