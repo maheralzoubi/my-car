@@ -3,16 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mycar/core/core.dart' show ScreenHeader;
 import 'package:mycar/core/localization/app_localizations.dart';
 import 'package:mycar/core/services/obd_service.dart';
-import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/connectionScreen/connection_screen.dart';
 
 import '../helpers/elm327_sim.dart' show FakeDevice;
-import '../flows/helpers/flow_harness.dart' show FakeBlePlatform;
 import '../helpers/fake_obd_adapter.dart';
-import 'helpers/screen_harness.dart' as harness;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -66,23 +62,12 @@ void main() {
 
   // ── Static text ───────────────────────────────────────────────────────────
 
-  testWidgets('shows the step title and adapter hint in the header', (
-    tester,
-  ) async {
+  testWidgets('shows app name in header', (tester) async {
     await tester.pumpWidget(_wrap(const ConnectionScreen()));
     await tester.pump();
 
-    // The redesign drops the brand wordmark for a standard ScreenHeader.
-    final header = find.byType(ScreenHeader);
-    expect(header, findsOneWidget);
-    expect(
-      find.descendant(of: header, matching: find.text('Connect to Vehicle')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: header, matching: find.text('Select OBD-II Adapter')),
-      findsOneWidget,
-    );
+    // "CARDIAG" is the en translation of 'app_name'
+    expect(find.text('CARDIAG'), findsOneWidget);
   });
 
   testWidgets('shows "Connect to Vehicle" title', (tester) async {
@@ -94,17 +79,17 @@ void main() {
 
   // ── Action button labels ──────────────────────────────────────────────────
 
-  testWidgets('action button shows PLEASE WAIT while checking permissions', (
-    tester,
-  ) async {
+  testWidgets('action button shows PLEASE WAIT while checking permissions',
+      (tester) async {
     await tester.pumpWidget(_wrap(const ConnectionScreen()));
     // Don't pump — capture the very first frame (checkingPermission state).
-    expect(find.text('Please Wait'), findsOneWidget);
+    expect(find.text('PLEASE WAIT'), findsOneWidget);
   });
 
   // ── OBD service interaction ───────────────────────────────────────────────
 
-  testWidgets('tapping a device item calls OBDService.initialize '
+  testWidgets(
+      'tapping a device item calls OBDService.initialize '
       'and shows CONNECTING button', (tester) async {
     // The screen calls _initialize() on mount → we cannot easily inject
     // scan results without mocking FlutterBluePlus.  We verify that the
@@ -125,7 +110,7 @@ void main() {
     // The screen starts in checkingPermission; we cannot drive all the way to
     // initFailed without real BT hardware.  Verify the screen is at least
     // healthy and not in a connected state.
-    expect(find.text('Scan Vehicle'), findsNothing);
+    expect(find.text('SCAN VEHICLE'), findsNothing);
   });
 
   // ── Settings navigation ───────────────────────────────────────────────────
@@ -134,8 +119,7 @@ void main() {
     await tester.pumpWidget(_wrap(const ConnectionScreen()));
     await tester.pump();
 
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-    expect(find.byTooltip('Settings'), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
   });
 
   // ── Bottom hint text ──────────────────────────────────────────────────────
@@ -179,8 +163,7 @@ void main() {
     OBDFailureReason.noElmCharacteristic: 'Not a BLE OBD adapter',
     OBDFailureReason.adapterNotResponding: 'Adapter not answering',
     OBDFailureReason.ecuNotResponding: 'Vehicle not responding',
-    OBDFailureReason.noStandardObdData:
-        "Car doesn't share standard OBD-II data",
+    OBDFailureReason.noStandardObdData: "Car doesn't share standard OBD-II data",
     OBDFailureReason.unknown: 'OBD Initialization Failed',
   };
 
@@ -190,7 +173,7 @@ void main() {
     ) async {
       await failWith(tester, reason);
       expect(find.text(title), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('RETRY'), findsOneWidget);
       expect(find.text('Copy diagnostic log'), findsOneWidget);
       expect(find.text('Share log'), findsOneWidget);
     });
@@ -238,7 +221,7 @@ void main() {
     expect(find.textContaining('J1850'), findsNothing);
     expect(find.byIcon(Icons.electric_car), findsOneWidget);
     expect(find.byIcon(Icons.directions_car), findsNothing);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('RETRY'), findsOneWidget);
     expect(find.text('Copy diagnostic log'), findsOneWidget);
     expect(find.text('Share log'), findsOneWidget);
   });
@@ -249,10 +232,8 @@ void main() {
       OBDFailureReason.noStandardObdData,
       locale: const Locale('ar'),
     );
-    expect(
-      find.text('السيارة لا تشارك بيانات OBD-II القياسية'),
-      findsOneWidget,
-    );
+    expect(find.text('السيارة لا تشارك بيانات OBD-II القياسية'),
+        findsOneWidget);
     expect(find.textContaining('شائع في السيارات الكهربائية'), findsOneWidget);
     expect(find.byIcon(Icons.electric_car), findsOneWidget);
     expect(find.text('إعادة المحاولة'), findsOneWidget);
@@ -267,10 +248,8 @@ void main() {
       OBDFailureReason.ecuNotResponding,
       locale: const Locale('ar'),
     );
-    expect(
-      find.textContaining('الكهربائية أو الهجينة فعّل وضع READY'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('الكهربائية أو الهجينة فعّل وضع READY'),
+        findsOneWidget);
   });
 
   testWidgets('RETRY after noStandardObdData retries the same adapter', (
@@ -280,11 +259,11 @@ void main() {
     fake
       ..failReason = null
       ..connectCalled = false;
-    await tester.tap(find.text('Retry'));
+    await tester.tap(find.text('RETRY'));
     await tester.pump();
     await tester.pump();
     expect(fake.connectCalled, isTrue);
-    expect(find.text('Scan Vehicle'), findsOneWidget);
+    expect(find.text('SCAN VEHICLE'), findsOneWidget);
   });
 
   testWidgets('clone adapter → J1850 hint naming the reported version', (
@@ -323,11 +302,11 @@ void main() {
     fake
       ..failReason = null
       ..connectCalled = false;
-    await tester.tap(find.text('Retry'));
+    await tester.tap(find.text('RETRY'));
     await tester.pump();
     await tester.pump();
     expect(fake.connectCalled, isTrue);
-    expect(find.text('Scan Vehicle'), findsOneWidget);
+    expect(find.text('SCAN VEHICLE'), findsOneWidget);
   });
 
   // ── Diagnostic log ────────────────────────────────────────────────────────
@@ -380,17 +359,17 @@ void main() {
     await _drop(tester, fake);
 
     expect(find.text('Connection lost'), findsOneWidget);
-    expect(find.text('Reconnect'), findsOneWidget);
+    expect(find.text('RECONNECT'), findsOneWidget);
     expect(find.text('Copy diagnostic log'), findsOneWidget);
 
     fake.connectCalled = false;
-    await tester.tap(find.text('Reconnect'));
+    await tester.tap(find.text('RECONNECT'));
     await tester.pump();
     await tester.pump();
 
     expect(fake.connectCalled, isTrue);
     expect(find.text('Connected to OBDII'), findsOneWidget);
-    expect(find.text('Scan Vehicle'), findsOneWidget);
+    expect(find.text('SCAN VEHICLE'), findsOneWidget);
     // Adapter details once connected.
     expect(find.text('ELM327 v1.5 · ISO 15765-4 (CAN 11/500)'), findsOneWidget);
   });
@@ -406,112 +385,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('Connection lost'), findsOneWidget);
-    expect(find.text('Reconnect'), findsOneWidget);
+    expect(find.text('RECONNECT'), findsOneWidget);
   });
-
-  // ── Light / dark × EN / AR ────────────────────────────────────────────────
-
-  for (final (themeName, theme) in [
-    ('light', AppTheme.light),
-    ('dark', AppTheme.dark),
-  ]) {
-    for (final locale in const [Locale('en'), Locale('ar')]) {
-      final lang = locale.languageCode;
-      testWidgets('[$themeName/$lang] renders idle, failed and connected '
-          'states without exceptions', (tester) async {
-        fake.adapterInfo = const OBDAdapterInfo(
-          version: 'ELM327 v1.5',
-          protocol: 'ISO 15765-4 (CAN 11/500)',
-        );
-        await harness.pumpScreen(
-          tester,
-          const ConnectionScreen(),
-          locale: locale,
-          theme: theme,
-        );
-        harness.expectNoException(tester);
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
-
-        // Failure with the clone hint + log actions (the tallest card).
-        fake
-          ..failReason = OBDFailureReason.ecuNotResponding
-          ..failAdapterVersion = 'ELM327 v1.5';
-        await OBDService.instance.initialize(device());
-        await tester.pump();
-        harness.expectNoException(tester);
-        expect(find.textContaining('J1850'), findsOneWidget);
-        expect(find.byType(LinearProgressIndicator), findsNothing);
-
-        // Retry → connected with the adapter line.
-        fake.failReason = null;
-        await tester.tap(find.text(harness.tr('btn_retry', locale)));
-        await tester.pump();
-        await tester.pump();
-        harness.expectNoException(tester);
-        expect(
-          find.text('ELM327 v1.5 · ISO 15765-4 (CAN 11/500)'),
-          findsOneWidget,
-        );
-        await harness.unmount(tester);
-      });
-    }
-  }
-
-  // ── Device list (fake BLE stack) ──────────────────────────────────────────
-
-  for (final (themeName, theme) in [
-    ('light', AppTheme.light),
-    ('dark', AppTheme.dark),
-  ]) {
-    for (final locale in const [Locale('en'), Locale('ar')]) {
-      final lang = locale.languageCode;
-      testWidgets('[$themeName/$lang] scan lists the ELM327 first with an OBD '
-          'badge; tapping it connects', (tester) async {
-        // The fake platform stays installed (there is no default to restore
-        // on the test host), so these tests run last in this file.
-        FakeBlePlatform.install(
-          devices: {
-            'AA:BB:CC:DD:EE:FF': 'JBL Flip 5',
-            '00:1D:A5:68:98:8B': 'OBDII',
-          },
-        );
-        await harness.pumpScreen(
-          tester,
-          const ConnectionScreen(),
-          locale: locale,
-          theme: theme,
-        );
-        for (var i = 0; i < 20 && find.text('OBDII').evaluate().isEmpty; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-        }
-        harness.expectNoException(tester);
-
-        expect(
-          find.text(harness.tr('available_devices', locale)),
-          findsOneWidget,
-        );
-        expect(find.text('1 OBD'), findsOneWidget);
-        expect(find.text('OBD'), findsOneWidget); // on the ELM327 row only
-        expect(find.text('JBL Flip 5'), findsOneWidget);
-        // OBD adapters float to the top.
-        expect(
-          tester.getTopLeft(find.text('OBDII')).dy,
-          lessThan(tester.getTopLeft(find.text('JBL Flip 5')).dy),
-        );
-
-        await tester.tap(find.text('OBDII'));
-        await tester.pump();
-        await tester.pump();
-        harness.expectNoException(tester);
-        expect(fake.connectCalled, isTrue);
-        expect(
-          find.text('${harness.tr('connected_to', locale)} OBDII'),
-          findsOneWidget,
-        );
-        expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-        expect(find.text(harness.tr('scan_vehicle', locale)), findsOneWidget);
-        await harness.unmount(tester);
-      });
-    }
-  }
 }

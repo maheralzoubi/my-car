@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/settingsScreen/dash_cam_settings_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -11,14 +10,12 @@ Future<void> _pump(
   Locale locale = en,
   Size size = phonePortrait,
   bool pushed = false,
-  ThemeData? theme,
 }) => pumpScreen(
   tester,
   const DashCamSettingsScreen(),
   locale: locale,
   size: size,
   pushed: pushed,
-  theme: theme,
 );
 
 /// Switch tracks, in order: dash cam (master), loop, auto start, incident.
@@ -55,26 +52,12 @@ void main() {
         ]) {
           expect(find.text(tr(key, locale)), findsOneWidget, reason: key);
         }
-        expect(find.byIcon(Icons.videocam_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.videocam), findsOneWidget);
         expect(
           directionAt(tester, find.byType(DashCamSettingsScreen)),
           locale == ar ? TextDirection.rtl : TextDirection.ltr,
         );
       });
-    }
-
-    for (final theme in [AppTheme.light, AppTheme.dark]) {
-      for (final locale in [en, ar]) {
-        testWidgets('${theme.brightness.name} theme, small phone '
-            '(${locale.languageCode}): on and off', (tester) async {
-          await _pump(tester, locale: locale, size: smallPhone, theme: theme);
-          expectNoException(tester);
-          await tester.tap(_switches.at(0));
-          await tester.pumpAndSettle();
-          expectNoException(tester);
-          expect(find.byIcon(Icons.videocam_off_rounded), findsOneWidget);
-        });
-      }
     }
 
     testWidgets('small phone, Arabic: no overflow', (tester) async {
@@ -109,8 +92,8 @@ void main() {
       await tester.tap(_switches.at(0));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.videocam_off_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.videocam_rounded), findsNothing);
+      expect(find.byIcon(Icons.videocam_off), findsOneWidget);
+      expect(find.byIcon(Icons.videocam), findsNothing);
       // Quality chips are hidden while disabled.
       expect(_quality('720p'), findsNothing);
 
@@ -128,7 +111,7 @@ void main() {
       await tester.tap(_switches.at(0));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.videocam_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.videocam), findsOneWidget);
       expect(_quality('720p'), findsOneWidget);
     });
 
@@ -160,14 +143,14 @@ void main() {
       await tester.tap(_switches.at(0));
       await tester.pumpAndSettle();
       expectNoException(tester);
-      expect(find.byIcon(Icons.videocam_off_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.videocam_off), findsOneWidget);
     });
   });
 
   group('navigation', () {
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });

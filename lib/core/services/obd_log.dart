@@ -32,8 +32,7 @@ class OBDLogEntry {
   @override
   String toString() {
     String two(int n) => n.toString().padLeft(2, '0');
-    final t =
-        '${two(time.hour)}:${two(time.minute)}:${two(time.second)}.'
+    final t = '${two(time.hour)}:${two(time.minute)}:${two(time.second)}.'
         '${time.millisecond.toString().padLeft(3, '0')}';
     return '$t ${_tags[kind]}$text';
   }
@@ -57,9 +56,9 @@ class OBDLog {
 
   /// [raw] reply (control characters made visible) and how long it took.
   void rx(String raw, {Duration? took}) => _add(
-    OBDLogKind.rx,
-    took == null ? escape(raw) : '${escape(raw)}  (${took.inMilliseconds} ms)',
-  );
+        OBDLogKind.rx,
+        took == null ? escape(raw) : '${escape(raw)}  (${took.inMilliseconds} ms)',
+      );
 
   void event(String message) => _add(OBDLogKind.event, message);
 

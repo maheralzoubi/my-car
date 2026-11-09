@@ -29,9 +29,8 @@ class OBDService {
 
   // ── Singleton ──────────────────────────────────────────────────────────────
 
-  static OBDService _instance = OBDService._(
-    ProductionOBDAdapter(identifyOnFailure: true),
-  );
+  static OBDService _instance =
+      OBDService._(ProductionOBDAdapter(identifyOnFailure: true));
 
   static OBDService get instance => _instance;
 
@@ -111,9 +110,9 @@ class OBDService {
   /// Live telemetry stream. Emits [OBDLiveData] each time the adapter polls.
   /// Also keeps [currentData] up to date.
   Stream<OBDLiveData> get liveDataStream => _adapter.liveDataStream.map((d) {
-    _currentData = d;
-    return d;
-  });
+        _currentData = d;
+        return d;
+      });
 
   /// Connects to [device] and runs the ELM327 handshake.
   ///
@@ -162,18 +161,16 @@ class OBDService {
     try {
       device = _lastDevice?.platformName;
     } catch (_) {} // test doubles may not implement it
-    return OBDLog.instance.dump(
-      header: [
-        'MyCar OBD diagnostic log — ${DateTime.now().toIso8601String()}',
-        'State: ${_state.name}',
-        if (device != null) 'Device: "$device"',
-        if (info?.version != null) 'Adapter: ${info!.version}',
-        if (info?.protocol != null) 'Protocol: ${info!.protocol}',
-        if (_lastError != null) 'Last error: $_lastError',
-        if (_lastError?.adapterVersion != null)
-          'Adapter (at failure): ${_lastError!.adapterVersion}',
-      ],
-    );
+    return OBDLog.instance.dump(header: [
+      'MyCar OBD diagnostic log — ${DateTime.now().toIso8601String()}',
+      'State: ${_state.name}',
+      if (device != null) 'Device: "$device"',
+      if (info?.version != null) 'Adapter: ${info!.version}',
+      if (info?.protocol != null) 'Protocol: ${info!.protocol}',
+      if (_lastError != null) 'Last error: $_lastError',
+      if (_lastError?.adapterVersion != null)
+        'Adapter (at failure): ${_lastError!.adapterVersion}',
+    ]);
   }
 
   /// Starts background telemetry polling.

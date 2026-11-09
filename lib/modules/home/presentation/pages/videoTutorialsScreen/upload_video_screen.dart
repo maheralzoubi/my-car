@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../../core/core.dart';
+import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 /// Screen for uploading a tutorial video with metadata and optional tools list.
@@ -60,78 +60,98 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            ScreenHeader(title: context.tr('upload_tutorial'), close: true),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  AppSizes.space20.w,
-                  AppSizes.space4.h,
-                  AppSizes.space20.w,
-                  AppSizes.space24.h,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildUnavailableNotice(),
-                      SizedBox(height: AppSizes.space24.h),
-                      _buildVideoUploadSection(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildThumbnailSection(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildTitleField(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildDescriptionField(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildCodeSelector(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildDifficultySelector(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildCostSelector(),
-                      SizedBox(height: AppSizes.space20.h),
-                      _buildToolsSection(),
-                      SizedBox(height: AppSizes.space32.h),
-                      AppButton(
-                        label: context.tr('publish_tutorial'),
-                        icon: Icons.publish_rounded,
-                        onPressed: _handleUpload,
-                      ),
-                    ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(20.r),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildUnavailableNotice(),
+                        SizedBox(height: 20.h),
+                        _buildVideoUploadSection(),
+                        SizedBox(height: 25.h),
+                        _buildThumbnailSection(),
+                        SizedBox(height: 25.h),
+                        _buildTitleField(),
+                        SizedBox(height: 20.h),
+                        _buildDescriptionField(),
+                        SizedBox(height: 25.h),
+                        _buildCodeSelector(),
+                        SizedBox(height: 20.h),
+                        _buildDifficultySelector(),
+                        SizedBox(height: 20.h),
+                        _buildCostSelector(),
+                        SizedBox(height: 25.h),
+                        _buildToolsSection(),
+                        SizedBox(height: 30.h),
+                        _buildUploadButton(),
+                        SizedBox(height: 20.h),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildUnavailableNotice() {
-    final p = context.colors;
-    return AppCard(
-      accent: p.primary,
-      padding: EdgeInsets.all(AppSizes.space12.r),
+  Widget _buildHeader() {
+    return Padding(
+      padding: EdgeInsets.all(20.r),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: p.primary,
-            size: AppSizes.iconSm.r,
+          IconButton(
+            icon: Icon(Icons.close, color: AppColors.accentCyan, size: 24.r),
+            onPressed: () => Navigator.pop(context),
           ),
-          SizedBox(width: AppSizes.space12.w),
+          Text(
+            context.tr('upload_tutorial'),
+            style: TextStyle(
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnavailableNotice() {
+    return Container(
+      padding: EdgeInsets.all(12.r),
+      decoration: BoxDecoration(
+        color: AppColors.accentOrange.withValues(alpha: 0.1),
+        border: Border.all(
+          color: AppColors.accentOrange.withValues(alpha: 0.4),
+        ),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: AppColors.accentOrange, size: 20.r),
+          SizedBox(width: 10.w),
           Expanded(
             child: Text(
               context.tr('tutorial_upload_unavailable'),
-              style: AppTextStyles.label.copyWith(
-                fontWeight: FontWeight.w400,
-                color: p.text,
-              ),
+              style: TextStyle(fontSize: 13.sp, color: AppColors.textLight),
             ),
           ),
         ],
@@ -174,51 +194,61 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
   }
 
   Widget _buildVideoUploadSection() {
-    final p = context.colors;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('video_file')),
-        // Outlined in the critical color while "video required" is shown.
-        AppCard(
+        _buildSectionTitle(context.tr('video_file')),
+        GestureDetector(
           onTap: _pickVideo,
-          accent: _videoMissing ? p.crit : null,
-          accentStyle: AppCardAccent.outline,
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSizes.space16.w,
-            vertical: AppSizes.space24.h,
-          ),
-          child: Column(
-            children: [
-              IconBox(
-                _video == null
-                    ? Icons.cloud_upload_outlined
-                    : Icons.movie_outlined,
-                size: 52,
+          child: Container(
+            height: 180.h,
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.05),
+              border: Border.all(
+                color: _videoMissing
+                    ? const Color(0xFFFF1744)
+                    : AppColors.accentCyan.withValues(alpha: 0.3),
+                width: 2,
+                style: BorderStyle.solid,
               ),
-              SizedBox(height: AppSizes.space12.h),
-              Text(
-                _video?.name ?? context.tr('tap_select_video'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: _video == null ? p.primary : p.text,
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _video == null ? Icons.cloud_upload : Icons.movie,
+                  size: 60.r,
+                  color: AppColors.accentCyan.withValues(alpha: 0.7),
                 ),
-              ),
-              SizedBox(height: AppSizes.space4.h),
-              Text(
-                _videoMissing
-                    ? context.tr('video_required')
-                    : context.tr('video_constraints'),
-                textAlign: TextAlign.center,
-                style: AppTextStyles.label.copyWith(
-                  fontWeight: FontWeight.w400,
-                  color: _videoMissing ? p.crit : p.text2,
+                SizedBox(height: 15.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    _video?.name ?? context.tr('tap_select_video'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accentCyan,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: 8.h),
+                Text(
+                  _videoMissing
+                      ? context.tr('video_required')
+                      : context.tr('video_constraints'),
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: _videoMissing
+                        ? const Color(0xFFFF1744)
+                        : AppColors.textLight.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -226,31 +256,44 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
   }
 
   Widget _buildThumbnailSection() {
-    final p = context.colors;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('thumbnail')),
-        AppCard(
+        _buildSectionTitle(context.tr('thumbnail')),
+        GestureDetector(
           onTap: _pickThumbnail,
-          padding: EdgeInsets.all(AppSizes.space12.r),
-          child: Row(
-            children: [
-              const IconBox(Icons.image_outlined),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Text(
-                  _thumbnail?.name ?? context.tr('select_thumbnail'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: _thumbnail == null ? p.primary : p.text,
+          child: Container(
+            height: 120.h,
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.05),
+              border: Border.all(
+                color: AppColors.accentCyan.withValues(alpha: 0.3),
+              ),
+              borderRadius: BorderRadius.circular(15.r),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image,
+                  size: 40.r,
+                  color: AppColors.accentCyan.withValues(alpha: 0.7),
+                ),
+                SizedBox(width: 15.w),
+                Flexible(
+                  child: Text(
+                    _thumbnail?.name ?? context.tr('select_thumbnail'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accentCyan,
+                    ),
                   ),
                 ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: p.muted, size: 22.r),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -259,14 +302,38 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
 
   Widget _buildTitleField() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('tutorial_title_label')),
+        _buildSectionTitle(context.tr('tutorial_title_label')),
         TextFormField(
           controller: _titleController,
-          style: AppTextStyles.body,
+          style: const TextStyle(color: AppColors.textLight),
           decoration: InputDecoration(
             hintText: context.tr('tutorial_title_hint'),
+            hintStyle: TextStyle(
+              color: AppColors.textLight.withValues(alpha: 0.5),
+            ),
+            filled: true,
+            fillColor: AppColors.white.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: BorderSide(
+                color: AppColors.accentCyan.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: BorderSide(
+                color: AppColors.accentCyan.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: const BorderSide(
+                color: AppColors.accentCyan,
+                width: 2,
+              ),
+            ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -281,15 +348,39 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
 
   Widget _buildDescriptionField() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('description_label')),
+        _buildSectionTitle(context.tr('description_label')),
         TextFormField(
           controller: _descriptionController,
-          style: AppTextStyles.body,
+          style: const TextStyle(color: AppColors.textLight),
           maxLines: 5,
           decoration: InputDecoration(
             hintText: context.tr('tutorial_desc_hint'),
+            hintStyle: TextStyle(
+              color: AppColors.textLight.withValues(alpha: 0.5),
+            ),
+            filled: true,
+            fillColor: AppColors.white.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: BorderSide(
+                color: AppColors.accentCyan.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: BorderSide(
+                color: AppColors.accentCyan.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: const BorderSide(
+                color: AppColors.accentCyan,
+                width: 2,
+              ),
+            ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -304,23 +395,52 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
 
   Widget _buildCodeSelector() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('related_code')),
+        _buildSectionTitle(context.tr('related_code')),
         Wrap(
-          spacing: AppSizes.space8.w,
-          runSpacing: AppSizes.space8.h,
-          children: [
-            // IntrinsicWidth: AppFilterChip fills the width it is given.
-            for (final code in codes)
-              IntrinsicWidth(
-                child: AppFilterChip(
-                  label: code == 'Other' ? context.tr('code_other') : code,
-                  selected: selectedCode == code,
-                  onTap: () => setState(() => selectedCode = code),
+          spacing: 10,
+          runSpacing: 10,
+          children: codes.map((code) {
+            final isSelected = selectedCode == code;
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  selectedCode = code;
+                });
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          colors: [
+                            AppColors.accentCyan,
+                            AppColors.accentOrange,
+                          ],
+                        )
+                      : null,
+                  color: isSelected
+                      ? null
+                      : AppColors.white.withValues(alpha: 0.05),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.transparent
+                        : AppColors.accentCyan.withValues(alpha: 0.3),
+                  ),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  code == 'Other' ? context.tr('code_other') : code,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? AppColors.white : AppColors.accentCyan,
+                  ),
                 ),
               ),
-          ],
+            );
+          }).toList(),
         ),
       ],
     );
@@ -328,71 +448,143 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
 
   Widget _buildDifficultySelector() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('difficulty_level')),
-        AppSegmentedControl<String>(
-          segments: [
-            for (final d in difficulties)
-              (d, context.tr('difficulty_${d.toLowerCase()}')),
-          ],
-          value: selectedDifficulty,
-          onChanged: (d) => setState(() => selectedDifficulty = d),
+        _buildSectionTitle(context.tr('difficulty_level')),
+        Row(
+          children: difficulties.map((difficulty) {
+            final isSelected = selectedDifficulty == difficulty;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedDifficulty = difficulty;
+                  });
+                },
+                child: Container(
+                  margin: EdgeInsetsDirectional.only(end: 10.w),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  decoration: BoxDecoration(
+                    gradient: isSelected
+                        ? const LinearGradient(
+                            colors: [
+                              AppColors.accentCyan,
+                              AppColors.accentOrange,
+                            ],
+                          )
+                        : null,
+                    color: isSelected
+                        ? null
+                        : AppColors.white.withValues(alpha: 0.05),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.transparent
+                          : AppColors.accentCyan.withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Center(
+                    child: Text(
+                      context.tr('difficulty_${difficulty.toLowerCase()}'),
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? AppColors.white
+                            : AppColors.textLight,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
   Widget _buildCostSelector() {
-    final p = context.colors;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('estimated_cost')),
-        SettingsGroup(
-          children: [
-            for (final cost in costRanges)
-              Semantics(
-                inMutuallyExclusiveGroup: true,
-                checked: selectedCost == cost,
-                child: SettingsTile(
-                  leading: Icon(
-                    selectedCost == cost
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: selectedCost == cost ? p.primary : p.muted,
-                    size: 22.r,
-                  ),
-                  title: _costLabel(cost),
-                  trailing: const SizedBox.shrink(),
-                  onTap: () => setState(() => selectedCost = cost),
+        _buildSectionTitle(context.tr('estimated_cost')),
+        ...costRanges.map((cost) {
+          final isSelected = selectedCost == cost;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedCost = cost;
+              });
+            },
+            child: Container(
+              margin: EdgeInsets.only(bottom: 10.h),
+              padding: EdgeInsets.all(15.r),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.accentCyan.withValues(alpha: 0.1)
+                    : AppColors.white.withValues(alpha: 0.05),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.accentCyan
+                      : AppColors.white.withValues(alpha: 0.1),
                 ),
+                borderRadius: BorderRadius.circular(12.r),
               ),
-          ],
-        ),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: isSelected
+                        ? AppColors.accentCyan
+                        : AppColors.white.withValues(alpha: 0.5),
+                  ),
+                  SizedBox(width: 15.w),
+                  Text(
+                    _costLabel(cost),
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? AppColors.accentCyan
+                          : AppColors.textLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
 
   Widget _buildToolsSection() {
-    final p = context.colors;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context.tr('tools_parts_optional')),
-        AppCard(
-          padding: EdgeInsets.all(AppSizes.space12.r),
+        _buildSectionTitle(context.tr('tools_parts_optional')),
+        Container(
+          padding: EdgeInsets.all(15.r),
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.05),
+            border: Border.all(
+              color: AppColors.accentCyan.withValues(alpha: 0.3),
+            ),
+            borderRadius: BorderRadius.circular(15.r),
+          ),
           child: Row(
             children: [
-              const IconBox(Icons.add_rounded),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Text(
-                  context.tr('add_tools_list'),
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: p.text,
-                  ),
+              const Icon(Icons.add_circle_outline, color: AppColors.accentCyan),
+              SizedBox(width: 15.w),
+              Text(
+                context.tr('add_tools_list'),
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: AppColors.accentCyan,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -401,6 +593,47 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
       ],
     );
   }
+
+  Widget _buildUploadButton() {
+    return Container(
+      width: double.infinity,
+      height: 56.h,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.accentCyan, AppColors.accentOrange],
+        ),
+        borderRadius: BorderRadius.circular(15.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentCyan.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _handleUpload,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.transparent,
+          shadowColor: AppColors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.r),
+          ),
+        ),
+        child: Text(
+          context.tr('publish_tutorial'),
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w700,
+            letterSpacing: _isArabic ? 0 : 2,
+            color: AppColors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
   String _costLabel(String cost) {
     switch (costRanges.indexOf(cost)) {
@@ -417,18 +650,15 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     }
   }
 
-  /// Label above a form field ("Title", "Difficulty Level").
-  Widget _buildFieldLabel(String title) {
+  Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: EdgeInsetsDirectional.only(
-        start: AppSizes.space4.w,
-        bottom: AppSizes.space8.h,
-      ),
+      padding: EdgeInsets.only(bottom: 12.h),
       child: Text(
         title,
-        style: AppTextStyles.label.copyWith(
-          fontWeight: FontWeight.w600,
-          color: context.colors.text,
+        style: TextStyle(
+          fontSize: 16.sp,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textLight,
         ),
       ),
     );
@@ -443,11 +673,27 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(context.tr('tutorial_upload_unavailable_title')),
-        content: Text(context.tr('tutorial_upload_unavailable')),
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: Text(
+          context.tr('tutorial_upload_unavailable_title'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
+        content: Text(
+          context.tr('tutorial_upload_unavailable'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
             child: Text(context.tr('ok')),
           ),
         ],

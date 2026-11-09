@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../../core/app_services.dart';
-import '../../../../../core/core.dart';
+import '../../../../../core/constants/app_colors.dart';
 
 /// Up to two initials of [name], or '?' when there is no name.
 String profileInitials(String? name) {
@@ -16,50 +16,16 @@ String profileInitials(String? name) {
   return parts.take(2).map((p) => p.characters.first.toUpperCase()).join();
 }
 
-/// The user's avatar: a soft-accent circle of [size] holding the on-device
-/// profile photo, or the user's initials in the accent color.
-class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key, required this.size, this.name});
-
-  /// Diameter, already scaled by the caller (e.g. `64.r`).
-  final double size;
-
-  /// Name to take initials from; defaults to the session user.
-  final String? name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: context.colors.primarySoft,
-        shape: BoxShape.circle,
-      ),
-      // Initials take ~36% of the circle, like the mockup's "YN".
-      child: ProfileAvatarContent(fontSize: size * 0.36, name: name),
-    );
-  }
-}
-
 /// Contents of a circular avatar: the on-device profile photo when one was
 /// picked, otherwise the signed-in user's initials. The caller supplies the
-/// circle; [ProfileAvatar] is the standard one.
+/// circle (size, gradient, shadow).
 class ProfileAvatarContent extends StatelessWidget {
-  const ProfileAvatarContent({
-    super.key,
-    required this.fontSize,
-    this.name,
-    this.color,
-  });
+  const ProfileAvatarContent({super.key, required this.fontSize, this.name});
 
   final double fontSize;
 
   /// Name to take initials from; defaults to the session user.
   final String? name;
-
-  /// Initials color; defaults to the accent (for a `primarySoft` circle).
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -74,23 +40,23 @@ class ProfileAvatarContent extends StatelessWidget {
               width: double.infinity,
               height: double.infinity,
               gaplessPlayback: true,
-              errorBuilder: (_, _, _) => _initials(context),
+              errorBuilder: (_, _, _) => _initials(),
             ),
           );
         }
-        return _initials(context);
+        return _initials();
       },
     );
   }
 
-  Widget _initials(BuildContext context) => Center(
-    child: Text(
-      profileInitials(name ?? AppServices.instance.session.name),
-      // Size is set by the caller to fit its circle.
-      style: AppTextStyles.headline.copyWith(
-        fontSize: fontSize,
-        color: color ?? context.colors.primary,
-      ),
-    ),
-  );
+  Widget _initials() => Center(
+        child: Text(
+          profileInitials(name ?? AppServices.instance.session.name),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            color: AppColors.white,
+          ),
+        ),
+      );
 }

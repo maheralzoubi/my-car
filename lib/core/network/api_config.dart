@@ -4,8 +4,7 @@ class ApiConfig {
   ApiConfig._();
 
   /// The deployed backend. Used unless overridden below.
-  static const String defaultBaseUrl =
-      'https://mycar-backend-j037.onrender.com';
+  static const String defaultBaseUrl = 'https://mycar-backend-r5p3.onrender.com';
 
   /// Override at build/run time with:
   /// flutter run --dart-define=API_BASE_URL=http://192.168.1.50:3000
@@ -19,15 +18,11 @@ class ApiConfig {
   @visibleForTesting
   static set baseUrlOverride(String? url) => _testOverride = url;
 
-  static String get baseUrl =>
-      resolveBaseUrl(testOverride: _testOverride, dartDefine: _dartDefine);
+  static String get baseUrl => resolveBaseUrl(testOverride: _testOverride, dartDefine: _dartDefine);
 
   /// Precedence: test override > `--dart-define=API_BASE_URL` > [defaultBaseUrl].
   @visibleForTesting
-  static String resolveBaseUrl({
-    String? testOverride,
-    String dartDefine = _dartDefine,
-  }) {
+  static String resolveBaseUrl({String? testOverride, String dartDefine = _dartDefine}) {
     if (testOverride != null && testOverride.isNotEmpty) return testOverride;
     if (dartDefine.isNotEmpty) return dartDefine;
     return defaultBaseUrl;

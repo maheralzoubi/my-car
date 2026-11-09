@@ -115,28 +115,22 @@ void main() {
     fake.emitLiveData(car.live);
     await tester.pump();
     await tester.pump();
-    // Open the "All parameters" list under the live tiles (collapsed by
-    // default), so every live reading is on screen.
-    final allParams = find.byKey(const ValueKey('dash_more_params'));
-    await tester.ensureVisible(allParams);
-    await tester.pump();
-    await tester.tap(allParams);
-    await tester.pump();
     // From here on an overflow fails the test directly, unless the caller
     // keeps collecting (it must call stopCollectingOverflows() first).
     if (!keepCollecting) stopCollectingOverflows();
     return overflows;
   }
 
-  /// Whether the warning light [key] is lit: lit lamps are listed on the
-  /// dashboard (the full grid is behind "See all").
-  bool lit(WidgetTester tester, String key, Locale locale) => find
-      .descendant(
-        of: find.byKey(const ValueKey('dash_lit_lamps')),
+  /// Whether the warning light [key] is lit (its label is drawn orange).
+  bool lit(WidgetTester tester, String key, Locale locale) {
+    final label = tester.widget<Text>(
+      find.descendant(
+        of: find.byType(GridView),
         matching: find.text(tr(key, locale)),
-      )
-      .evaluate()
-      .isNotEmpty;
+      ),
+    );
+    return label.style?.color == const Color(0xFFFF6B35);
+  }
 
   // ══ 1. Dashboard ═══════════════════════════════════════════════════════════
 
@@ -197,16 +191,8 @@ void main() {
             findsOneWidget,
           );
           // Battery: PID 0142 or the adapter's ATRV fallback — same field.
-          // The tile shows the value and its unit ("V") as separate texts.
-          final batteryTile = find.widgetWithText(
-            OBDGauge,
-            tr('battery', locale),
-          );
           expect(
-            find.descendant(
-              of: batteryTile,
-              matching: find.text(d.batteryVoltage!.toStringAsFixed(1)),
-            ),
+            live(find.text('${d.batteryVoltage!.toStringAsFixed(1)}V'), locale),
             findsOneWidget,
           );
           if (d.coolantTempC != null) {
@@ -277,10 +263,7 @@ void main() {
 
           if (car.ev) {
             // No engine ECU: the engine tiles stay at '--' instead of 0.
-            final rpmGauge = find.widgetWithText(
-              OBDGauge,
-              tr('engine', locale),
-            );
+            final rpmGauge = find.widgetWithText(OBDGauge, 'RPM');
             expect(
               find.descendant(of: rpmGauge, matching: find.text('--')),
               findsOneWidget,
@@ -533,7 +516,7 @@ void main() {
         await showCodes(tester, havalJolion, locale, size: phonePortrait);
         fake.clearShouldFail = true;
 
-        await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+        await tester.tap(find.byIcon(Icons.clear_all));
         await tester.pump();
         await tester.tap(find.text(tr('clear', locale)));
         await tester.pumpAndSettle();
@@ -551,7 +534,7 @@ void main() {
       testWidgets('MG5 [$lang]: clear OK → empty state', (tester) async {
         await showCodes(tester, mg5, locale, size: phonePortrait);
 
-        await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+        await tester.tap(find.byIcon(Icons.clear_all));
         await tester.pump();
         await tester.tap(find.text(tr('clear', locale)));
         await tester.pumpAndSettle();
@@ -559,7 +542,7 @@ void main() {
         expect(fake.clearDtcsCalled, isTrue);
         expect(find.text(tr('no_codes_found', locale)), findsOneWidget);
         expect(find.text('P0420'), findsNothing);
-        expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
+        expect(find.byIcon(Icons.clear_all), findsNothing);
         expectNoException(tester);
       });
     }
@@ -645,7 +628,7 @@ void main() {
         expect(inDetail(find.text(label!)), findsWidgets);
         expect(inDetail(find.text(tr('body', locale))), findsOneWidget);
         expect(
-          inDetail(find.text(tr('severity_info', locale))),
+          inDetail(find.text(tr('severity_info', locale).toUpperCase())),
           findsOneWidget,
         );
         expect(
@@ -1243,7 +1226,7 @@ void main() {
         final shares = captureShares(tester);
         final descs = await codesScreen(tester, geelyCoolray, locale);
         await openCode(tester, 'B1000');
-        await tester.tap(inDetail(find.byIcon(Icons.share_outlined)));
+        await tester.tap(inDetail(find.byIcon(Icons.share)));
         await tester.pumpAndSettle();
         expectNoException(tester);
         expect(shares, hasLength(1));

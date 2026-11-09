@@ -75,8 +75,7 @@ class AlertService {
     );
     await _notif
         .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
   }
 
@@ -114,8 +113,7 @@ class AlertService {
       id: 'overheat',
       condition: d.coolantTempC != null && d.coolantTempC! >= 108,
       title: '🌡️ Engine Overheating!',
-      message:
-          'Coolant ${d.coolantTempC?.toStringAsFixed(0)}°C — Pull over safely',
+      message: 'Coolant ${d.coolantTempC?.toStringAsFixed(0)}°C — Pull over safely',
       severity: AlertSeverity.critical,
     );
 
@@ -123,8 +121,7 @@ class AlertService {
       id: 'oil_overheat',
       condition: d.oilTempC != null && d.oilTempC! >= 135,
       title: '🛢️ Oil Temperature Critical!',
-      message:
-          'Oil temp ${d.oilTempC?.toStringAsFixed(0)}°C — Stop engine soon',
+      message: 'Oil temp ${d.oilTempC?.toStringAsFixed(0)}°C — Stop engine soon',
       severity: AlertSeverity.critical,
     );
 
@@ -132,8 +129,7 @@ class AlertService {
       id: 'battery',
       condition: d.batteryVoltage != null && d.batteryVoltage! < 11.0,
       title: '🔋 Battery / Charging Failure!',
-      message:
-          '${d.batteryVoltage?.toStringAsFixed(1)} V — Charging system fault',
+      message: '${d.batteryVoltage?.toStringAsFixed(1)} V — Charging system fault',
       severity: AlertSeverity.critical,
     );
 
@@ -151,8 +147,7 @@ class AlertService {
       id: 'knock_retard',
       condition: d.timingAdvanceDeg != null && d.timingAdvanceDeg! < -8,
       title: '⚡ Knock Detected!',
-      message:
-          'Timing retarded to ${d.timingAdvanceDeg?.toStringAsFixed(1)}° — Possible bad fuel',
+      message: 'Timing retarded to ${d.timingAdvanceDeg?.toStringAsFixed(1)}° — Possible bad fuel',
       severity: AlertSeverity.warning,
       rearm: d.timingAdvanceDeg != null && d.timingAdvanceDeg! >= -5,
     );
@@ -173,8 +168,7 @@ class AlertService {
       id: 'intake_heat',
       condition: d.intakeAirTempC != null && d.intakeAirTempC! > 65,
       title: '💨 Intake Heat Soak',
-      message:
-          'Air temp ${d.intakeAirTempC?.toStringAsFixed(0)}°C — Possible intercooler issue',
+      message: 'Air temp ${d.intakeAirTempC?.toStringAsFixed(0)}°C — Possible intercooler issue',
       severity: AlertSeverity.warning,
       rearm: d.intakeAirTempC != null && d.intakeAirTempC! <= 60,
     );
@@ -196,9 +190,7 @@ class AlertService {
     bool rearm = true,
   }) async {
     if (!condition) {
-      if (rearm && !_isCritical(id)) {
-        _lastFired.remove(id);
-      }
+      if (rearm && !_isCritical(id)) { _lastFired.remove(id); }
       return;
     }
 
@@ -249,7 +241,10 @@ class AlertService {
 
       // Play the bundled alert tone.
       await _player.stop();
-      await _player.play(AssetSource('sounds/alert.mp3'), volume: 1.0);
+      await _player.play(
+        AssetSource('sounds/alert.mp3'),
+        volume: 1.0,
+      );
     } catch (_) {
       // Silently ignore audio errors — alert is shown visually anyway.
     }

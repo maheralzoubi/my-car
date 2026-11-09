@@ -23,7 +23,10 @@ abstract final class MapMarkerHelper {
     final r = circleSize / 2;
 
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, circleSize, totalH));
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, circleSize, totalH),
+    );
 
     // ── drop shadow ────────────────────────────────────────────────────────
     canvas.drawCircle(
@@ -83,7 +86,10 @@ abstract final class MapMarkerHelper {
     );
 
     final picture = recorder.endRecording();
-    final img = await picture.toImage(circleSize.toInt(), totalH.toInt());
+    final img = await picture.toImage(
+      circleSize.toInt(),
+      totalH.toInt(),
+    );
     final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
 
     return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());

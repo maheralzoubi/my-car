@@ -1,123 +1,140 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/// The app's type scale: one family, six sizes, all responsive via `.sp`.
+import '../constants/app_colors.dart';
+
+/// The app's type scale: six styles, all responsive via `.sp`.
 ///
-/// Styles carry NO color: text inherits the theme's text color, so the same
-/// style works in light and dark. Tint with `copyWith(color: context.colors.x)`
-/// (secondary text: `context.colors.text2`).
+/// Use these instead of ad-hoc `TextStyle(fontSize: …)`. Adjust a single
+/// property with `copyWith`, e.g. `AppTextStyles.body.copyWith(color: …)`.
 ///
-/// | Style      | Size | Weight | Use for                                       |
-/// |------------|------|--------|-----------------------------------------------|
-/// | `display`  | 28   | 600    | Screen titles on hero screens, big readouts   |
-/// | `headline` | 22   | 600    | Screen titles, key numbers on cards           |
-/// | `title`    | 17   | 600    | Section and card headings, list row titles    |
-/// | `body`     | 15   | 400    | Default reading text                          |
-/// | `label`    | 13   | 500    | Labels, subtitles, chips, units               |
-/// | `caption`  | 11   | 500    | Nav labels, timestamps, tiny badges           |
+/// | Style      | Size | Weight | Use for                                     |
+/// |------------|------|--------|---------------------------------------------|
+/// | `display`  | 32   | 700    | Big live readouts: speed, RPM, drive score  |
+/// | `headline` | 24   | 700    | Screen hero titles, key numbers on cards    |
+/// | `title`    | 18   | 600    | App bar titles, card and section headers    |
+/// | `body`     | 15   | 400    | Default reading text, list item titles      |
+/// | `label`    | 13   | 500    | Secondary text, chips, small buttons, units |
+/// | `caption`  | 11   | 400    | Timestamps, footnotes, tile captions        |
 ///
-/// [display] and [headline] use tabular figures so live values don't jitter.
+/// Numeric styles ([display], [headline]) use tabular figures so live values
+/// don't jitter as digits change.
 abstract final class AppTextStyles {
   AppTextStyles._();
 
-  /// Font family registered in pubspec.yaml (Arabic + Latin).
+  /// Font family registered in pubspec.yaml.
   static const String fontFamily = 'IBMPlexSansArabic';
 
   static const List<FontFeature> _tabular = [FontFeature.tabularFigures()];
 
   static TextStyle get display => TextStyle(
-    fontSize: 28.sp,
-    fontWeight: FontWeight.w600,
-    height: 1.28,
+    fontSize: 32.sp,
+    fontWeight: FontWeight.w700,
+    height: 1.1,
+    color: AppColors.textLight,
     fontFeatures: _tabular,
   );
 
   static TextStyle get headline => TextStyle(
-    fontSize: 22.sp,
-    fontWeight: FontWeight.w600,
-    height: 1.36,
+    fontSize: 24.sp,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    color: AppColors.textLight,
     fontFeatures: _tabular,
   );
 
-  static TextStyle get title =>
-      TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600, height: 1.4);
+  static TextStyle get title => TextStyle(
+    fontSize: 18.sp,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    color: AppColors.textLight,
+  );
 
-  static TextStyle get body =>
-      TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w400, height: 1.47);
+  static TextStyle get body => TextStyle(
+    fontSize: 15.sp,
+    fontWeight: FontWeight.w400,
+    height: 1.45,
+    color: AppColors.textLight,
+  );
 
-  static TextStyle get label =>
-      TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500, height: 1.38);
+  static TextStyle get label => TextStyle(
+    fontSize: 13.sp,
+    fontWeight: FontWeight.w500,
+    height: 1.35,
+    color: AppColors.textLight,
+  );
 
-  static TextStyle get caption =>
-      TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w500, height: 1.36);
+  static TextStyle get caption => TextStyle(
+    fontSize: 11.sp,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    color: AppColors.textSecondary,
+  );
 
-  /// Adds tabular figures to any style, for live numbers in body/label sizes.
-  static TextStyle numeric(TextStyle style) =>
-      style.copyWith(fontFeatures: _tabular);
-
-  /// Material [TextTheme] on the same scale, for built-in widgets (dialogs,
-  /// buttons, list tiles, text fields). Not `.sp`-scaled: the theme is built
-  /// outside any widget's build context.
+  /// Material [TextTheme] mapped onto the same six sizes, used by built-in
+  /// widgets (dialogs, buttons, list tiles, text fields). Not `.sp`-scaled,
+  /// since the theme is built outside any widget's build context.
   static const TextTheme materialTextTheme = TextTheme(
     displayLarge: TextStyle(
-      fontSize: 28,
-      fontWeight: FontWeight.w600,
-      height: 1.28,
+      fontSize: 32,
+      fontWeight: FontWeight.w700,
+      height: 1.1,
     ),
     displayMedium: TextStyle(
-      fontSize: 28,
-      fontWeight: FontWeight.w600,
-      height: 1.28,
+      fontSize: 32,
+      fontWeight: FontWeight.w700,
+      height: 1.1,
     ),
     displaySmall: TextStyle(
-      fontSize: 28,
-      fontWeight: FontWeight.w600,
-      height: 1.28,
+      fontSize: 32,
+      fontWeight: FontWeight.w700,
+      height: 1.1,
     ),
     headlineLarge: TextStyle(
-      fontSize: 22,
-      fontWeight: FontWeight.w600,
-      height: 1.36,
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      height: 1.2,
     ),
     headlineMedium: TextStyle(
-      fontSize: 22,
-      fontWeight: FontWeight.w600,
-      height: 1.36,
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      height: 1.2,
     ),
     headlineSmall: TextStyle(
-      fontSize: 22,
-      fontWeight: FontWeight.w600,
-      height: 1.36,
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      height: 1.2,
     ),
     titleLarge: TextStyle(
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: FontWeight.w600,
-      height: 1.4,
+      height: 1.3,
     ),
     titleMedium: TextStyle(
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: FontWeight.w600,
-      height: 1.4,
+      height: 1.3,
     ),
     titleSmall: TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w600,
-      height: 1.47,
+      height: 1.45,
     ),
     bodyLarge: TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w400,
-      height: 1.47,
+      height: 1.45,
     ),
     bodyMedium: TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w400,
-      height: 1.47,
+      height: 1.45,
     ),
     bodySmall: TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w400,
-      height: 1.38,
+      height: 1.35,
     ),
     labelLarge: TextStyle(
       fontSize: 15,
@@ -127,12 +144,12 @@ abstract final class AppTextStyles {
     labelMedium: TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w500,
-      height: 1.38,
+      height: 1.35,
     ),
     labelSmall: TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w500,
-      height: 1.36,
+      height: 1.3,
     ),
   );
 }

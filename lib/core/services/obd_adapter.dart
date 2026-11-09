@@ -15,28 +15,23 @@ class OBDLiveData {
   final double? throttlePct;
   final double? fuelLevelPct;
   final double? engineLoad;
-  final double? batteryVoltage; // PID 0142 — control module voltage (V)
-  final double? oilTempC; // PID 015C — engine oil temperature (°C)
-  final double? fuelTrimShortPct; // PID 0106 — STFT bank 1 (%)
-  final double? fuelTrimLongPct; // PID 0107 — LTFT bank 1 (%)
-  final double? fuelTrimShortB2; // PID 0108 — STFT bank 2 (%)  — V6/V8 only
-  final double? fuelTrimLongB2; // PID 0109 — LTFT bank 2 (%)  — V6/V8 only
-  final double?
-  o2B1S1Voltage; // PID 0114 — O2 sensor bank 1 sensor 1 upstream (V)
-  final double?
-  o2B1S2Voltage; // PID 0115 — O2 sensor bank 1 sensor 2 downstream (V)
-  final double?
-  o2B2S1Voltage; // PID 0118 — O2 sensor bank 2 sensor 1 (V) — V6/V8
-  final double? intakeAirTempC; // PID 010F — intake air temperature (°C)
-  final double? mapKpa; // PID 010B — manifold absolute pressure (kPa)
-  final double? timingAdvanceDeg; // PID 010E — ignition timing advance (°)
+  final double? batteryVoltage;  // PID 0142 — control module voltage (V)
+  final double? oilTempC;        // PID 015C — engine oil temperature (°C)
+  final double? fuelTrimShortPct;  // PID 0106 — STFT bank 1 (%)
+  final double? fuelTrimLongPct;   // PID 0107 — LTFT bank 1 (%)
+  final double? fuelTrimShortB2;   // PID 0108 — STFT bank 2 (%)  — V6/V8 only
+  final double? fuelTrimLongB2;    // PID 0109 — LTFT bank 2 (%)  — V6/V8 only
+  final double? o2B1S1Voltage;     // PID 0114 — O2 sensor bank 1 sensor 1 upstream (V)
+  final double? o2B1S2Voltage;     // PID 0115 — O2 sensor bank 1 sensor 2 downstream (V)
+  final double? o2B2S1Voltage;      // PID 0118 — O2 sensor bank 2 sensor 1 (V) — V6/V8
+  final double? intakeAirTempC;     // PID 010F — intake air temperature (°C)
+  final double? mapKpa;             // PID 010B — manifold absolute pressure (kPa)
+  final double? timingAdvanceDeg;   // PID 010E — ignition timing advance (°)
   /// Wide-band upstream sensor (PID 0124, else 0134) — equivalence ratio λ.
   /// Only read when the narrow-band 0114 is not advertised.
   final double? lambdaB1S1;
-  final double?
-  fuelRailPressureKpa; // PID 0123 — fuel rail gauge pressure (kPa) — diesel / GDI
-  final double?
-  acceleratorPedalPct; // PID 0149 — accelerator pedal position D (%)
+  final double? fuelRailPressureKpa; // PID 0123 — fuel rail gauge pressure (kPa) — diesel / GDI
+  final double? acceleratorPedalPct; // PID 0149 — accelerator pedal position D (%)
 
   const OBDLiveData({
     this.rpm,
@@ -73,17 +68,16 @@ class ReadinessMonitor {
 
   const ReadinessMonitor({required this.name, required this.status});
 
-  bool get isReady => status == MonitorStatus.ready;
-  bool get isNotReady => status == MonitorStatus.notReady;
-  bool get isApplicable => status != MonitorStatus.notApplicable;
+  bool get isReady       => status == MonitorStatus.ready;
+  bool get isNotReady    => status == MonitorStatus.notReady;
+  bool get isApplicable  => status != MonitorStatus.notApplicable;
 }
 
 /// Summary returned by [OBDAdapter.getReadinessMonitors].
 class ReadinessResult {
-  final bool milOn; // MIL (check engine) lamp status
-  final int dtcCount; // number of confirmed DTCs stored
+  final bool milOn;         // MIL (check engine) lamp status
+  final int  dtcCount;      // number of confirmed DTCs stored
   final List<ReadinessMonitor> monitors;
-
   /// True for diesel (compression ignition) engines: PID 0101 byte B bit 3.
   final bool compressionIgnition;
 
@@ -144,12 +138,7 @@ enum OBDFailureReason {
 /// before failures were typed) and implements [Exception], so existing
 /// `on StateError` / `on Exception` handlers keep matching.
 class OBDConnectException extends StateError implements Exception {
-  OBDConnectException(
-    this.reason,
-    super.message, {
-    this.adapterVersion,
-    this.cause,
-  });
+  OBDConnectException(this.reason, super.message, {this.adapterVersion, this.cause});
 
   final OBDFailureReason reason;
 
@@ -240,7 +229,7 @@ class ProductionOBDAdapter implements OBDAdapter {
   /// default to keep the failed handshake's command sequence minimal;
   /// [OBDService] turns it on.
   ProductionOBDAdapter({this.identifyOnFailure = false, OBDLog? log})
-    : _log = log ?? OBDLog.instance;
+      : _log = log ?? OBDLog.instance;
 
   final bool identifyOnFailure;
   final OBDLog _log;
@@ -289,7 +278,7 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   final _dataController = StreamController<OBDLiveData>.broadcast();
   Timer? _pollingTimer;
-  bool _polling = false; // guard against overlapping polls
+  bool _polling = false;          // guard against overlapping polls
   OBDLiveData _lastData = const OBDLiveData(); // last known good values
 
   // The 0100 reply that established the protocol — reused as the 0x01–0x20
@@ -360,14 +349,11 @@ class ProductionOBDAdapter implements OBDAdapter {
         timeout: const Duration(seconds: 15),
       );
     } catch (e) {
-      final timedOut =
-          e is TimeoutException ||
+      final timedOut = e is TimeoutException ||
           (e is FlutterBluePlusException &&
               e.code == FbpErrorCode.timeout.index);
       throw OBDConnectException(
-        timedOut
-            ? OBDFailureReason.bleTimeout
-            : OBDFailureReason.bleConnectFailed,
+        timedOut ? OBDFailureReason.bleTimeout : OBDFailureReason.bleConnectFailed,
         'BLE connect failed: $e',
         cause: e,
       );
@@ -402,9 +388,7 @@ class ProductionOBDAdapter implements OBDAdapter {
         'Ensure it is a BLE ELM327 adapter.',
       );
     }
-    _log.event(
-      'Write ${_writeChar!.uuid.str}, notify ${_notifyChar!.uuid.str}',
-    );
+    _log.event('Write ${_writeChar!.uuid.str}, notify ${_notifyChar!.uuid.str}');
 
     // ── 4. Subscribe to incoming data ─────────────────────────────────────
     try {
@@ -428,9 +412,9 @@ class ProductionOBDAdapter implements OBDAdapter {
     await Future.delayed(const Duration(milliseconds: 500));
     final handshake = [
       await _sendAT('ATE0', timeout: 2000), // echo off
-      await _sendAT('ATL0'), // linefeeds off
-      await _sendAT('ATS0'), // spaces off
-      await _sendAT('ATH0'), // headers off
+      await _sendAT('ATL0'),               // linefeeds off
+      await _sendAT('ATS0'),               // spaces off
+      await _sendAT('ATH0'),               // headers off
     ];
     // Not one reply: whatever is on the other end of this characteristic
     // pair isn't an ELM327 (or it's wedged). Don't sit through 25 s of
@@ -548,10 +532,8 @@ class ProductionOBDAdapter implements OBDAdapter {
       version: _atReply('ATI', await _sendAT('ATI', timeout: 1500)),
       protocol: _atReply('ATDP', await _sendAT('ATDP', timeout: 1500)),
     );
-    _log.event(
-      'Adapter "${info.version ?? '?'}", '
-      'protocol "${info.protocol ?? '?'}"',
-    );
+    _log.event('Adapter "${info.version ?? '?'}", '
+        'protocol "${info.protocol ?? '?'}"');
     return info;
   }
 
@@ -589,7 +571,7 @@ class ProductionOBDAdapter implements OBDAdapter {
   //   Fallback: first writable + first notifiable in any service
   // ──────────────────────────────────────────────────────────────────────────
 
-  static const _knownSvcIds = ['fff0', 'ffe0', 'e7810a71', 'be781a71'];
+  static const _knownSvcIds   = ['fff0', 'ffe0', 'e7810a71', 'be781a71'];
   static const _knownWriteIds = ['fff2', 'ffe1', 'bef8d6c9'];
   static const _knownNotifyIds = ['fff1', 'ffe1', 'bef8d6c9'];
 
@@ -603,7 +585,7 @@ class ProductionOBDAdapter implements OBDAdapter {
 
       for (final c in svc.characteristics) {
         final cId = c.uuid.str.toLowerCase();
-        final knownWrite = _knownWriteIds.any(cId.contains);
+        final knownWrite  = _knownWriteIds.any(cId.contains);
         final knownNotify = _knownNotifyIds.any(cId.contains);
 
         if (_writeChar == null &&
@@ -872,10 +854,8 @@ class ProductionOBDAdapter implements OBDAdapter {
   Future<double?> _adapterVoltage() async {
     if ((_pidTimeouts['ATRV'] ?? 0) >= 2) return null;
     final r = await _sendAT('ATRV', timeout: 1000);
-    final m = RegExp(
-      r'(\d{1,2}(?:[.,]\d+)?)\s*V\b',
-      caseSensitive: false,
-    ).firstMatch(r);
+    final m = RegExp(r'(\d{1,2}(?:[.,]\d+)?)\s*V\b', caseSensitive: false)
+        .firstMatch(r);
     final v = m == null ? null : double.tryParse(m[1]!.replaceAll(',', '.'));
     final ok = v != null && v > 0 && v < 30;
     _pidTimeouts['ATRV'] = ok ? 0 : (_pidTimeouts['ATRV'] ?? 0) + 1;
@@ -964,9 +944,7 @@ class ProductionOBDAdapter implements OBDAdapter {
     if (_pidAdvertised(0x14)) return null; // narrow-band sensor covers it
     final pid = _pidAdvertised(0x24)
         ? '0124'
-        : _pidAdvertised(0x34)
-        ? '0134'
-        : null;
+        : _pidAdvertised(0x34) ? '0134' : null;
     if (pid == null) return null;
     final b = _bytes(await _query(pid, timeout: 800), '41${pid.substring(2)}');
     return b.length >= 2 ? (b[0] * 256 + b[1]) / 32768.0 : null;
@@ -999,7 +977,10 @@ class ProductionOBDAdapter implements OBDAdapter {
     // extras need an explicit bit): ~1 s on CAN, ~2–3 s on K-line, but up
     // to ~20 s if every PID times out. Ticks that fire while a poll is still
     // running are skipped (see [_polling]).
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) => _poll());
+    _pollingTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _poll(),
+    );
   }
 
   @override
@@ -1019,32 +1000,27 @@ class ProductionOBDAdapter implements OBDAdapter {
       // (unsupported sensor, transient timeout, etc.) so the UI never
       // flickers back to '--' after a value has been established.
       _lastData = OBDLiveData(
-        rpm: (await _rpm()) ?? _lastData.rpm,
-        speedKmh: (await _speed()) ?? _lastData.speedKmh,
-        coolantTempC: (await _coolant()) ?? _lastData.coolantTempC,
-        throttlePct: (await _throttle()) ?? _lastData.throttlePct,
-        fuelLevelPct: (await _fuel()) ?? _lastData.fuelLevelPct,
-        engineLoad: (await _load()) ?? _lastData.engineLoad,
-        batteryVoltage: (await _batteryVoltage()) ?? _lastData.batteryVoltage,
-        oilTempC: (await _oilTemp()) ?? _lastData.oilTempC,
-        fuelTrimShortPct:
-            (await _fuelTrimShort()) ?? _lastData.fuelTrimShortPct,
-        fuelTrimLongPct: (await _fuelTrimLong()) ?? _lastData.fuelTrimLongPct,
-        fuelTrimShortB2:
-            (await _fuelTrimShortB2()) ?? _lastData.fuelTrimShortB2,
-        fuelTrimLongB2: (await _fuelTrimLongB2()) ?? _lastData.fuelTrimLongB2,
-        o2B1S1Voltage: (await _o2B1S1()) ?? _lastData.o2B1S1Voltage,
-        o2B1S2Voltage: (await _o2B1S2()) ?? _lastData.o2B1S2Voltage,
-        o2B2S1Voltage: (await _o2B2S1()) ?? _lastData.o2B2S1Voltage,
-        intakeAirTempC: (await _intakeAirTemp()) ?? _lastData.intakeAirTempC,
-        mapKpa: (await _map()) ?? _lastData.mapKpa,
-        timingAdvanceDeg:
-            (await _timingAdvance()) ?? _lastData.timingAdvanceDeg,
-        lambdaB1S1: (await _lambdaB1S1()) ?? _lastData.lambdaB1S1,
-        fuelRailPressureKpa:
-            (await _fuelRailPressure()) ?? _lastData.fuelRailPressureKpa,
-        acceleratorPedalPct:
-            (await _acceleratorPedal()) ?? _lastData.acceleratorPedalPct,
+        rpm:              (await _rpm())              ?? _lastData.rpm,
+        speedKmh:         (await _speed())            ?? _lastData.speedKmh,
+        coolantTempC:     (await _coolant())          ?? _lastData.coolantTempC,
+        throttlePct:      (await _throttle())         ?? _lastData.throttlePct,
+        fuelLevelPct:     (await _fuel())             ?? _lastData.fuelLevelPct,
+        engineLoad:       (await _load())             ?? _lastData.engineLoad,
+        batteryVoltage:   (await _batteryVoltage())   ?? _lastData.batteryVoltage,
+        oilTempC:         (await _oilTemp())          ?? _lastData.oilTempC,
+        fuelTrimShortPct: (await _fuelTrimShort())    ?? _lastData.fuelTrimShortPct,
+        fuelTrimLongPct:  (await _fuelTrimLong())     ?? _lastData.fuelTrimLongPct,
+        fuelTrimShortB2:  (await _fuelTrimShortB2())  ?? _lastData.fuelTrimShortB2,
+        fuelTrimLongB2:   (await _fuelTrimLongB2())   ?? _lastData.fuelTrimLongB2,
+        o2B1S1Voltage:    (await _o2B1S1())           ?? _lastData.o2B1S1Voltage,
+        o2B1S2Voltage:    (await _o2B1S2())           ?? _lastData.o2B1S2Voltage,
+        o2B2S1Voltage:    (await _o2B2S1())            ?? _lastData.o2B2S1Voltage,
+        intakeAirTempC:   (await _intakeAirTemp())     ?? _lastData.intakeAirTempC,
+        mapKpa:           (await _map())               ?? _lastData.mapKpa,
+        timingAdvanceDeg: (await _timingAdvance())     ?? _lastData.timingAdvanceDeg,
+        lambdaB1S1:       (await _lambdaB1S1())        ?? _lastData.lambdaB1S1,
+        fuelRailPressureKpa: (await _fuelRailPressure()) ?? _lastData.fuelRailPressureKpa,
+        acceleratorPedalPct: (await _acceleratorPedal()) ?? _lastData.acceleratorPedalPct,
       );
       if (!_dataController.isClosed) _dataController.add(_lastData);
     } finally {
@@ -1066,13 +1042,13 @@ class ProductionOBDAdapter implements OBDAdapter {
     // Real faults (airbag, sensor failures, etc.) often appear here before they
     // become "confirmed". Prefix with '~' so the UI can label them "Pending".
     final r07 = await _sendAT('07', timeout: 5000);
-    final pending = _parseDtcs(r07, header: '47').map((c) => '~$c').toList();
+    final pending = _parseDtcs(r07, header: '47')
+        .map((c) => '~$c')
+        .toList();
 
     // Merge: confirmed first, then pending codes not already in confirmed list.
     final confirmedSet = confirmed.toSet();
-    final uniquePending = pending
-        .where((p) => !confirmedSet.contains(p.substring(1)))
-        .toList();
+    final uniquePending = pending.where((p) => !confirmedSet.contains(p.substring(1))).toList();
     return [...confirmed, ...uniquePending];
   }
 
@@ -1152,49 +1128,11 @@ class ProductionOBDAdapter implements OBDAdapter {
 
   static final _vinAlphabet = RegExp(r'^[A-HJ-NPR-Z0-9]{17}$');
   static const _vinValues = {
-    'A': 1,
-    'B': 2,
-    'C': 3,
-    'D': 4,
-    'E': 5,
-    'F': 6,
-    'G': 7,
-    'H': 8,
-    'J': 1,
-    'K': 2,
-    'L': 3,
-    'M': 4,
-    'N': 5,
-    'P': 7,
-    'R': 9,
-    'S': 2,
-    'T': 3,
-    'U': 4,
-    'V': 5,
-    'W': 6,
-    'X': 7,
-    'Y': 8,
-    'Z': 9,
+    'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8,
+    'J': 1, 'K': 2, 'L': 3, 'M': 4, 'N': 5, 'P': 7, 'R': 9,
+    'S': 2, 'T': 3, 'U': 4, 'V': 5, 'W': 6, 'X': 7, 'Y': 8, 'Z': 9,
   };
-  static const _vinWeights = [
-    8,
-    7,
-    6,
-    5,
-    4,
-    3,
-    2,
-    10,
-    0,
-    9,
-    8,
-    7,
-    6,
-    5,
-    4,
-    3,
-    2,
-  ];
+  static const _vinWeights = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
 
   /// 17 characters of the VIN alphabet (no I, O, Q). Where the position-9
   /// check digit is mandatory, it must also be correct:
@@ -1230,38 +1168,14 @@ class ProductionOBDAdapter implements OBDAdapter {
     // frame stored with the first confirmed DTC); strict CAN ECUs answer a
     // bare "020C" with NO DATA.
     final queries = <(String, String, String, int, String Function(List<int>))>[
-      (
-        '020C00',
-        '420C',
-        'RPM',
-        2,
-        (b) => '${((b[0] * 256 + b[1]) / 4).toStringAsFixed(0)} rpm',
-      ),
-      ('020D00', '420D', 'Speed', 1, (b) => '${b[0]} km/h'),
-      ('020500', '4205', 'Coolant', 1, (b) => '${b[0] - 40}°C'),
-      (
-        '020400',
-        '4204',
-        'Engine Load',
-        1,
-        (b) => '${(b[0] * 100 / 255).toStringAsFixed(1)}%',
-      ),
-      ('020F00', '420F', 'Air Temp', 1, (b) => '${b[0] - 40}°C'),
-      (
-        '021100',
-        '4211',
-        'Throttle',
-        1,
-        (b) => '${(b[0] * 100 / 255).toStringAsFixed(1)}%',
-      ),
-      (
-        '020600',
-        '4206',
-        'Fuel Trim',
-        1,
-        (b) => '${((b[0] / 1.28) - 100).toStringAsFixed(1)}%',
-      ),
-      ('020B00', '420B', 'MAP', 1, (b) => '${b[0]} kPa'),
+      ('020C00', '420C', 'RPM',         2, (b) => '${((b[0]*256+b[1])/4).toStringAsFixed(0)} rpm'),
+      ('020D00', '420D', 'Speed',        1, (b) => '${b[0]} km/h'),
+      ('020500', '4205', 'Coolant',      1, (b) => '${b[0]-40}°C'),
+      ('020400', '4204', 'Engine Load',  1, (b) => '${(b[0]*100/255).toStringAsFixed(1)}%'),
+      ('020F00', '420F', 'Air Temp',     1, (b) => '${b[0]-40}°C'),
+      ('021100', '4211', 'Throttle',     1, (b) => '${(b[0]*100/255).toStringAsFixed(1)}%'),
+      ('020600', '4206', 'Fuel Trim',    1, (b) => '${((b[0]/1.28)-100).toStringAsFixed(1)}%'),
+      ('020B00', '420B', 'MAP',          1, (b) => '${b[0]} kPa'),
     ];
 
     for (final q in queries) {
@@ -1310,7 +1224,8 @@ class ProductionOBDAdapter implements OBDAdapter {
     // its bit 3 says nothing about the engine. Because C/D bits name
     // different monitors on spark and diesel engines, only ECUs of the same
     // ignition type are merged into C/D.
-    int supportedCount(List<int> e) => _popCount(e[1] & 0x07) + _popCount(e[2]);
+    int supportedCount(List<int> e) =>
+        _popCount(e[1] & 0x07) + _popCount(e[2]);
     var engine = ecus.first;
     for (final e in ecus) {
       if (supportedCount(e) > supportedCount(engine)) engine = e;
@@ -1335,43 +1250,29 @@ class ProductionOBDAdapter implements OBDAdapter {
 
     void add(String name, int supByte, int supBit, int incByte, int incBit) {
       final sup = (supByte >> supBit) & 1 == 1;
-      monitors.add(
-        ReadinessMonitor(
-          name: name,
-          status: !sup
-              ? MonitorStatus.notApplicable
-              : (incByte >> incBit) & 1 == 1
-              ? MonitorStatus.notReady
-              : MonitorStatus.ready,
-        ),
-      );
+      monitors.add(ReadinessMonitor(
+        name: name,
+        status: !sup
+            ? MonitorStatus.notApplicable
+            : (incByte >> incBit) & 1 == 1
+                ? MonitorStatus.notReady
+                : MonitorStatus.ready,
+      ));
     }
 
     // Continuous monitors — byte B.
-    add('Misfire', contSup, 0, contInc, 0);
-    add('Fuel System', contSup, 1, contInc, 1);
-    add('Components', contSup, 2, contInc, 2);
+    add('Misfire',          contSup, 0, contInc, 0);
+    add('Fuel System',      contSup, 1, contInc, 1);
+    add('Components',       contSup, 2, contInc, 2);
     // Non-continuous monitors — bytes C / D. The bits mean different
     // monitors on spark- and compression-ignition engines; null = reserved.
     const spark = [
-      'Catalyst',
-      'Heated Catalyst',
-      'Evap System',
-      'Secondary Air',
-      'A/C System',
-      'O2 Sensor',
-      'O2 Sensor Heater',
-      'EGR / VVT',
+      'Catalyst', 'Heated Catalyst', 'Evap System', 'Secondary Air',
+      'A/C System', 'O2 Sensor', 'O2 Sensor Heater', 'EGR / VVT',
     ];
     const compression = [
-      'NMHC Catalyst',
-      'NOx / SCR',
-      null,
-      'Boost Pressure',
-      null,
-      'Exhaust Gas Sensor',
-      'PM Filter',
-      'EGR / VVT',
+      'NMHC Catalyst', 'NOx / SCR', null, 'Boost Pressure',
+      null, 'Exhaust Gas Sensor', 'PM Filter', 'EGR / VVT',
     ];
     final names = diesel ? compression : spark;
     for (var bit = 0; bit < 8; bit++) {
@@ -1524,8 +1425,7 @@ class ProductionOBDAdapter implements OBDAdapter {
         // declared length is only padding); a shorter group would otherwise
         // swallow and truncate another ECU's codes.
         final candidates = open.where((g) => g.frames % 16 == index);
-        var group =
-            candidates.where((g) => g.fits(data)).firstOrNull ??
+        var group = candidates.where((g) => g.fits(data)).firstOrNull ??
             candidates.firstOrNull;
         if (group == null) {
           if (index != 0) continue; // orphan consecutive frame
@@ -1553,13 +1453,7 @@ class ProductionOBDAdapter implements OBDAdapter {
   List<String> _parseDtcs(String response, {String header = '43'}) {
     // Ignore ELM327 error responses.
     final flat = response.replaceAll(RegExp(r'\s'), '').toUpperCase();
-    const errorTokens = [
-      'NODATA',
-      'UNABLETOCONNECT',
-      'CANERROR',
-      'STOPPED',
-      'ERROR',
-    ];
+    const errorTokens = ['NODATA', 'UNABLETOCONNECT', 'CANERROR', 'STOPPED', 'ERROR'];
     if (errorTokens.any(flat.contains)) return [];
 
     final hdr = header.toUpperCase();
@@ -1591,9 +1485,8 @@ class ProductionOBDAdapter implements OBDAdapter {
 
         final prefix = ['P', 'C', 'B', 'U'][(b1 >> 6) & 3];
         // Use hex formatting: P0300 → "0300", not decimal 768 → "0768".
-        final num =
-            (b1 & 0x3F).toRadixString(16).padLeft(2, '0').toUpperCase() +
-            b2.toRadixString(16).padLeft(2, '0').toUpperCase();
+        final num = (b1 & 0x3F).toRadixString(16).padLeft(2, '0').toUpperCase() +
+                    b2.toRadixString(16).padLeft(2, '0').toUpperCase();
         final code = '$prefix$num';
         if (!dtcs.contains(code)) dtcs.add(code);
       }

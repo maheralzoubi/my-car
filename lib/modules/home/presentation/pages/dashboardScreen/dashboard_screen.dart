@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../../core/core.dart';
+import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/alert_service.dart';
 import '../../../../../core/services/dtc_repository.dart';
@@ -13,7 +13,6 @@ import '../../../../../core/services/maintenance_service.dart';
 import '../../../../../core/services/obd_service.dart';
 import '../../../../../core/services/trip_service.dart';
 import '../../../../../core/services/vin_decoder.dart';
-import '../shell/app_shell.dart';
 import 'obd_gauge.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -24,9 +23,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // "All parameters" list under the live tiles (collapsed by default).
-  bool _showAllParams = false;
-
+  int _selectedIndex = 0;
   DateTime? _lastBackPressTime;
   bool _scanningDtcs = false;
   final _dtcRepo = DtcRepository();
@@ -71,10 +68,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // MaintenanceService — prevents double-counting across commits.
   double _committedKm = 0;
 
-  // One entry per lamp, in grid order (icons: [_lampIcons]).
   List<Map<String, dynamic>> warningLights = [
-    for (final label in _lampIcons.keys)
-      {'label': label, 'active': false, 'codes': <String>[]},
+    {'icon': '⚠️', 'label': 'check_engine', 'active': false, 'codes': <String>[]},
+    {'icon': '🔋', 'label': 'battery',      'active': false, 'codes': <String>[]},
+    {'icon': '🛢️', 'label': 'oil',          'active': false, 'codes': <String>[]},
+    {'icon': '🛞', 'label': 'abs',           'active': false, 'codes': <String>[]},
+    {'icon': '🛡️', 'label': 'airbag',       'active': false, 'codes': <String>[]},
+    {'icon': '🌡️', 'label': 'temp',          'active': false, 'codes': <String>[]},
+    {'icon': '⛽', 'label': 'fuel',           'active': false, 'codes': <String>[]},
+    {'icon': '💨', 'label': 'exhaust',        'active': false, 'codes': <String>[]},
+    {'icon': '🔄', 'label': 'transmission',  'active': false, 'codes': <String>[]},
+    {'icon': '💥', 'label': 'misfire',        'active': false, 'codes': <String>[]},
+    {'icon': '🔌', 'label': 'o2_sensor',     'active': false, 'codes': <String>[]},
+    {'icon': '📊', 'label': 'fuel_trim',     'active': false, 'codes': <String>[]},
+    {'icon': '💉', 'label': 'injector',      'active': false, 'codes': <String>[]},
+    {'icon': '🌬️', 'label': 'maf_sensor',     'active': false, 'codes': <String>[]},
+    {'icon': '📡', 'label': 'network',          'active': false, 'codes': <String>[]},
+    {'icon': '🔧', 'label': 'service',          'active': false, 'codes': <String>[]},
+    {'icon': '🔵', 'label': 'traction',         'active': false, 'codes': <String>[]},
+    {'icon': '🚗', 'label': 'steering',         'active': false, 'codes': <String>[]},
+    {'icon': '🌀', 'label': 'egr',              'active': false, 'codes': <String>[]},
+    {'icon': '⚡', 'label': 'throttle',         'active': false, 'codes': <String>[]},
+    {'icon': '💧', 'label': 'fuel_pressure',   'active': false, 'codes': <String>[]},
+    {'icon': '🔴', 'label': 'mil',             'active': false, 'codes': <String>[]},
+    {'icon': '💡', 'label': 'body',            'active': false, 'codes': <String>[]},
   ];
 
   @override
@@ -192,42 +209,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
       setState(() {
         // Temp: warn if coolant ≥ 105 °C (overheating).
-        _sensorWarnings['temp'] =
-            d.coolantTempC != null && d.coolantTempC! >= 105;
+        _sensorWarnings['temp']         = d.coolantTempC   != null && d.coolantTempC!   >= 105;
         // Fuel: warn if fuel level ≤ 10 %.
-        _sensorWarnings['fuel'] =
-            d.fuelLevelPct != null && d.fuelLevelPct! <= 10;
+        _sensorWarnings['fuel']         = d.fuelLevelPct   != null && d.fuelLevelPct!   <= 10;
         // Battery: warn if system voltage < 11.5 V (charging / battery fault).
-        _sensorWarnings['battery'] =
-            d.batteryVoltage != null && d.batteryVoltage! < 11.5;
+        _sensorWarnings['battery']      = d.batteryVoltage != null && d.batteryVoltage! < 11.5;
         // Oil: warn if oil temperature > 130 °C (oil degrading / overheating).
-        _sensorWarnings['oil'] = d.oilTempC != null && d.oilTempC! > 130;
+        _sensorWarnings['oil']          = d.oilTempC       != null && d.oilTempC!       > 130;
         // Intake air > 60 °C = heat soak / intercooler failure (turbo engines).
-        _sensorWarnings['check_engine'] =
-            (_sensorWarnings['check_engine'] ?? false) ||
+        _sensorWarnings['check_engine'] = (_sensorWarnings['check_engine'] ?? false) ||
             (d.rpm != null && d.rpm! > 6500) ||
             (d.intakeAirTempC != null && d.intakeAirTempC! > 60);
         // Fuel trim: severe deviation > ±25 % indicates rich/lean fault.
         _sensorWarnings['fuel_trim'] =
             (d.fuelTrimShortPct != null && d.fuelTrimShortPct!.abs() > 25) ||
-            (d.fuelTrimLongPct != null && d.fuelTrimLongPct!.abs() > 25) ||
-            (d.fuelTrimShortB2 != null && d.fuelTrimShortB2!.abs() > 25) ||
-            (d.fuelTrimLongB2 != null && d.fuelTrimLongB2!.abs() > 25);
+            (d.fuelTrimLongPct  != null && d.fuelTrimLongPct!.abs()  > 25) ||
+            (d.fuelTrimShortB2  != null && d.fuelTrimShortB2!.abs()  > 25) ||
+            (d.fuelTrimLongB2   != null && d.fuelTrimLongB2!.abs()   > 25);
         // Service: mirror the maintenance-due flag into sensor warnings.
         _sensorWarnings['service'] = MaintenanceService.instance.dueCount > 0;
         // Throttle: stuck open if > 90 % at idle (RPM < 1000).
-        _sensorWarnings['throttle'] =
-            d.throttlePct != null &&
+        _sensorWarnings['throttle'] = d.throttlePct != null &&
             d.throttlePct! > 90 &&
-            d.rpm != null &&
-            d.rpm! < 1000;
+            d.rpm != null && d.rpm! < 1000;
         // Timing: heavy knock retard (< -10°) = ECU protecting engine from damage.
-        _sensorWarnings['check_engine'] =
-            (_sensorWarnings['check_engine'] ?? false) ||
+        _sensorWarnings['check_engine'] = (_sensorWarnings['check_engine'] ?? false) ||
             (d.timingAdvanceDeg != null && d.timingAdvanceDeg! < -10);
         // MAF/MAP: overboost > 200 kPa on turbo engines.
-        _sensorWarnings['maf_sensor'] =
-            (_sensorWarnings['maf_sensor'] ?? false) ||
+        _sensorWarnings['maf_sensor'] = (_sensorWarnings['maf_sensor'] ?? false) ||
             (d.mapKpa != null && d.mapKpa! > 200);
         // MIL: reflect hardware lamp status fetched from readiness monitors.
         _sensorWarnings['mil'] = _milOn;
@@ -253,9 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Strip the '~' pending prefix so matching works the same for both
     // confirmed (mode 03) and pending (mode 07) codes.
-    final codes = rawCodes
-        .map((c) => c.startsWith('~') ? c.substring(1) : c)
-        .toList();
+    final codes = rawCodes.map((c) => c.startsWith('~') ? c.substring(1) : c).toList();
     final pendingCount = rawCodes.where((c) => c.startsWith('~')).length;
 
     List<String> codesFor(bool Function(String) test) =>
@@ -263,20 +270,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Prefixes owned by specific lights — excluded from the generic check-engine list.
     const specificPrefixes = [
-      'P056', 'P057', 'P115', // battery
-      'P052', 'P053', // oil
-      'P011', 'P012', 'P025', // temp
-      'P008', 'P009', 'P046', // fuel
-      'P042', 'P043', 'P044', 'P045', // exhaust
-      'P07', 'P08', // transmission
-      'P030', 'P032', 'P033', 'P034', 'P035', // misfire / ignition
-      'P013', 'P014', 'P015', 'P016', // o2_sensor
-      'P017', 'P018', // fuel_trim
-      'P020', 'P021', // injector
-      'P010', // maf_sensor
-      'P040', 'P041', // egr
-      'P21', // throttle / TAC
-      'P022', 'P023', 'P024', // fuel_pressure
+      'P056', 'P057', 'P115',                        // battery
+      'P052', 'P053',                                 // oil
+      'P011', 'P012', 'P025',                        // temp
+      'P008', 'P009', 'P046',                        // fuel
+      'P042', 'P043', 'P044', 'P045',                // exhaust
+      'P07', 'P08',                                   // transmission
+      'P030', 'P032', 'P033', 'P034', 'P035',        // misfire / ignition
+      'P013', 'P014', 'P015', 'P016',                // o2_sensor
+      'P017', 'P018',                                 // fuel_trim
+      'P020', 'P021',                                 // injector
+      'P010',                                         // maf_sensor
+      'P040', 'P041',                                 // egr
+      'P21',                                          // throttle / TAC
+      'P022', 'P023', 'P024',                        // fuel_pressure
     ];
     bool isSpecific(String c) =>
         _matchPrefix(c, specificPrefixes) || c.startsWith('U');
@@ -304,8 +311,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           n == 0x450 ||
           n == 0x710;
     }
-
-    bool isAbsCode(String c) => c.startsWith('C00');
+    bool isAbsCode(String c)      => c.startsWith('C00');
     bool isTractionCode(String c) => c.startsWith('C01') && !isSteeringCode(c);
 
     setState(() {
@@ -314,150 +320,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _pendingDtcs = pendingCount;
       warningLights = [
         // Check engine: residual P-codes not shown under any dedicated light.
-        {
-          'label': 'check_engine',
+        {'icon': '⚠️', 'label': 'check_engine',
           'codes': codesFor((c) => c.startsWith('P') && !isSpecific(c)),
-          'active': codes.any((c) => c.startsWith('P') && !isSpecific(c)),
-        },
-        {
-          'label': 'battery',
+          'active': codes.any((c) => c.startsWith('P') && !isSpecific(c))},
+        {'icon': '🔋', 'label': 'battery',
           'codes': codesFor((c) => _matchPrefix(c, ['P056', 'P057', 'P115'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P056', 'P057', 'P115'])),
-        },
-        {
-          'label': 'oil',
+          'active': codes.any((c) => _matchPrefix(c, ['P056', 'P057', 'P115']))},
+        {'icon': '🛢️', 'label': 'oil',
           'codes': codesFor((c) => _matchPrefix(c, ['P052', 'P053'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P052', 'P053'])),
-        },
-        {
-          'label': 'abs',
+          'active': codes.any((c) => _matchPrefix(c, ['P052', 'P053']))},
+        {'icon': '🛞', 'label': 'abs',
           'codes': codesFor(isAbsCode),
-          'active': codes.any(isAbsCode),
-        },
-        {
-          'label': 'airbag',
+          'active': codes.any(isAbsCode)},
+        {'icon': '🛡️', 'label': 'airbag',
           'codes': codesFor((c) => c.startsWith('B00')),
-          'active': codes.any((c) => c.startsWith('B00')),
-        },
-        {
-          'label': 'temp',
+          'active': codes.any((c) => c.startsWith('B00'))},
+        {'icon': '🌡️', 'label': 'temp',
           'codes': codesFor((c) => _matchPrefix(c, ['P011', 'P012', 'P025'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P011', 'P012', 'P025'])),
-        },
-        {
-          'label': 'fuel',
+          'active': codes.any((c) => _matchPrefix(c, ['P011', 'P012', 'P025']))},
+        {'icon': '⛽', 'label': 'fuel',
           'codes': codesFor((c) => _matchPrefix(c, ['P008', 'P009', 'P046'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P008', 'P009', 'P046'])),
-        },
-        {
-          'label': 'exhaust',
-          'codes': codesFor(
-            (c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045']),
-          ),
-          'active': codes.any(
-            (c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045']),
-          ),
-        },
-        {
-          'label': 'transmission',
+          'active': codes.any((c) => _matchPrefix(c, ['P008', 'P009', 'P046']))},
+        {'icon': '💨', 'label': 'exhaust',
+          'codes': codesFor((c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P042', 'P043', 'P044', 'P045']))},
+        {'icon': '🔄', 'label': 'transmission',
           'codes': codesFor((c) => _matchPrefix(c, ['P07', 'P08'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P07', 'P08'])),
-        },
-        {
-          'label': 'misfire',
-          'codes': codesFor(
-            (c) => _matchPrefix(c, ['P030', 'P032', 'P033', 'P034', 'P035']),
-          ),
-          'active': codes.any(
-            (c) => _matchPrefix(c, ['P030', 'P032', 'P033', 'P034', 'P035']),
-          ),
-        },
-        {
-          'label': 'o2_sensor',
-          'codes': codesFor(
-            (c) => _matchPrefix(c, ['P013', 'P014', 'P015', 'P016']),
-          ),
-          'active': codes.any(
-            (c) => _matchPrefix(c, ['P013', 'P014', 'P015', 'P016']),
-          ),
-        },
-        {
-          'label': 'fuel_trim',
+          'active': codes.any((c) => _matchPrefix(c, ['P07', 'P08']))},
+        {'icon': '💥', 'label': 'misfire',
+          'codes': codesFor((c) => _matchPrefix(c, ['P030', 'P032', 'P033', 'P034', 'P035'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P030', 'P032', 'P033', 'P034', 'P035']))},
+        {'icon': '🔌', 'label': 'o2_sensor',
+          'codes': codesFor((c) => _matchPrefix(c, ['P013', 'P014', 'P015', 'P016'])),
+          'active': codes.any((c) => _matchPrefix(c, ['P013', 'P014', 'P015', 'P016']))},
+        {'icon': '📊', 'label': 'fuel_trim',
           'codes': codesFor((c) => _matchPrefix(c, ['P017', 'P018'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P017', 'P018'])),
-        },
-        {
-          'label': 'injector',
+          'active': codes.any((c) => _matchPrefix(c, ['P017', 'P018']))},
+        {'icon': '💉', 'label': 'injector',
           'codes': codesFor((c) => _matchPrefix(c, ['P020', 'P021'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P020', 'P021'])),
-        },
-        {
-          'label': 'maf_sensor',
+          'active': codes.any((c) => _matchPrefix(c, ['P020', 'P021']))},
+        {'icon': '🌬️', 'label': 'maf_sensor',
           'codes': codesFor((c) => _matchPrefix(c, ['P010'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P010'])),
-        },
-        {
-          'label': 'network',
+          'active': codes.any((c) => _matchPrefix(c, ['P010']))},
+        {'icon': '📡', 'label': 'network',
           'codes': codesFor((c) => c.startsWith('U')),
-          'active': codes.any((c) => c.startsWith('U')),
-        },
-        {
-          'label': 'service',
+          'active': codes.any((c) => c.startsWith('U'))},
+        {'icon': '🔧', 'label': 'service',
           'codes': <String>[],
-          'active': MaintenanceService.instance.dueCount > 0,
-        },
-        {
-          'label': 'traction',
+          'active': MaintenanceService.instance.dueCount > 0},
+        {'icon': '🔵', 'label': 'traction',
           'codes': codesFor(isTractionCode),
-          'active': codes.any(isTractionCode),
-        },
-        {
-          'label': 'steering',
+          'active': codes.any(isTractionCode)},
+        {'icon': '🚗', 'label': 'steering',
           'codes': codesFor(isSteeringCode),
-          'active': codes.any(isSteeringCode),
-        },
-        {
-          'label': 'egr',
+          'active': codes.any(isSteeringCode)},
+        {'icon': '🌀', 'label': 'egr',
           'codes': codesFor((c) => _matchPrefix(c, ['P040', 'P041'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P040', 'P041'])),
-        },
-        {
-          'label': 'throttle',
+          'active': codes.any((c) => _matchPrefix(c, ['P040', 'P041']))},
+        {'icon': '⚡', 'label': 'throttle',
           'codes': codesFor((c) => _matchPrefix(c, ['P21'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P21'])),
-        },
-        {
-          'label': 'fuel_pressure',
+          'active': codes.any((c) => _matchPrefix(c, ['P21']))},
+        {'icon': '💧', 'label': 'fuel_pressure',
           'codes': codesFor((c) => _matchPrefix(c, ['P022', 'P023', 'P024'])),
-          'active': codes.any((c) => _matchPrefix(c, ['P022', 'P023', 'P024'])),
-        },
-        {'label': 'mil', 'codes': <String>[], 'active': readiness.milOn},
-        {
-          'label': 'body',
+          'active': codes.any((c) => _matchPrefix(c, ['P022', 'P023', 'P024']))},
+        {'icon': '🔴', 'label': 'mil',
+          'codes': <String>[],
+          'active': readiness.milOn},
+        {'icon': '💡', 'label': 'body',
           'codes': codesFor((c) => c.startsWith('B') && !c.startsWith('B00')),
-          'active': codes.any((c) => c.startsWith('B') && !c.startsWith('B00')),
-        },
+          'active': codes.any((c) => c.startsWith('B') && !c.startsWith('B00'))},
       ];
     });
   }
 
   bool _matchPrefix(String code, List<String> prefixes) =>
       prefixes.any((p) => code.startsWith(p));
-
-  /// Lamps whose codes live in modules a standard OBD-II scan (modes 03/07,
-  /// answered by the engine / transmission computers) does not reach. They
-  /// light up when the engine computer happens to report one of their codes;
-  /// otherwise they are shown as "not readable" — never as OK.
-  static const Set<String> _notStandardObdLamps = {
-    'airbag',
-    'abs',
-    'traction',
-    'steering',
-    'body',
-  };
-
-  bool _lampUnreadable(Map<String, dynamic> lamp) =>
-      _notStandardObdLamps.contains(lamp['label']) && !_lampOn(lamp);
 
   @override
   void dispose() {
@@ -477,62 +414,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
-
-  bool get _connected => OBDService.instance.isInitialized;
-
-  /// Switches to [tab] in the bottom-navigation shell, or pushes [route] when
-  /// the dashboard is shown on its own (pushed from the service hub, tests).
-  void _goTab(AppTab tab, String route) {
-    final shell = AppShell.maybeOf(context);
-    if (shell != null) {
-      shell.goTo(tab);
-    } else {
-      Navigator.pushNamed(context, route);
-    }
-  }
-
-  void _openScan() => _goTab(AppTab.diagnose, AppRoutes.diagnosticCodes);
-  void _openRoadside() => _goTab(AppTab.roadside, AppRoutes.roadside);
-  void _openHistory() => _goTab(AppTab.history, AppRoutes.history);
-  void _openSettings() => _goTab(AppTab.profile, AppRoutes.settings);
-  void _push(String route) => Navigator.pushNamed(context, route);
-
-  /// Some localized labels (drive-score bands) carry an emoji; the UI shows
-  /// the words only.
-  static final RegExp _emoji = RegExp(
-    r'[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]',
-    unicode: true,
-  );
-  static String _plain(String s) => s.replaceAll(_emoji, '').trim();
-
-  // Material icons for the warning lamps (keyed by lamp label, in grid order).
-  static const Map<String, IconData> _lampIcons = {
-    'check_engine': Icons.warning_amber_rounded,
-    'battery': Icons.battery_alert_rounded,
-    'oil': Icons.oil_barrel_outlined,
-    'abs': Icons.album_outlined,
-    'airbag': Icons.airline_seat_recline_normal_rounded,
-    'temp': Icons.thermostat_rounded,
-    'fuel': Icons.local_gas_station_outlined,
-    'exhaust': Icons.air_rounded,
-    'transmission': Icons.settings_outlined,
-    'misfire': Icons.local_fire_department_outlined,
-    'o2_sensor': Icons.sensors_rounded,
-    'fuel_trim': Icons.tune_rounded,
-    'injector': Icons.opacity_rounded,
-    'maf_sensor': Icons.wind_power_outlined,
-    'network': Icons.lan_outlined,
-    'service': Icons.handyman_outlined,
-    'traction': Icons.waves_rounded,
-    'steering': Icons.trip_origin_rounded,
-    'egr': Icons.recycling_rounded,
-    'throttle': Icons.speed_rounded,
-    'fuel_pressure': Icons.water_drop_outlined,
-    'mil': Icons.error_outline_rounded,
-    'body': Icons.lightbulb_outline_rounded,
-  };
-
   @override
   Widget build(BuildContext context) {
     // The service hub pushes the dashboard ("You can switch between services
@@ -543,13 +424,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       canPop: Navigator.canPop(context),
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        // Inside AppShell the dashboard stays mounted while another tab is
-        // showing; that tab's Back returns to Home (the shell handles it), so
-        // the exit hint must only react when Home is the visible tab.
-        // TickerMode (set by the shell on hidden tabs) still reflects the tab
-        // that was visible when Back was pressed, even if the shell's own
-        // handler already switched to Home during this same pop.
-        if (!TickerMode.getValuesNotifier(context).value.enabled) return;
         final now = DateTime.now();
         if (_lastBackPressTime != null &&
             now.difference(_lastBackPressTime!) < const Duration(seconds: 2)) {
@@ -564,155 +438,210 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         }
       },
-      // No bottom bar here: AppShell provides the app's navigation.
       child: Scaffold(
         body: Stack(
           children: [
-            SafeArea(
+            Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0D0D0D), Color(0xFF0A1929)],
+              ),
+            ),
+            child: SafeArea(
               child: Column(
                 children: [
                   _buildHeader(),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                        AppSizes.space20.w,
-                        AppSizes.space4.h,
-                        AppSizes.space20.w,
-                        AppSizes.space32.h,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _connected ? _buildHealthCard() : _buildConnectCard(),
-                          if (MaintenanceService.instance.dueCount > 0) ...[
-                            SizedBox(height: AppSizes.space12.h),
-                            _buildMaintenanceAlert(),
-                          ],
-                          SizedBox(height: AppSizes.space24.h),
-                          _buildLiveDataSection(),
-                          if (TripService.instance.isRunning) ...[
-                            SizedBox(height: AppSizes.space12.h),
-                            _buildTripCard(),
-                          ],
-                          SizedBox(height: AppSizes.space24.h),
-                          _buildServicesSection(),
-                          SizedBox(height: AppSizes.space24.h),
-                          _buildWarningLightsSection(),
-                          if (_connected || _vin != null) ...[
-                            SizedBox(height: AppSizes.space24.h),
-                            _buildVehicleSection(),
-                          ],
-                          SizedBox(height: AppSizes.space24.h),
-                          _buildRecentScansSection(),
-                        ],
-                      ),
-                    ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(20.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_vin != null) _buildVinCard(),
+                      if (_vin != null) SizedBox(height: 16.h),
+                      if (MaintenanceService.instance.dueCount > 0) _buildMaintenanceAlert(),
+                      if (MaintenanceService.instance.dueCount > 0) SizedBox(height: 16.h),
+                      _buildHealthCard(),
+                      SizedBox(height: 20.h),
+                      _buildLiveDataSection(),
+                      SizedBox(height: 20.h),
+                      if (TripService.instance.isRunning) _buildTripCard(),
+                      if (TripService.instance.isRunning) SizedBox(height: 20.h),
+                      SizedBox(height: 10.h),
+                      _buildWarningLightsSection(),
+                      SizedBox(height: 30.h),
+                      _buildQuickScanButton(),
+                      SizedBox(height: 20.h),
+                      _buildMaintenanceCard(),
+                      SizedBox(height: 20.h),
+                      _buildVideoTutorialsCard(),
+                      SizedBox(height: 30.h),
+                      _buildRecentScansSection(),
+                      SizedBox(height: 80.h),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            // ── In-app alert overlay ────────────────────────────────────
-            if (_activeAlert != null) _buildAlertOverlay(_activeAlert!),
-          ],
+            ],
+          ),
         ),
       ),
+            // ── In-app alert overlay ────────────────────────────────────
+            if (_activeAlert != null)
+              _buildAlertOverlay(_activeAlert!),
+          ],
+        ),
+        bottomNavigationBar: _buildBottomNavBar(),
+      ),
     );
-  }
-
-  // ── Header: greeting + vehicle name, adapter action ─────────────────────────
-
-  String get _greeting {
-    final h = DateTime.now().hour;
-    return context.tr(
-      h < 12
-          ? 'dash_greeting_morning'
-          : h < 18
-          ? 'dash_greeting_afternoon'
-          : 'dash_greeting_evening',
-    );
-  }
-
-  /// VinDecoder reports undeterminable fields as [VinDecoder.unknown].
-  String _vinField(String key, String unknownKey) {
-    final value = _vinInfo[key] ?? '';
-    return value == VinDecoder.unknown ? context.tr(unknownKey) : value;
-  }
-
-  /// "Maker  •  year" from the VIN, the raw VIN, or "My car".
-  String get _vehicleName {
-    if (_vin == null) return context.tr('dash_my_car');
-    final manufacturer = _vinField('manufacturer', 'vin_unknown');
-    final year = _vinField('year', 'vin_year_unknown');
-    return manufacturer.isNotEmpty ? '$manufacturer  •  $year' : _vin!;
   }
 
   Widget _buildHeader() {
-    final p = context.colors;
-    final canPop = Navigator.canPop(context);
-    final inShell = AppShell.maybeOf(context) != null;
+    final isConnected = OBDService.instance.isInitialized;
     return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        canPop ? AppSizes.space8.w : AppSizes.space20.w,
-        AppSizes.space12.h,
-        AppSizes.space16.w,
-        AppSizes.space12.h,
-      ),
+      padding: EdgeInsets.all(20.r),
+      child: isConnected ? _buildConnectedHeader() : _buildDisconnectedBanner(),
+    );
+  }
+
+  // The whole header (adapter name, "Connected" pill, chevron) opens the
+  // adapter screen, the only place to disconnect or switch adapters.
+  Widget _buildConnectedHeader() {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _openConnectionScreen,
       child: Row(
         children: [
-          if (canPop) ...[
-            IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
-              color: p.text,
-              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              onPressed: () => Navigator.maybePop(context),
-            ),
-            SizedBox(width: AppSizes.space4.w),
-          ],
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
               children: [
-                Text(
-                  _greeting,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: p.text2,
+                Container(
+                  width: 40.w,
+                  height: 40.h,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+                    ),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
+                  child: Icon(Icons.directions_car, color: Colors.white, size: 24.r),
                 ),
-                Semantics(
-                  header: true,
-                  child: Text(
-                    _vehicleName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.headline.copyWith(color: p.text),
+                SizedBox(width: 12.w),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        OBDService.instance.connectedDeviceName ??
+                            context.tr('dash_adapter'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFE8EAED),
+                        ),
+                      ),
+                      Text(
+                        context.tr('dash_manage_adapter'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: const Color(0xFFE8EAED).withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          // Outside the shell (pushed from the hub) there is no Profile tab.
-          if (!inShell) ...[
-            SizedBox(width: AppSizes.space8.w),
-            HeaderAction(
-              icon: Icons.settings_outlined,
-              tooltip: context.tr('settings'),
-              onPressed: _openSettings,
+          SizedBox(width: 8.w),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E676).withValues(alpha: 0.1),
+              border: Border.all(color: const Color(0xFF00E676)),
+              borderRadius: BorderRadius.circular(20.r),
             ),
-          ],
-          SizedBox(width: AppSizes.space8.w),
-          HeaderAction(
-            icon: _connected
-                ? Icons.bluetooth_connected_rounded
-                : Icons.bluetooth_rounded,
-            color: _connected ? p.primary : null,
-            tooltip: context.tr('dash_adapter'),
-            onPressed: _openConnectionScreen,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8.w,
+                  height: 8.h,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00E676),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  context.tr('connected'),
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: const Color(0xFF00E676),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 6.w),
+          Icon(
+            Icons.arrow_forward_ios,
+            color: const Color(0xFF00E676).withValues(alpha: 0.7),
+            size: 14.r,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDisconnectedBanner() {
+    return GestureDetector(
+      onTap: _openConnectionScreen,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF6B35).withValues(alpha: 0.08),
+          border: Border.all(color: const Color(0xFFFF6B35).withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.bluetooth_disabled, color: const Color(0xFFFF6B35), size: 22.r),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('obd_not_connected'),
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFFF6B35),
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    context.tr('tap_to_connect'),
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: const Color(0xFFFF6B35).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: const Color(0xFFFF6B35), size: 14.r),
+          ],
+        ),
       ),
     );
   }
@@ -742,161 +671,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Color get _healthColor {
-    final p = context.colors;
     final s = _healthScore;
-    if (s >= 70) return p.ok;
-    if (s >= 50) return p.warn;
-    return p.crit;
+    if (s >= 90) return const Color(0xFF00E676);
+    if (s >= 70) return const Color(0xFF00D9FF);
+    if (s >= 50) return const Color(0xFFFFD600);
+    if (s >= 30) return const Color(0xFFFF6B35);
+    return Colors.redAccent;
   }
 
-  // ── Health card (connected) ───────────────────────────────────────────────
+  // ── Card ──────────────────────────────────────────────────────────────────
 
-  Widget _buildHealthCard() {
-    final p = context.colors;
-    final confirmed = _confirmedDtcs;
-    final pending = _pendingDtcs;
-    return AppCard(
-      padding: EdgeInsets.all(AppSizes.space16.r),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              _HealthRing(score: _healthScore, color: _healthColor),
-              SizedBox(width: AppSizes.space16.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      context.tr('vehicle_health'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: p.text2,
-                      ),
-                    ),
-                    Text(
-                      _healthLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.title.copyWith(color: p.text),
-                    ),
-                    SizedBox(height: AppSizes.space4.h),
-                    _buildLinkStatus(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (confirmed > 0 || pending > 0) ...[
-            SizedBox(height: AppSizes.space16.h),
-            _buildCodesRow(confirmed, pending),
-          ],
-          SizedBox(height: AppSizes.space16.h),
-          AppButton(
-            label: context.tr('quick_scan'),
-            icon: Icons.monitor_heart_outlined,
-            onPressed: _openScan,
-          ),
-        ],
-      ),
-    );
-  }
+  // ── Alert overlay ─────────────────────────────────────────────────────────
 
-  /// "Connected" pill + adapter name. Opens the adapter screen, the place to
-  /// disconnect or switch adapters.
-  Widget _buildLinkStatus() {
-    final p = context.colors;
-    return InkWell(
-      onTap: _openConnectionScreen,
-      borderRadius: BorderRadius.circular(AppSizes.radiusSm.r),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 44.h),
-        child: Row(
-          children: [
-            StatusBadge(
-              label: context.tr('connected'),
-              level: StatusLevel.ok,
-              showIcon: true,
-            ),
-            SizedBox(width: AppSizes.space8.w),
-            Flexible(
-              child: Text(
-                OBDService.instance.connectedDeviceName ??
-                    context.tr('dash_adapter'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.label.copyWith(
-                  fontWeight: FontWeight.w400,
-                  color: p.text2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildAlertOverlay(OBDAlert alert) {
+    final isCritical = alert.severity == AlertSeverity.critical;
+    final bgColor    = isCritical ? const Color(0xFFFF1744) : const Color(0xFFFF6B35);
 
-  /// Warn-soft "N codes need attention" row; opens the codes screen.
-  Widget _buildCodesRow(int confirmed, int pending) {
-    final p = context.colors;
-    final text = context
-        .tr(
-          confirmed == 0
-              ? (pending == 1
-                    ? 'dash_pending_only_one'
-                    : 'dash_pending_only_many')
-              : confirmed == 1
-              ? 'dash_fault_code_n'
-              : 'dash_fault_codes_n',
-        )
-        .replaceAll('{n}', '${confirmed == 0 ? pending : confirmed}');
-    return Material(
-      color: p.warnSoft,
-      borderRadius: BorderRadius.circular(AppSizes.radiusMd.r),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: _openScan,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: 44.h),
-          child: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(
-              AppSizes.space12.w,
-              AppSizes.space8.h,
-              AppSizes.space8.w,
-              AppSizes.space8.h,
+    return Positioned(
+      top: 0, left: 0, right: 0,
+      child: SafeArea(
+        child: GestureDetector(
+          onTap: () => setState(() => _activeAlert = null),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: EdgeInsets.all(12.r),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(color: bgColor.withValues(alpha: 0.6),
+                    blurRadius: 20, offset: const Offset(0, 6)),
+              ],
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: p.warn, size: 18.r),
-                SizedBox(width: AppSizes.space8.w),
+                Icon(
+                  isCritical ? Icons.warning_rounded : Icons.info_rounded,
+                  color: Colors.white, size: 28.r,
+                ),
+                SizedBox(width: 12.w),
                 Expanded(
-                  child: Text(
-                    text,
-                    style: AppTextStyles.label.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: p.warn,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(alert.title,
+                          style: TextStyle(
+                              fontSize: 15.sp, fontWeight: FontWeight.w800,
+                              color: Colors.white)),
+                      SizedBox(height: 3.h),
+                      Text(alert.message,
+                          style: TextStyle(
+                              fontSize: 12.sp, color: Colors.white.withValues(alpha: 0.9))),
+                    ],
                   ),
                 ),
-                // Pending (mode 07) codes: not confirmed faults yet.
-                if (confirmed > 0 && pending > 0) ...[
-                  SizedBox(width: AppSizes.space8.w),
-                  Text(
-                    context
-                        .tr('dash_pending_codes_n')
-                        .replaceAll('{n}', '$pending'),
-                    style: AppTextStyles.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: p.warn,
-                    ),
-                  ),
-                ],
-                Icon(Icons.chevron_right_rounded, color: p.warn, size: 20.r),
+                Icon(Icons.close, color: Colors.white.withValues(alpha: 0.7), size: 18.r),
               ],
             ),
           ),
@@ -905,153 +735,543 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── Not connected: offer "Connect" ────────────────────────────────────────
+  // ── VIN card ──────────────────────────────────────────────────────────────
 
-  Widget _buildConnectCard() {
-    return AppCard(
-      onTap: _openConnectionScreen,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.space16.w,
-        vertical: AppSizes.space24.h,
+  Widget _buildVinCard() {
+    // VinDecoder reports undeterminable fields as VinDecoder.unknown.
+    String field(String key, String unknownKey) {
+      final value = _vinInfo[key] ?? '';
+      return value == VinDecoder.unknown ? context.tr(unknownKey) : value;
+    }
+    final manufacturer = field('manufacturer', 'vin_unknown');
+    final year         = field('year', 'vin_year_unknown');
+    final country      = _localizedCountry(field('country', 'vin_unknown'));
+    return Container(
+      padding: EdgeInsets.all(14.r),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(16.r),
       ),
-      child: EmptyState(
-        icon: Icons.bluetooth_disabled_rounded,
-        title: context.tr('obd_not_connected'),
-        message: context.tr('dash_connect_for_health'),
-        action: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Row(
+        children: [
+          Icon(Icons.directions_car, color: const Color(0xFF00D9FF), size: 22.r),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  manufacturer.isNotEmpty ? '$manufacturer  •  $year' : _vin ?? '',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE8EAED),
+                  ),
+                ),
+                if (country.isNotEmpty)
+                  Text(
+                    '$country  •  VIN: $_vin',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: const Color(0xFF00D9FF).withValues(alpha: 0.7),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// VinDecoder's English country name, in Arabic when the UI is Arabic
+  /// (falls back to the English name for countries not listed).
+  String _localizedCountry(String country) {
+    if (Localizations.localeOf(context).languageCode != 'ar') return country;
+    return _arCountryNames[country] ?? country;
+  }
+
+  // ── Maintenance alert ─────────────────────────────────────────────────────
+
+  Widget _buildMaintenanceAlert() {
+    final count = MaintenanceService.instance.dueCount;
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.maintenance),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFD600).withValues(alpha: 0.08),
+          border: Border.all(color: const Color(0xFFFFD600).withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Row(
           children: [
-            AppButton(
-              label: context.tr('dash_connect'),
-              icon: Icons.bluetooth_searching_rounded,
-              onPressed: _openConnectionScreen,
+            Icon(Icons.build_outlined, color: const Color(0xFFFFD600), size: 18.r),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Text(
+                context
+                    .tr(count == 1
+                        ? 'dash_maintenance_due_one'
+                        : 'dash_maintenance_due_many')
+                    .replaceAll('{n}', '$count'),
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xFFFFD600),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            SizedBox(height: AppSizes.space8.h),
-            AppButton.secondary(
-              label: context.tr('quick_scan'),
-              icon: Icons.monitor_heart_outlined,
-              onPressed: _openScan,
-            ),
+            Icon(Icons.arrow_forward_ios, color: const Color(0xFFFFD600), size: 12.r),
           ],
         ),
       ),
     );
   }
 
-  // ── Maintenance due ───────────────────────────────────────────────────────
+  // ── Trip computer card ────────────────────────────────────────────────────
 
-  Widget _buildMaintenanceAlert() {
-    final p = context.colors;
-    final count = MaintenanceService.instance.dueCount;
-    return AppCard(
-      accent: p.warn,
-      onTap: () => _push(AppRoutes.maintenance),
-      padding: EdgeInsetsDirectional.fromSTEB(
-        AppSizes.space12.w,
-        AppSizes.space12.h,
-        AppSizes.space8.w,
-        AppSizes.space12.h,
+  Widget _buildTripCard() {
+    final trip = TripService.instance;
+    final elapsed = trip.elapsed;
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final timeStr = h > 0 ? '$h:$m:$s' : '$m:$s';
+
+    return Container(
+      padding: EdgeInsets.all(18.r),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(18.r),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBox(Icons.build_outlined, color: p.warn, size: 36),
-          SizedBox(width: AppSizes.space12.w),
-          Expanded(
-            child: Text(
-              context
-                  .tr(
-                    count == 1
-                        ? 'dash_maintenance_due_one'
-                        : 'dash_maintenance_due_many',
-                  )
-                  .replaceAll('{n}', '$count'),
-              style: AppTextStyles.label.copyWith(
-                fontWeight: FontWeight.w600,
-                color: p.warn,
+          Row(
+            children: [
+              Icon(Icons.route, color: const Color(0xFF00E676), size: 18.r),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  context.tr('dash_trip_computer'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE8EAED),
+                  ),
+                ),
               ),
+              SizedBox(width: 8.w),
+              GestureDetector(
+                onTap: () => setState(() => trip.reset()),
+                child: Text(
+                  context.tr('dash_reset'),
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: const Color(0xFF00E676).withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14.h),
+          Row(
+            children: [
+              _tripStat(context.tr('dash_distance'), '${trip.distanceKm.toStringAsFixed(1)} km', const Color(0xFF00D9FF)),
+              _tripStat(context.tr('dash_time'), timeStr, const Color(0xFF00E676)),
+              _tripStat(context.tr('dash_avg_speed'), '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h', const Color(0xFFFFD600)),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              _tripStat(context.tr('dash_fuel_used'), '${trip.fuelUsedL.toStringAsFixed(2)} L', const Color(0xFFFF6B35)),
+              _tripStat(
+                context.tr('dash_efficiency'),
+                trip.fuelEfficiencyL100km > 0
+                    ? '${trip.fuelEfficiencyL100km.toStringAsFixed(1)} L/100km'
+                    : '--',
+                const Color(0xFF9C27B0),
+              ),
+              Expanded(child: SizedBox()),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          // ── Drive score ──────────────────────────────────────────────
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              color: _driveScoreColor(trip.driveScore).withValues(alpha: 0.1),
+              border: Border.all(
+                  color: _driveScoreColor(trip.driveScore).withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            // Label column takes the free space (and ellipsizes); the score
+            // keeps its natural width, so the row never overflows the card.
+            child: Row(
+              children: [
+                Text('🏎️', style: TextStyle(fontSize: 20.sp)),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.tr('drive_score'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 10.sp,
+                              color: const Color(0xFFE8EAED).withValues(alpha: 0.55))),
+                      Text(_driveScoreLabel(trip.driveScore),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _driveScoreColor(trip.driveScore))),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Text('${trip.driveScore}',
+                    style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.w900,
+                        color: _driveScoreColor(trip.driveScore))),
+                Text(' / 100',
+                    style: TextStyle(fontSize: 12.sp,
+                        color: const Color(0xFFE8EAED).withValues(alpha: 0.4))),
+              ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: p.warn, size: 20.r),
         ],
       ),
     );
   }
 
-  // ── Alert overlay ─────────────────────────────────────────────────────────
+  // Same bands as TripService.driveScoreLabel, localized.
+  String _driveScoreLabel(int score) {
+    if (score >= 85) return context.tr('dash_drive_eco');
+    if (score >= 65) return context.tr('dash_drive_normal');
+    if (score >= 45) return context.tr('dash_drive_sporty');
+    return context.tr('dash_drive_aggressive');
+  }
 
-  Widget _buildAlertOverlay(OBDAlert alert) {
-    final p = context.colors;
-    final isCritical = alert.severity == AlertSeverity.critical;
-    final tone = isCritical ? p.crit : p.warn;
-    final radius = BorderRadius.circular(AppSizes.radiusLg.r);
-    return PositionedDirectional(
-      top: 0,
-      start: 0,
-      end: 0,
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.space12.r),
-          child: Material(
-            color: p.surface,
-            elevation: 6,
-            shape: RoundedRectangleBorder(
-              borderRadius: radius,
-              side: BorderSide(color: tone),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => setState(() => _activeAlert = null),
-              child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  AppSizes.space12.w,
-                  AppSizes.space12.h,
-                  AppSizes.space12.w,
-                  AppSizes.space12.h,
-                ),
-                child: Row(
-                  children: [
-                    IconBox(
-                      isCritical
-                          ? Icons.error_outline_rounded
-                          : Icons.warning_amber_rounded,
-                      color: tone,
-                    ),
-                    SizedBox(width: AppSizes.space12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            alert.title,
-                            style: AppTextStyles.body.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: p.text,
-                            ),
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            alert.message,
-                            style: AppTextStyles.label.copyWith(
-                              fontWeight: FontWeight.w400,
-                              color: p.text2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.space8.w),
-                    Icon(Icons.close_rounded, color: p.muted, size: 20.r),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+  Color _driveScoreColor(int score) {
+    if (score >= 85) return const Color(0xFF00E676);
+    if (score >= 65) return const Color(0xFF00D9FF);
+    if (score >= 45) return const Color(0xFFFFD600);
+    return const Color(0xFFFF1744);
+  }
+
+  Widget _tripStat(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10.sp,
+                  color: const Color(0xFFE8EAED).withValues(alpha: 0.55))),
+          SizedBox(height: 2.h),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
+                  color: color)),
+        ],
       ),
     );
   }
 
-  // ── Live data ─────────────────────────────────────────────────────────────
+  Widget _buildHealthCard() {
+    final connected = OBDService.instance.isInitialized;
+
+    return Container(
+      padding: EdgeInsets.all(20.r),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.05),
+            Colors.white.withValues(alpha: 0.02),
+          ],
+        ),
+        border: Border.all(
+          color: connected
+              ? _healthColor.withValues(alpha: 0.4)
+              : const Color(0xFF00D9FF).withValues(alpha: 0.15),
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: connected ? _buildHealthConnected() : _buildHealthDisconnected(),
+    );
+  }
+
+  Widget _buildHealthConnected() {
+    return StreamBuilder<OBDLiveData>(
+      stream: OBDService.instance.liveDataStream,
+      initialData: OBDService.instance.currentData,
+      builder: (context, snapshot) {
+        final d = snapshot.data ?? const OBDLiveData();
+        final score   = _healthScore;
+        final label   = _healthLabel;
+        final hColor  = _healthColor;
+        final confirmed = _confirmedDtcs;
+        final pending   = _pendingDtcs;
+
+        final rpmStr     = d.rpm != null          ? d.rpm!.toStringAsFixed(0)               : '--';
+        final speedStr   = d.speedKmh != null     ? '${d.speedKmh!.toStringAsFixed(0)} km/h' : '--';
+        final coolantStr = d.coolantTempC != null  ? '${d.coolantTempC!.toStringAsFixed(0)}°C' : '--';
+        final fuelStr    = d.fuelLevelPct != null  ? '${d.fuelLevelPct!.toStringAsFixed(0)}%'  : '--';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header row ──────────────────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(
+                    context.tr('vehicle_health'),
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE8EAED),
+                    ),
+                  ),
+                ),
+                // Score badge
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: hColor.withValues(alpha: 0.15),
+                    border: Border.all(color: hColor),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.favorite, color: hColor, size: 13.r),
+                      SizedBox(width: 5.w),
+                      Text(
+                        '$score%  $label',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: hColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // ── Health bar ──────────────────────────────────────────────────
+            SizedBox(height: 14.h),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4.r),
+              child: LinearProgressIndicator(
+                value: score / 100,
+                minHeight: 6.h,
+                backgroundColor: Colors.white.withValues(alpha: 0.08),
+                valueColor: AlwaysStoppedAnimation<Color>(hColor),
+              ),
+            ),
+
+            // ── DTC alert ───────────────────────────────────────────────────
+            if (confirmed > 0 || pending > 0) ...[
+              SizedBox(height: 10.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                    color: const Color(0xFFFF6B35).withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: const Color(0xFFFF6B35), size: 14.r),
+                    SizedBox(width: 6.w),
+                    Expanded(
+                      child: Text(
+                        context
+                            .tr(confirmed == 0
+                                ? (pending == 1
+                                    ? 'dash_pending_only_one'
+                                    : 'dash_pending_only_many')
+                                : confirmed == 1
+                                    ? 'dash_fault_code_n'
+                                    : 'dash_fault_codes_n')
+                            .replaceAll('{n}', '${confirmed == 0 ? pending : confirmed}'),
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: const Color(0xFFFF6B35),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    // Pending (mode 07) codes: not confirmed faults yet.
+                    if (confirmed > 0 && pending > 0) ...[
+                      SizedBox(width: 6.w),
+                      Text(
+                        context
+                            .tr('dash_pending_codes_n')
+                            .replaceAll('{n}', '$pending'),
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: const Color(0xFFFFD600),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Live metrics grid ────────────────────────────────────────────
+            SizedBox(height: 16.h),
+            Row(
+              children: [
+                _buildMetricTile(Icons.speed,        'RPM',     rpmStr,     const Color(0xFF00D9FF)),
+                SizedBox(width: 10.w),
+                _buildMetricTile(Icons.directions_car, context.tr('dash_speed'),  speedStr,   const Color(0xFF00E676)),
+              ],
+            ),
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                _buildMetricTile(Icons.thermostat,   context.tr('dash_coolant'), coolantStr, const Color(0xFFFFD600)),
+                SizedBox(width: 10.w),
+                _buildMetricTile(Icons.local_gas_station, context.tr('fuel'), fuelStr,   const Color(0xFFFF6B35)),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHealthDisconnected() {
+    return Column(
+      children: [
+        SizedBox(height: 8.h),
+        Row(
+          children: [
+            Container(
+              width: 48.w,
+              height: 48.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00D9FF).withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: const Color(0xFF00D9FF).withValues(alpha: 0.3)),
+              ),
+              child: Icon(Icons.bluetooth_searching,
+                  color: const Color(0xFF00D9FF), size: 24.r),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('vehicle_health'),
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE8EAED),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    context.tr('dash_connect_for_health'),
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: const Color(0xFFE8EAED).withValues(alpha: 0.5),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        // Placeholder metric tiles
+        Row(
+          children: [
+            _buildMetricTile(Icons.speed,        'RPM',     '--', Colors.white24),
+            SizedBox(width: 10.w),
+            _buildMetricTile(Icons.directions_car, context.tr('dash_speed'),  '--', Colors.white24),
+          ],
+        ),
+        SizedBox(height: 10.h),
+        Row(
+          children: [
+            _buildMetricTile(Icons.thermostat,   context.tr('dash_coolant'), '--', Colors.white24),
+            SizedBox(width: 10.w),
+            _buildMetricTile(Icons.local_gas_station, context.tr('fuel'), '--', Colors.white24),
+          ],
+        ),
+        SizedBox(height: 8.h),
+      ],
+    );
+  }
+
+  Widget _buildMetricTile(IconData icon, String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18.r),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: const Color(0xFFE8EAED).withValues(alpha: 0.55),
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    value,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: color == Colors.white24
+                          ? const Color(0xFFE8EAED).withValues(alpha: 0.2)
+                          : color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildLiveDataSection() {
     return StreamBuilder<OBDLiveData>(
@@ -1059,259 +1279,286 @@ class _DashboardScreenState extends State<DashboardScreen> {
       initialData: OBDService.instance.currentData,
       builder: (context, snapshot) {
         final d = snapshot.data ?? const OBDLiveData();
-        final p = context.colors;
-        final gap = SizedBox(width: AppSizes.space12.w);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionTitle(
-              context.tr('live_data'),
-              trailing: _connected
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Live-link indicator.
-                        ExcludeSemantics(
-                          child: Container(
-                            width: 8.r,
-                            height: 8.r,
-                            decoration: BoxDecoration(
-                              color: p.ok,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
+        return Container(
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.03),
+            border: Border.all(
+              color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+            ),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.speed, color: Color(0xFF00D9FF), size: 20.r),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      context.tr('live_data'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFE8EAED),
+                      ),
+                    ),
+                  ),
+                  if (OBDService.instance.isInitialized) ...[
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.liveGraph),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D9FF).withValues(alpha: 0.1),
+                          border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.4)),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
-                        SizedBox(width: AppSizes.space8.w),
-                        SectionLink(
-                          label: context.tr('dash_see_graph'),
-                          onTap: () => _push(AppRoutes.liveGraph),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.show_chart, color: const Color(0xFF00D9FF), size: 13.r),
+                            SizedBox(width: 4.w),
+                            Text(context.tr('graph'), style: TextStyle(fontSize: 11.sp, color: const Color(0xFF00D9FF), fontWeight: FontWeight.w600)),
+                          ],
                         ),
-                      ],
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Container(
+                      width: 8.w, height: 8.h,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF00E676), shape: BoxShape.circle),
+                    ),
+                  ],
+                ],
+              ),
+              SizedBox(height: 12.h),
+              // ── Arc gauges: RPM + Speed ──────────────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: OBDGauge(
+                      value: d.rpm,
+                      max: 8000,
+                      label: 'RPM',
+                      unit: 'rpm',
+                      color: const Color(0xFF00D9FF),
+                      dangerAt: 6500,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: OBDGauge(
+                      value: d.speedKmh,
+                      max: 240,
+                      label: context.tr('dash_speed'),
+                      unit: 'km/h',
+                      color: const Color(0xFF00E676),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              // ── Coolant tile (stays as number) ───────────────────────────
+              Row(
+                children: [
+                  _buildLiveTile(
+                    context.tr('dash_coolant'),
+                    d.coolantTempC != null ? d.coolantTempC!.toStringAsFixed(0) : '--',
+                    '°C',
+                    Icons.thermostat,
+                    d.coolantTempC != null && d.coolantTempC! >= 105
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFFFFD600),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    context.tr('dash_air_temp'),
+                    d.intakeAirTempC != null ? '${d.intakeAirTempC!.toStringAsFixed(0)}°C' : '--',
+                    '',
+                    Icons.air,
+                    d.intakeAirTempC != null && d.intakeAirTempC! > 60
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFF00D9FF),
+                  ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    context.tr('battery'),
+                    d.batteryVoltage != null ? '${d.batteryVoltage!.toStringAsFixed(1)}V' : '--',
+                    '',
+                    Icons.battery_charging_full,
+                    d.batteryVoltage != null && d.batteryVoltage! < 11.5
+                        ? const Color(0xFFFF1744)
+                        : const Color(0xFF00E676),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              Row(
+                children: [
+                  // Diesels (and some petrol cars) report the pedal, not a
+                  // throttle plate.
+                  if (_isDiesel ||
+                      (d.throttlePct == null && d.acceleratorPedalPct != null))
+                    _buildLiveTile(
+                      context.tr('accel_pedal'),
+                      d.acceleratorPedalPct != null
+                          ? d.acceleratorPedalPct!.toStringAsFixed(1)
+                          : '--',
+                      '%',
+                      Icons.tune,
+                      const Color(0xFFFF6B35),
                     )
-                  : null,
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: OBDGauge(
-                    value: d.speedKmh,
-                    label: context.tr('dash_speed'),
-                    unit: 'km/h',
-                    icon: Icons.speed_rounded,
+                  else
+                    _buildLiveTile(
+                      context.tr('throttle'),
+                      d.throttlePct != null ? d.throttlePct!.toStringAsFixed(1) : '--',
+                      '%',
+                      Icons.tune,
+                      const Color(0xFFFF6B35),
+                    ),
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    context.tr('fuel'),
+                    d.fuelLevelPct != null ? d.fuelLevelPct!.toStringAsFixed(1) : '--',
+                    '%',
+                    Icons.local_gas_station,
+                    const Color(0xFFFF6B35),
                   ),
-                ),
-                gap,
-                Expanded(
-                  child: OBDGauge(
-                    value: d.rpm,
-                    label: context.tr('engine'),
-                    unit: 'rpm',
-                    icon: Icons.av_timer_rounded,
-                    dangerAt: 6500,
+                  SizedBox(width: 10.w),
+                  _buildLiveTile(
+                    context.tr('dash_engine_load'),
+                    d.engineLoad != null ? d.engineLoad!.toStringAsFixed(1) : '--',
+                    '%',
+                    Icons.settings,
+                    const Color(0xFF9C27B0),
                   ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              SizedBox(height: 10.h),
+              // ── MAP + Timing advance (diesel: rail pressure + oil temp) ──
+              Row(
+                children: [
+                  _buildLiveTile(
+                    context.tr('dash_map'),
+                    d.mapKpa != null ? '${d.mapKpa!.toStringAsFixed(0)} kPa' : '--',
+                    '',
+                    Icons.compress,
+                    const Color(0xFF00BCD4),
+                  ),
+                  SizedBox(width: 10.w),
+                  if (_isDiesel) ...[
+                    _buildRailPressureTile(d.fuelRailPressureKpa),
+                    SizedBox(width: 10.w),
+                    _buildOilTempTile(d.oilTempC),
+                  ] else ...[
+                    _buildTimingTile(d.timingAdvanceDeg),
+                    SizedBox(width: 10.w),
+                    // GDI petrol engines may report rail pressure too.
+                    if (d.fuelRailPressureKpa != null)
+                      _buildRailPressureTile(d.fuelRailPressureKpa)
+                    else
+                      Expanded(child: SizedBox()),
+                  ],
+                ],
+              ),
+              // ── Fuel trim Bank 1 + oil temp (petrol only) ────────────────
+              if (!_isDiesel) ...[
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    _buildFuelTrimTile('STFT B1', d.fuelTrimShortPct, ''),
+                    SizedBox(width: 10.w),
+                    _buildFuelTrimTile('LTFT B1', d.fuelTrimLongPct, ''),
+                    SizedBox(width: 10.w),
+                    _buildOilTempTile(d.oilTempC),
+                  ],
                 ),
               ],
-            ),
-            SizedBox(height: AppSizes.space12.h),
-            Row(
-              children: [
-                Expanded(
-                  child: OBDGauge(
-                    value: d.coolantTempC,
-                    label: context.tr('dash_coolant'),
-                    unit: '°C',
-                    icon: Icons.thermostat_rounded,
-                    dangerAt: 105,
-                  ),
-                ),
-                gap,
-                Expanded(
-                  child: OBDGauge(
-                    value: d.batteryVoltage,
-                    label: context.tr('battery'),
-                    unit: 'V',
-                    icon: Icons.battery_charging_full_rounded,
-                    decimals: 1,
-                    dangerBelow: 11.5,
-                  ),
+              // ── Fuel trim Bank 2 (V6/V8) ─────────────────────────────────
+              if (d.fuelTrimShortB2 != null || d.fuelTrimLongB2 != null) ...[
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    _buildFuelTrimTile('STFT B2', d.fuelTrimShortB2, ''),
+                    SizedBox(width: 10.w),
+                    _buildFuelTrimTile('LTFT B2', d.fuelTrimLongB2, ''),
+                    SizedBox(width: 10.w),
+                    Expanded(child: SizedBox()),
+                  ],
                 ),
               ],
-            ),
-            SizedBox(height: AppSizes.space12.h),
-            _buildMoreParams(d),
-          ],
+              // ── O2 sensor voltages (diesel: only if it reports any) ──────
+              if (!_isDiesel ||
+                  d.o2B1S1Voltage != null ||
+                  d.lambdaB1S1 != null ||
+                  d.o2B1S2Voltage != null) ...[
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    // Wide-band upstream sensors report λ instead of volts.
+                    if (d.o2B1S1Voltage == null && d.lambdaB1S1 != null)
+                      _buildLambdaTile('O2 B1S1', d.lambdaB1S1!)
+                    else
+                      _buildO2Tile('O2 B1S1', d.o2B1S1Voltage),
+                    SizedBox(width: 10.w),
+                    _buildO2Tile('O2 B1S2', d.o2B1S2Voltage),
+                    SizedBox(width: 10.w),
+                    _buildO2Tile('O2 B2S1', d.o2B2S1Voltage),
+                  ],
+                ),
+              ],
+            ],
+          ),
         );
       },
     );
   }
 
-  /// Every other live parameter, collapsed by default behind "All parameters".
-  Widget _buildMoreParams(OBDLiveData d) {
-    final p = context.colors;
-    final rows = _showAllParams ? _paramRows(d) : const <Widget>[];
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            button: true,
-            expanded: _showAllParams,
-            child: InkWell(
-              key: const ValueKey('dash_more_params'),
-              onTap: () => setState(() => _showAllParams = !_showAllParams),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: 48.h),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSizes.space16.w),
-                  child: Row(
-                    children: [
-                      Icon(Icons.tune_rounded, color: p.text2, size: 20.r),
-                      SizedBox(width: AppSizes.space12.w),
-                      Expanded(
-                        child: Text(
-                          context.tr(
-                            _showAllParams
-                                ? 'dash_fewer_params'
-                                : 'dash_more_params',
-                          ),
-                          style: AppTextStyles.body.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: p.text,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        _showAllParams
-                            ? Icons.expand_less_rounded
-                            : Icons.expand_more_rounded,
-                        color: p.muted,
-                        size: 22.r,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          for (final row in rows) ...[
-            Divider(
-              height: 1,
-              thickness: 1,
-              indent: AppSizes.space16.w,
-              color: p.border,
-            ),
-            row,
-          ],
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _paramRows(OBDLiveData d) {
-    final p = context.colors;
-    String f1(double? v) => v != null ? v.toStringAsFixed(1) : '--';
-    // Diesels (and some petrol cars) report the pedal, not a throttle plate.
-    final usePedal =
-        _isDiesel || (d.throttlePct == null && d.acceleratorPedalPct != null);
-    final iat = d.intakeAirTempC;
-    return [
-      _param(
-        context.tr('dash_air_temp'),
-        iat != null ? '${iat.toStringAsFixed(0)}°C' : '--',
-        tone: iat != null && iat > 60 ? p.crit : null,
-      ),
-      if (usePedal)
-        _param(context.tr('accel_pedal'), f1(d.acceleratorPedalPct), unit: '%')
-      else
-        _param(context.tr('throttle'), f1(d.throttlePct), unit: '%'),
-      _param(context.tr('fuel'), f1(d.fuelLevelPct), unit: '%'),
-      _param(context.tr('dash_engine_load'), f1(d.engineLoad), unit: '%'),
-      _param(
-        context.tr('dash_map'),
-        d.mapKpa != null ? '${d.mapKpa!.toStringAsFixed(0)} kPa' : '--',
-      ),
-      // Diesel: rail pressure + oil temp instead of timing / fuel trims.
-      if (_isDiesel) ...[
-        _railPressureParam(d.fuelRailPressureKpa),
-        _oilTempParam(d.oilTempC),
-      ] else ...[
-        _timingParam(d.timingAdvanceDeg),
-        // GDI petrol engines may report rail pressure too.
-        if (d.fuelRailPressureKpa != null)
-          _railPressureParam(d.fuelRailPressureKpa),
-        _fuelTrimParam('STFT B1', d.fuelTrimShortPct),
-        _fuelTrimParam('LTFT B1', d.fuelTrimLongPct),
-        _oilTempParam(d.oilTempC),
-      ],
-      // Fuel trim bank 2 (V6/V8).
-      if (d.fuelTrimShortB2 != null || d.fuelTrimLongB2 != null) ...[
-        _fuelTrimParam('STFT B2', d.fuelTrimShortB2),
-        _fuelTrimParam('LTFT B2', d.fuelTrimLongB2),
-      ],
-      // O2 sensors (diesel: only if it reports any).
-      if (!_isDiesel ||
-          d.o2B1S1Voltage != null ||
-          d.lambdaB1S1 != null ||
-          d.o2B1S2Voltage != null) ...[
-        // Wide-band upstream sensors report λ instead of volts.
-        if (d.o2B1S1Voltage == null && d.lambdaB1S1 != null)
-          _lambdaParam('O2 B1S1', d.lambdaB1S1!)
-        else
-          _o2Param('O2 B1S1', d.o2B1S1Voltage),
-        _o2Param('O2 B1S2', d.o2B1S2Voltage),
-        _o2Param('O2 B2S1', d.o2B2S1Voltage),
-      ],
-    ];
-  }
-
-  /// One parameter row: label, then value (+ unit). [tone] is a status color,
-  /// used only when the reading is out of its normal range.
-  Widget _param(String label, String value, {String unit = '', Color? tone}) {
-    final p = context.colors;
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: 44.h),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.space16.w,
-          vertical: AppSizes.space8.h,
+  Widget _buildLiveTile(
+    String label,
+    String value,
+    String unit,
+    IconData icon,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
         ),
-        child: Row(
+        child: Column(
           children: [
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.body.copyWith(color: p.text2),
+            Icon(icon, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
               ),
             ),
-            SizedBox(width: AppSizes.space12.w),
-            // Value + unit read left-to-right in Arabic too ("18.0 %").
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    value,
-                    maxLines: 1,
-                    style: AppTextStyles.numeric(AppTextStyles.body).copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: tone ?? (value == '--' ? p.muted : p.text),
-                    ),
-                  ),
-                  if (unit.isNotEmpty && value != '--') ...[
-                    SizedBox(width: AppSizes.space4.w),
-                    Text(
-                      unit,
-                      style: AppTextStyles.label.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: p.text2,
-                      ),
-                    ),
-                  ],
-                ],
+            SizedBox(height: 4.h),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            Text(
+              unit,
+              style: TextStyle(
+                fontSize: 9.sp,
+                color: color.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -1320,740 +1567,407 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Fuel trim: normal ±10 %, moderate ±20 % (warn), severe beyond (crit).
-  Widget _fuelTrimParam(String label, double? value) {
-    final p = context.colors;
-    final Color? tone = value == null || value.abs() <= 10
-        ? null
-        : value.abs() <= 20
-        ? p.warn
-        : p.crit;
-    final prefix = value != null && value > 0 ? '+' : '';
-    return _param(
-      label,
-      value != null ? '$prefix${value.toStringAsFixed(1)}' : '--',
-      unit: '%',
-      tone: tone,
+  // Fuel trim tile: colour-codes the value (green = normal, red = lean/rich).
+  Widget _buildFuelTrimTile(String label, double? value, String tooltip) {
+    final hasValue = value != null;
+    final color = hasValue
+        ? (value.abs() <= 10
+            ? const Color(0xFF00E676)   // normal ±10 %
+            : value.abs() <= 20
+                ? const Color(0xFFFFD600) // moderate ±20 %
+                : const Color(0xFFFF1744)) // severe > 20 %
+        : Colors.white24;
+    final prefix = hasValue && value > 0 ? '+' : '';
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.track_changes, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              hasValue ? '$prefix${value.toStringAsFixed(1)}' : '--',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            Text(
+              '%',
+              style: TextStyle(fontSize: 9.sp, color: color.withValues(alpha: 0.7)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _o2Param(String label, double? voltage) {
+  Widget _buildO2Tile(String label, double? voltage) {
     // O2 sensor voltage 0–1.275 V.
     // < 0.1 V  = lean   (or sensor cold/dead)
     // 0.1–0.9  = cycling — healthy, engine controlling fuel properly
     // > 0.9 V  = rich
     // ~0.45 V  = stuck — sensor dead or lazy
-    final p = context.colors;
-    if (voltage == null) return _param(label, '--');
-    final Color? tone;
-    if (voltage < 0.1 || voltage > 0.9) {
-      tone = p.warn; // lean / rich
+    Color color;
+    String status;
+    if (voltage == null) {
+      color = Colors.white24;
+      status = '--';
+    } else if (voltage < 0.1) {
+      color = const Color(0xFFFFD600); // lean
+      status = '${voltage.toStringAsFixed(2)}V';
+    } else if (voltage > 0.9) {
+      color = const Color(0xFFFF6B35); // rich
+      status = '${voltage.toStringAsFixed(2)}V';
     } else if ((voltage - 0.45).abs() < 0.05) {
-      tone = p.crit; // stuck ~0.45 V → dead sensor
+      color = const Color(0xFFFF1744); // stuck ~0.45V → dead sensor
+      status = '${voltage.toStringAsFixed(2)}V';
     } else {
-      tone = null; // cycling normally
+      color = const Color(0xFF00E676); // cycling normally
+      status = '${voltage.toStringAsFixed(2)}V';
     }
-    return _param(label, '${voltage.toStringAsFixed(2)}V', tone: tone);
-  }
 
-  Widget _timingParam(double? deg) {
-    // Normal advance (≥ 0°). Light retard (-5 to 0°): warn. Heavy knock
-    // retard (< -5°): crit — the ECU is protecting the engine from damage.
-    final p = context.colors;
-    final Color? tone = deg == null || deg >= 0
-        ? null
-        : deg >= -5
-        ? p.warn
-        : p.crit;
-    final prefix = deg != null && deg > 0 ? '+' : '';
-    return _param(
-      context.tr('timing'),
-      deg != null ? '$prefix${deg.toStringAsFixed(1)}°' : '--',
-      tone: tone,
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.sensors, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              status,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _oilTempParam(double? oilTempC) {
-    final p = context.colors;
-    return _param(
+  Widget _buildTimingTile(double? deg) {
+    // Green: normal advance (> 0°). Yellow: light retard (-5 to 0°).
+    // Red: heavy knock retard (< -5°) — ECU protecting engine from damage.
+    Color color;
+    if (deg == null) {
+      color = Colors.white24;
+    } else if (deg >= 0) {
+      color = const Color(0xFF00E676);
+    } else if (deg >= -5) {
+      color = const Color(0xFFFFD600);
+    } else {
+      color = const Color(0xFFFF1744);
+    }
+    final prefix = deg != null && deg > 0 ? '+' : '';
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.flash_on, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(context.tr('timing'),
+                style: TextStyle(
+                    fontSize: 10.sp,
+                    color: const Color(0xFFE8EAED).withValues(alpha: 0.6))),
+            SizedBox(height: 4.h),
+            Text(
+              deg != null ? '$prefix${deg.toStringAsFixed(1)}°' : '--',
+              style: TextStyle(
+                  fontSize: 15.sp, fontWeight: FontWeight.w700, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOilTempTile(double? oilTempC) {
+    return _buildLiveTile(
       context.tr('dash_oil_temp'),
       oilTempC != null ? '${oilTempC.toStringAsFixed(0)}°C' : '--',
-      tone: oilTempC != null && oilTempC > 130 ? p.crit : null,
+      '',
+      Icons.oil_barrel,
+      oilTempC != null && oilTempC > 130
+          ? const Color(0xFFFF1744)
+          : const Color(0xFF00E676),
     );
   }
 
   // Fuel rail gauge pressure, shown in MPa (common-rail diesel: ~25–35 MPa
   // at idle, up to ~200 MPa under load; GDI petrol: ~4–20 MPa).
-  Widget _railPressureParam(double? kpa) => _param(
-    context.tr('rail_pressure'),
-    kpa != null ? (kpa / 1000).toStringAsFixed(1) : '--',
-    unit: 'MPa',
-  );
+  Widget _buildRailPressureTile(double? kpa) {
+    return _buildLiveTile(
+      context.tr('rail_pressure'),
+      kpa != null ? (kpa / 1000).toStringAsFixed(1) : '--',
+      'MPa',
+      Icons.water_drop,
+      const Color(0xFF00BCD4),
+    );
+  }
 
-  Widget _lambdaParam(String label, double lambda) {
+  Widget _buildLambdaTile(String label, double lambda) {
     // Wide-band sensor equivalence ratio: 1.00 = stoichiometric.
     // Petrol closed loop holds ~0.97–1.03; outside that it runs rich (< 1)
     // or lean (> 1). Diesels run lean (λ well above 1) by design.
-    final p = context.colors;
-    final normal = _isDiesel || (lambda - 1).abs() <= 0.03;
-    return _param(
-      label,
-      'λ ${lambda.toStringAsFixed(2)}',
-      tone: normal ? null : p.warn,
-    );
-  }
-
-  // ── Trip computer card ────────────────────────────────────────────────────
-
-  Widget _buildTripCard() {
-    final p = context.colors;
-    final trip = TripService.instance;
-    final elapsed = trip.elapsed;
-    final h = elapsed.inHours;
-    final m = elapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final timeStr = h > 0 ? '$h:$m:$s' : '$m:$s';
-    final scoreTone = _driveScoreColor(trip.driveScore);
-
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const IconBox(Icons.route_rounded, size: 36),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Text(
-                  context.tr('dash_trip_computer'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.title.copyWith(color: p.text),
-                ),
-              ),
-              SizedBox(width: AppSizes.space8.w),
-              AppButton.ghost(
-                label: context.tr('dash_reset'),
-                onPressed: () => setState(() => trip.reset()),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSizes.space12.h),
-          Row(
-            children: [
-              _tripStat(
-                context.tr('dash_distance'),
-                '${trip.distanceKm.toStringAsFixed(1)} km',
-              ),
-              _tripStat(context.tr('dash_time'), timeStr),
-              _tripStat(
-                context.tr('dash_avg_speed'),
-                '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h',
-              ),
-            ],
-          ),
-          SizedBox(height: AppSizes.space12.h),
-          Row(
-            children: [
-              _tripStat(
-                context.tr('dash_fuel_used'),
-                '${trip.fuelUsedL.toStringAsFixed(2)} L',
-              ),
-              _tripStat(
-                context.tr('dash_efficiency'),
-                trip.fuelEfficiencyL100km > 0
-                    ? '${trip.fuelEfficiencyL100km.toStringAsFixed(1)} L/100km'
-                    : '--',
-              ),
-              const Spacer(),
-            ],
-          ),
-          SizedBox(height: AppSizes.space12.h),
-          Divider(height: 1, thickness: 1, color: p.border),
-          SizedBox(height: AppSizes.space12.h),
-          // ── Drive score ──────────────────────────────────────────────
-          // Label column takes the free space (and ellipsizes); the score
-          // keeps its natural width, so the row never overflows the card.
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.tr('drive_score'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: p.text2,
-                      ),
-                    ),
-                    Text(
-                      _driveScoreLabel(trip.driveScore),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scoreTone,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: AppSizes.space8.w),
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '${trip.driveScore}',
-                      style: AppTextStyles.headline.copyWith(color: scoreTone),
-                    ),
-                    Text(
-                      ' / 100',
-                      style: AppTextStyles.label.copyWith(color: p.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Same bands as TripService.driveScoreLabel, localized (without emoji).
-  String _driveScoreLabel(int score) {
-    if (score >= 85) return _plain(context.tr('dash_drive_eco'));
-    if (score >= 65) return _plain(context.tr('dash_drive_normal'));
-    if (score >= 45) return _plain(context.tr('dash_drive_sporty'));
-    return _plain(context.tr('dash_drive_aggressive'));
-  }
-
-  Color _driveScoreColor(int score) {
-    final p = context.colors;
-    if (score >= 65) return p.ok;
-    if (score >= 45) return p.warn;
-    return p.crit;
-  }
-
-  Widget _tripStat(String label, String value) {
-    final p = context.colors;
+    final Color color;
+    if (_isDiesel || (lambda - 1).abs() <= 0.03) {
+      color = const Color(0xFF00E676);
+    } else if (lambda < 1) {
+      color = const Color(0xFFFF6B35); // rich
+    } else {
+      color = const Color(0xFFFFD600); // lean
+    }
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.copyWith(color: p.text2),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textDirection: TextDirection.ltr,
-            style: AppTextStyles.numeric(
-              AppTextStyles.body,
-            ).copyWith(fontWeight: FontWeight.w600, color: p.text),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Services ──────────────────────────────────────────────────────────────
-
-  Widget _buildServicesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitle(context.tr('dash_services')),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Container(
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
           children: [
-            _service(
-              Icons.local_shipping_outlined,
-              context.tr('dash_svc_roadside'),
-              _openRoadside,
+            Icon(Icons.sensors, color: color, size: 18.r),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.6),
+              ),
             ),
-            _service(
-              Icons.build_rounded,
-              context.tr('dash_svc_maintenance'),
-              () => _push(AppRoutes.maintenance),
-            ),
-            _service(
-              Icons.key_rounded,
-              context.tr('smart_key'),
-              () => _push(AppRoutes.smartKey),
-            ),
-            _service(
-              Icons.play_circle_outline_rounded,
-              context.tr('dash_svc_tutorials'),
-              () => _push(AppRoutes.videoTutorials),
+            SizedBox(height: 4.h),
+            Text(
+              'λ ${lambda.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _service(IconData icon, String label, VoidCallback onTap) {
-    final p = context.colors;
-    return Expanded(
-      child: Semantics(
-        button: true,
-        label: label,
-        excludeSemantics: true,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd.r),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSizes.space4.w,
-              vertical: AppSizes.space4.h,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 52.r,
-                  height: 52.r,
-                  decoration: BoxDecoration(
-                    color: p.surface,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: p.border),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(icon, color: p.text, size: 22.r),
-                ),
-                SizedBox(height: AppSizes.space8.h),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label.copyWith(color: p.text2),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
-  }
-
-  // ── Warning lights: lit lamps on the page, the full grid in a sheet ───────
-
-  /// A lamp lights from a DTC match OR from a live sensor threshold. The
-  /// service lamp follows the maintenance tracker directly, so it stays
-  /// current after the user logs a service.
-  bool _lampOn(Map<String, dynamic> light) {
-    final label = light['label'] as String;
-    if (label == 'service') return MaintenanceService.instance.dueCount > 0;
-    return (light['active'] as bool) || (_sensorWarnings[label] ?? false);
   }
 
   Widget _buildWarningLightsSection() {
-    final p = context.colors;
-    final lit = warningLights.where(_lampOn).toList();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
-          context.tr('warning_lights'),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_scanningDtcs)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSizes.space8.w),
-                  child: SizedBox.square(
-                    dimension: 18.r,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              else if (_connected)
-                IconButton(
-                  onPressed: _fetchDtcsAndUpdateLights,
-                  tooltip: context.tr('dash_recheck_lamps'),
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    color: p.primary,
-                    size: 20.r,
-                  ),
-                ),
-              SectionLink(
-                label: context.tr('dash_see_all'),
-                onTap: _showAllLampsSheet,
+        Row(
+          children: [
+            Icon(Icons.warning_amber, color: Color(0xFFFF6B35), size: 20.r),
+            SizedBox(width: 10.w),
+            Text(
+              context.tr('warning_lights'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFE8EAED),
               ),
-            ],
-          ),
-        ),
-        if (lit.isEmpty)
-          AppCard(
-            child: Row(
-              children: [
-                _connected
-                    ? IconBox(
-                        Icons.check_circle_outline_rounded,
-                        color: p.ok,
-                        size: 36,
-                      )
-                    : const IconBox.neutral(
-                        Icons.lightbulb_outline_rounded,
-                        size: 36,
-                      ),
-                SizedBox(width: AppSizes.space12.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        context.tr(
-                          _connected ? 'dash_lamps_off' : 'dash_lamps_unknown',
-                        ),
-                        style: AppTextStyles.body.copyWith(color: p.text2),
-                      ),
-                      if (_connected) ...[
-                        SizedBox(height: 2.h),
-                        Text(
-                          context.tr('dash_lamps_off_note'),
-                          key: const ValueKey('dash_lamps_off_note'),
-                          style: AppTextStyles.label.copyWith(
-                            fontWeight: FontWeight.w400,
-                            color: p.muted,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+            ),
+            const Spacer(),
+            if (_scanningDtcs)
+              SizedBox(
+                width: 18.r,
+                height: 18.r,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: const Color(0xFF00D9FF),
                 ),
-              ],
-            ),
-          )
-        else
-          AppCard(
-            key: const ValueKey('dash_lit_lamps'),
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                for (var i = 0; i < lit.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      indent: AppSizes.space16.w,
-                      color: p.border,
-                    ),
-                  _litLampRow(lit[i]),
-                ],
-              ],
-            ),
+              )
+            else if (OBDService.instance.isInitialized)
+              GestureDetector(
+                onTap: _fetchDtcsAndUpdateLights,
+                child: Icon(Icons.refresh, color: const Color(0xFF00D9FF), size: 20.r),
+              ),
+          ],
+        ),
+        SizedBox(height: 15.h),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
           ),
+          itemCount: warningLights.length,
+          itemBuilder: (context, index) {
+            final light = warningLights[index];
+            return _buildWarningLight(
+              light['icon'] as String,
+              light['label'] as String,
+              light['active'] as bool,
+              light['codes'] as List<String>,
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _litLampRow(Map<String, dynamic> light) {
-    final p = context.colors;
-    final label = light['label'] as String;
-    final codes = light['codes'] as List<String>;
-    return InkWell(
-      onTap: codes.isNotEmpty
-          ? () => _showDtcBottomSheet(context, label, codes)
+  Widget _buildWarningLight(String icon, String label, bool dtcActive, List<String> codes) {
+    // Light activates from a DTC match OR from a live sensor threshold.
+    // The service light follows the maintenance tracker directly, so it
+    // stays current after the user logs a service.
+    final sensorActive = _sensorWarnings[label] ?? false;
+    final active = label == 'service'
+        ? MaintenanceService.instance.dueCount > 0
+        : dtcActive || sensorActive;
+    return GestureDetector(
+      onTap: active && codes.isNotEmpty
+          ? () => _showDtcBottomSheet(context, icon, label, codes)
           : null,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 52.h),
-        child: Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(
-            AppSizes.space16.w,
-            AppSizes.space8.h,
-            AppSizes.space12.w,
-            AppSizes.space8.h,
+      child: Container(
+        decoration: BoxDecoration(
+          color: active
+              ? const Color(0xFFFF6B35).withValues(alpha: 0.1)
+              : Colors.white.withValues(alpha: 0.03),
+          border: Border.all(
+            color: active
+                ? const Color(0xFFFF6B35)
+                : Colors.white.withValues(alpha: 0.1),
           ),
-          child: Row(
-            children: [
-              IconBox(_lampIcons[label]!, color: p.warn, size: 32),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      context.tr(label),
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: p.text,
-                      ),
-                    ),
-                    if (codes.isNotEmpty)
-                      Text(
-                        '${codes.length} ${context.tr(codes.length == 1 ? 'code_detected' : 'codes_detected')}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: p.text2,
-                        ),
-                      ),
-                  ],
-                ),
+          borderRadius: BorderRadius.circular(15.r),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              icon,
+              style: TextStyle(
+                fontSize: 28.sp,
+                color: active ? null : Colors.grey,
               ),
-              if (codes.isNotEmpty)
-                Icon(Icons.chevron_right_rounded, color: p.muted, size: 22.r),
-            ],
-          ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              context.tr(label),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 9.sp,
+                color: active
+                    ? const Color(0xFFFF6B35)
+                    : const Color(0xFFE8EAED).withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// "See all": every lamp, lit ones in the warning color.
-  void _showAllLampsSheet() {
-    final lamps = [
-      for (final l in warningLights)
-        if (!_lampUnreadable(l)) (l, _lampOn(l)),
-    ];
-    final unreadable = warningLights.where(_lampUnreadable).toList();
-    // Background, top corners and drag handle come from the sheet theme.
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetCtx) {
-        final p = sheetCtx.colors;
-        return DraggableScrollableSheet(
-          initialChildSize: 0.75,
-          minChildSize: 0.4,
-          maxChildSize: 0.92,
-          expand: false,
-          builder: (_, scrollCtrl) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  AppSizes.space20.w,
-                  0,
-                  AppSizes.space20.w,
-                  AppSizes.space12.h,
-                ),
-                child: Text(
-                  sheetCtx.tr('warning_lights'),
-                  style: AppTextStyles.title.copyWith(color: p.text),
-                ),
-              ),
-              Expanded(
-                child: CustomScrollView(
-                  controller: scrollCtrl,
-                  slivers: [
-                    SliverPadding(
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                        AppSizes.space16.w,
-                        0,
-                        AppSizes.space16.w,
-                        AppSizes.space16.h,
-                      ),
-                      sliver: SliverGrid.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: AppSizes.space8.w,
-                          mainAxisSpacing: AppSizes.space8.h,
-                          childAspectRatio: 0.9,
-                        ),
-                        itemCount: lamps.length,
-                        itemBuilder: (_, i) {
-                          final (light, on) = lamps[i];
-                          final label = light['label'] as String;
-                          final codes = light['codes'] as List<String>;
-                          return Material(
-                            color: on ? p.warnSoft : p.surface2,
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusMd.r,
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: on && codes.isNotEmpty
-                                  ? () => _showDtcBottomSheet(
-                                      sheetCtx,
-                                      label,
-                                      codes,
-                                    )
-                                  : null,
-                              child: Padding(
-                                padding: EdgeInsets.all(AppSizes.space4.r),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      _lampIcons[label],
-                                      color: on ? p.warn : p.muted,
-                                      size: 24.r,
-                                    ),
-                                    SizedBox(height: AppSizes.space8.h),
-                                    Text(
-                                      sheetCtx.tr(label),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: on ? p.warn : p.text2,
-                                        fontWeight: on
-                                            ? FontWeight.w600
-                                            : FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (unreadable.isNotEmpty)
-                      SliverPadding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                          AppSizes.space16.w,
-                          0,
-                          AppSizes.space16.w,
-                          AppSizes.space24.h,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: _unreadableLampsCard(sheetCtx, unreadable),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// "Not readable over standard OBD-II": lamps a standard scan can't
-  /// confirm, with why — so a quiet airbag/ABS lamp is never read as OK.
-  Widget _unreadableLampsCard(
+  void _showDtcBottomSheet(
     BuildContext ctx,
-    List<Map<String, dynamic>> lamps,
+    String icon,
+    String label,
+    List<String> codes,
   ) {
-    final p = ctx.colors;
-    return AppCard(
-      key: const ValueKey('dash_unreadable_lamps'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const IconBox.neutral(Icons.info_outline_rounded),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Text(
-                  ctx.tr('dash_lamps_limited_title'),
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: p.text,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSizes.space8.h),
-          Text(
-            ctx.tr('dash_lamps_limited_body'),
-            style: AppTextStyles.label.copyWith(
-              fontWeight: FontWeight.w400,
-              color: p.text2,
-            ),
-          ),
-          SizedBox(height: AppSizes.space12.h),
-          Wrap(
-            spacing: AppSizes.space8.w,
-            runSpacing: AppSizes.space8.h,
-            children: [
-              for (final l in lamps)
-                StatusBadge(
-                  label: ctx.tr(l['label'] as String),
-                  level: StatusLevel.neutral,
-                  icon: _lampIcons[l['label']],
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDtcBottomSheet(BuildContext ctx, String label, List<String> codes) {
     final repo = _dtcRepo;
     final langCode = Localizations.localeOf(ctx).languageCode;
     final isArabic = langCode == 'ar';
 
-    // Background, top corners and drag handle come from the sheet theme.
-    showModalBottomSheet<void>(
+    showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
-      builder: (sheetCtx) {
-        final p = sheetCtx.colors;
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.92,
-          expand: false,
-          builder: (_, scrollCtrl) => Column(
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (_, scrollCtrl) => Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D1B2A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            border: Border.all(
+              color: const Color(0xFFFF6B35).withValues(alpha: 0.4),
+            ),
+          ),
+          child: Column(
             children: [
+              // Handle bar
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.h),
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
               // Header
               Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  AppSizes.space20.w,
-                  0,
-                  AppSizes.space20.w,
-                  AppSizes.space16.h,
-                ),
+                padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 16.h),
                 child: Row(
                   children: [
-                    IconBox(_lampIcons[label]!, color: p.warn),
-                    SizedBox(width: AppSizes.space12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            sheetCtx.tr(label),
-                            style: AppTextStyles.title.copyWith(color: p.text),
+                    Text(icon, style: TextStyle(fontSize: 28.sp)),
+                    SizedBox(width: 12.w),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ctx.tr(label),
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFFF6B35),
                           ),
-                          Text(
-                            '${codes.length} ${sheetCtx.tr(codes.length == 1 ? 'code_detected' : 'codes_detected')}',
-                            style: AppTextStyles.label.copyWith(
-                              fontWeight: FontWeight.w400,
-                              color: p.text2,
-                            ),
+                        ),
+                        Text(
+                          '${codes.length} ${codes.length == 1 ? 'code' : 'codes'} detected',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.white54,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              Divider(height: 1, thickness: 1, color: p.border),
+              const Divider(color: Colors.white12, height: 1),
               // Code list
               Expanded(
                 child: ListView.builder(
                   controller: scrollCtrl,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.space16.w,
-                    vertical: AppSizes.space12.h,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   itemCount: codes.length,
                   itemBuilder: (_, i) => _DtcDetailCard(
                     code: codes[i],
@@ -2065,123 +1979,327 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // ── Vehicle: adapter + VIN ────────────────────────────────────────────────
-
-  Widget _buildVehicleSection() {
-    String? vinLine;
-    if (_vin != null) {
-      final country = _localizedCountry(_vinField('country', 'vin_unknown'));
-      vinLine = country.isNotEmpty ? '$country  •  VIN: $_vin' : 'VIN: $_vin';
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitle(context.tr('dash_vehicle')),
-        SettingsGroup(
-          children: [
-            if (_connected)
-              SettingsTile(
-                leading: const IconBox.neutral(
-                  Icons.bluetooth_connected_rounded,
-                ),
-                title: context.tr('dash_adapter'),
-                subtitle: context.tr('dash_manage_adapter'),
-                onTap: _openConnectionScreen,
-              ),
-            if (vinLine != null)
-              SettingsTile(
-                leading: const IconBox.neutral(Icons.badge_outlined),
-                title: context.tr('dash_vehicle_id'),
-                subtitle: vinLine,
-              ),
+  Widget _buildQuickScanButton() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.diagnosticCodes);
+      },
+      child: Container(
+        padding: EdgeInsets.all(20.r),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF00D9FF), Color(0xFFFF6B35)],
+          ),
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00D9FF).withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
           ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('quick_scan'),
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 5.h),
+                  Text(
+                    context.tr('run_diagnostics'),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 50.w,
+              height: 50.h,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 30.r,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Permanent entry to the maintenance tracker — the due banner only shows
+  // once a logged service falls due, which needs the tracker first.
+  Widget _buildMaintenanceCard() {
+    const accent = Color(0xFFFFD600);
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.maintenance),
+      child: Container(
+        padding: EdgeInsets.all(20.r),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          border: Border.all(color: accent.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50.w,
+              height: 50.h,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.car_repair, color: accent, size: 28.r),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('maintenance_tracker'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE8EAED),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    context.tr('dash_maintenance_sub'),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: const Color(0xFFE8EAED).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: accent, size: 16.r),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoTutorialsCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.videoTutorials);
+      },
+      child: Container(
+        padding: EdgeInsets.all(20.r),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          border: Border.all(color: const Color(0xFF00D9FF).withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50.w,
+              height: 50.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00D9FF).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.video_library,
+                color: Color(0xFF00D9FF),
+                size: 28.r,
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('video_tutorials'),
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFE8EAED),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    context.tr('learn_to_fix'),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: const Color(0xFFE8EAED).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Color(0xFF00D9FF),
+              size: 16.r,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentScansSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Row(
+                children: [
+                  Icon(Icons.history, color: Color(0xFF00D9FF), size: 20.r),
+                  SizedBox(width: 10.w),
+                  Flexible(
+                    child: Text(
+                      context.tr('recent_scans'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFE8EAED),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/history');
+              },
+              child: Text(
+                context.tr('history'),
+                style: TextStyle(color: Color(0xFF00D9FF), fontSize: 14.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 15.h),
+        Container(
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.03),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(15.r),
+          ),
+          child: Center(
+            child: Text(
+              context.tr('no_scans_yet'),
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: const Color(0xFFE8EAED).withValues(alpha: 0.4),
+              ),
+            ),
+          ),
         ),
       ],
     );
   }
 
-  /// VinDecoder's English country name, in Arabic when the UI is Arabic
-  /// (falls back to the English name for countries not listed).
-  String _localizedCountry(String country) {
-    if (Localizations.localeOf(context).languageCode != 'ar') return country;
-    return _arCountryNames[country] ?? country;
-  }
-
-  // ── Recent scans → History ────────────────────────────────────────────────
-
-  Widget _buildRecentScansSection() {
-    final p = context.colors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitle(
-          context.tr('recent_scans'),
-          trailing: SectionLink(
-            label: context.tr('history'),
-            onTap: _openHistory,
-          ),
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D0D0D).withValues(alpha: 0.95),
+        border: Border(
+          top: BorderSide(color: const Color(0xFF00D9FF).withValues(alpha: 0.2)),
         ),
-        AppCard(
-          onTap: _openHistory,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 10.h),
           child: Row(
             children: [
-              const IconBox.neutral(Icons.history_rounded, size: 36),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Text(
-                  context.tr('no_scans_yet'),
-                  style: AppTextStyles.label.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: p.text2,
-                  ),
-                ),
-              ),
+              Expanded(child: _buildNavItem(Icons.home, context.tr('home'), 0)),
+              Expanded(child: _buildNavItem(Icons.search, context.tr('scan'), 1)),
+              Expanded(child: _buildNavItem(Icons.vpn_key, context.tr('smart_key'), 2)),
+              Expanded(child: _buildNavItem(Icons.history, context.tr('history'), 3)),
+              Expanded(child: _buildNavItem(Icons.settings, context.tr('settings'), 4)),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
-}
 
-// ── Health score ring ────────────────────────────────────────────────────────
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
 
-class _HealthRing extends StatelessWidget {
-  const _HealthRing({required this.score, required this.color});
-
-  final int score;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.colors;
-    return Semantics(
-      label: '${context.tr('vehicle_health')} $score / 100',
-      excludeSemantics: true,
-      child: SizedBox.square(
-        dimension: 64.r,
-        child: Stack(
-          alignment: Alignment.center,
+    return GestureDetector(
+      onTap: () {
+        // Home is this screen; the other tabs are pushed on top of it.
+        final route = switch (index) {
+          1 => AppRoutes.diagnosticCodes,
+          2 => AppRoutes.smartKey,
+          3 => AppRoutes.history,
+          4 => AppRoutes.settings,
+          _ => null,
+        };
+        setState(() => _selectedIndex = index);
+        if (route == null) return;
+        // Highlight the tab while its screen is up, then give the highlight
+        // back to Home when the user returns to the dashboard.
+        Navigator.pushNamed(context, route).then((_) {
+          if (mounted) setState(() => _selectedIndex = 0);
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF00D9FF).withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox.expand(
-              child: CircularProgressIndicator(
-                value: score / 100,
-                strokeWidth: 6.r,
-                strokeCap: StrokeCap.round,
-                backgroundColor: p.track,
-                color: color,
-              ),
+            Icon(
+              icon,
+              color: isSelected
+                  ? const Color(0xFF00D9FF)
+                  : const Color(0xFFE8EAED).withValues(alpha: 0.5),
+              size: 24.r,
             ),
+            SizedBox(height: 5.h),
             Text(
-              '$score',
-              style: AppTextStyles.numeric(
-                AppTextStyles.title,
-              ).copyWith(fontWeight: FontWeight.w700, color: p.text),
+              label,
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: isSelected
+                    ? const Color(0xFF00D9FF)
+                    : const Color(0xFFE8EAED).withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),
@@ -2221,17 +2339,14 @@ class _DtcDetailCardState extends State<_DtcDetailCard> {
   }
 
   Future<void> _load() async {
-    final en = await widget.repo.getDtcDescription(
-      widget.code,
-      languageCode: 'en',
-    );
+    final en = await widget.repo.getDtcDescription(widget.code, languageCode: 'en');
     String? ar;
     if (widget.isArabic) {
       ar = await widget.repo.getDtcDescription(widget.code, languageCode: 'ar');
     }
     if (!mounted) return;
     setState(() {
-      _enDesc = en;
+      _enDesc = en ?? 'No description available.';
       _arDesc = ar;
       _loading = false;
     });
@@ -2239,82 +2354,108 @@ class _DtcDetailCardState extends State<_DtcDetailCard> {
 
   void _openYoutube() {
     final query = Uri.encodeComponent('${widget.code} car fix how to');
-    final url = Uri.parse(
-      'https://www.youtube.com/results?search_query=$query',
-    );
+    final url = Uri.parse('https://www.youtube.com/results?search_query=$query');
     launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
-    final descStyle = AppTextStyles.label.copyWith(
-      fontWeight: FontWeight.w400,
-      height: 1.5,
-      color: p.text,
-    );
-    return AppCard(
-      margin: EdgeInsetsDirectional.only(bottom: AppSizes.space12.h),
+    return Container(
+      margin: EdgeInsets.only(bottom: 14.h),
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        border: Border.all(color: const Color(0xFFFF6B35).withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Code + fix-video link
+          // Code badge + YouTube button
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.space8.w,
-                  vertical: AppSizes.space4.h,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
                 decoration: BoxDecoration(
-                  color: p.warnSoft,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm.r),
+                  color: const Color(0xFFFF6B35).withValues(alpha: 0.15),
+                  border: Border.all(color: const Color(0xFFFF6B35)),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
-                // DTC codes are always Latin, so letter-spacing is safe.
                 child: Text(
                   widget.code,
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: p.warn,
-                    letterSpacing: 1,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFFF6B35),
+                    letterSpacing: 1.5,
                   ),
                 ),
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: _openYoutube,
-                icon: Icon(Icons.play_circle_outline_rounded, size: 18.r),
-                label: Text(context.tr('dash_fix_video')),
+              GestureDetector(
+                onTap: _openYoutube,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.12),
+                    border: Border.all(color: Colors.red.shade400),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.play_circle_fill, color: Colors.red.shade400, size: 16.r),
+                      SizedBox(width: 5.w),
+                      Text(
+                        'YouTube Fix',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.red.shade400,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-          SizedBox(height: AppSizes.space8.h),
+          SizedBox(height: 12.h),
           // Description
           if (_loading)
             Row(
               children: [
-                SizedBox.square(
-                  dimension: 14.r,
-                  child: const CircularProgressIndicator(strokeWidth: 2),
+                SizedBox(
+                  width: 14.r, height: 14.r,
+                  child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00D9FF)),
                 ),
-                SizedBox(width: AppSizes.space8.w),
+                SizedBox(width: 10.w),
                 Text(
-                  context.tr('dash_loading_desc'),
-                  style: descStyle.copyWith(color: p.muted),
+                  'Loading description...',
+                  style: TextStyle(fontSize: 13.sp, color: Colors.white38),
                 ),
               ],
             )
           else ...[
             // English description always shown
-            Text(_enDesc ?? context.tr('dash_no_desc'), style: descStyle),
+            Text(
+              _enDesc!,
+              style: TextStyle(fontSize: 13.sp, color: const Color(0xFFE8EAED), height: 1.5),
+            ),
             // Arabic description shown below when app is in Arabic
             if (widget.isArabic && _arDesc != null && _arDesc != _enDesc) ...[
-              SizedBox(height: AppSizes.space8.h),
-              Divider(height: 1, thickness: 1, color: p.border),
-              SizedBox(height: AppSizes.space8.h),
+              SizedBox(height: 8.h),
+              const Divider(color: Colors.white12, height: 1),
+              SizedBox(height: 8.h),
               Directionality(
                 textDirection: TextDirection.rtl,
-                child: Text(_arDesc!, style: descStyle),
+                child: Text(
+                  _arDesc!,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: const Color(0xFF00D9FF),
+                    height: 1.5,
+                  ),
+                ),
               ),
             ],
           ],

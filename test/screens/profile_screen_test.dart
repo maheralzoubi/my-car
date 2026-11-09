@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mycar/core/app_services.dart';
 import 'package:mycar/core/constants/app_routes.dart';
-import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/profileScreen/profile_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -64,11 +63,8 @@ Finder _statValue(String labelKey, [Locale l = en]) {
   );
 }
 
-// Stat values are rich text (value + optional unit), so read the span too.
-List<String> _texts(WidgetTester tester, Finder f) => tester
-    .widgetList<Text>(f)
-    .map((t) => t.data ?? t.textSpan?.toPlainText() ?? '')
-    .toList();
+List<String> _texts(WidgetTester tester, Finder f) =>
+    tester.widgetList<Text>(f).map((t) => t.data ?? '').toList();
 
 void main() {
   setUpAll(loadAppFonts);
@@ -144,27 +140,6 @@ void main() {
       expectNoException(tester);
     });
 
-    for (final locale in [en, ar]) {
-      testWidgets('light theme renders, scrolled through '
-          '(${locale.languageCode})', (tester) async {
-        _seedScans(2);
-        await pumpScreen(
-          tester,
-          const ProfileScreen(),
-          locale: locale,
-          theme: AppTheme.light,
-        );
-        await tester.pump();
-        expectNoException(tester);
-        await tester.drag(
-          find.byType(SingleChildScrollView),
-          const Offset(0, -4000),
-        );
-        await tester.pumpAndSettle();
-        expectNoException(tester);
-      });
-    }
-
     testWidgets('Arabic UI shows no untranslated English copy', (tester) async {
       await _pump(tester, locale: ar);
       expect(englishLeaks(tester), isEmpty);
@@ -180,8 +155,7 @@ void main() {
 
       await _pump(tester);
       expect(find.text('Jane Tester'), findsOneWidget);
-      // Header card + personal information row.
-      expect(find.text('jane@example.com'), findsNWidgets(2));
+      expect(find.text('jane@example.com'), findsOneWidget);
       expect(find.text('John Doe'), findsNothing);
     });
   });
@@ -199,7 +173,7 @@ void main() {
 
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });
@@ -260,8 +234,7 @@ void main() {
       });
       await _pump(tester);
       expect(find.text('Jane Tester'), findsOneWidget);
-      // Header card + personal information row.
-      expect(find.text('jane@example.com'), findsNWidgets(2));
+      expect(find.text('jane@example.com'), findsOneWidget);
       expect(find.text('+962700000000'), findsOneWidget);
       expect(find.text('Irbid'), findsOneWidget);
       expect(find.text('JT'), findsOneWidget);
@@ -334,16 +307,18 @@ void main() {
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
       expect(find.text('Jane Q. Tester'), findsOneWidget);
-      // Header card + personal information row.
-      expect(find.text('jq@example.com'), findsNWidgets(2));
+      expect(find.text('jq@example.com'), findsOneWidget);
       expect(find.text('Jane Tester'), findsNothing);
     });
 
-    testWidgets('a guest avatar is not badged as verified', (tester) async {
-      await _pump(tester);
-      expect(find.text(tr('profile_guest')), findsOneWidget);
-      expect(find.byIcon(Icons.verified), findsNothing);
-    });
+    testWidgets(
+      'a guest avatar is not badged as verified',
+      (tester) async {
+        await _pump(tester);
+        expect(find.text(tr('profile_guest')), findsOneWidget);
+        expect(find.byIcon(Icons.verified), findsNothing);
+      },
+    );
 
     for (final locale in [en, ar]) {
       for (final size in [phonePortrait, smallPhone]) {

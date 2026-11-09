@@ -7,16 +7,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../core/core.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/map_marker_helper.dart';
-import '../../data/models/driver_model.dart';
 import '../../data/models/service_request.dart';
 import '../../data/models/service_type.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
-import '../widgets/roadside_visuals.dart';
 import 'rating_screen.dart';
 import 'roadside_error_snackbar.dart';
 
@@ -35,28 +33,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   BitmapDescriptor? _customerPin;
   BitmapDescriptor? _driverPin;
-  Brightness? _pinBrightness;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Pins follow the theme; rebuild them when the brightness changes.
-    final brightness = Theme.of(context).brightness;
-    if (brightness != _pinBrightness) {
-      _pinBrightness = brightness;
-      _preloadMarkers(context.colors, brightness);
-    }
+  void initState() {
+    super.initState();
+    _preloadMarkers();
   }
 
-  Future<void> _preloadMarkers(AppPalette p, Brightness brightness) async {
+  Future<void> _preloadMarkers() async {
     final customer = await MapMarkerHelper.buildPin(
-      color: p.primaryButton,
+      color: AppColors.accentOrange,
       icon: Icons.home_rounded,
     );
-    // Navy in light, slate in dark; the pin's white ring keeps it visible on
-    // either map style.
     final driver = await MapMarkerHelper.buildPin(
-      color: brightness == Brightness.dark ? p.surface2 : p.text,
+      color: AppColors.accentCyan,
       icon: Icons.directions_car_rounded,
     );
     if (mounted) {
@@ -92,15 +82,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
       builder: (context, state) {
         final req = state.activeRequest;
         final driver = req?.assignedDriver;
+        final service = state.selectedService;
+        final color = service?.color ?? AppColors.accentOrange;
 
         return Scaffold(
+          backgroundColor: AppColors.backgroundDark,
           body: Stack(
             children: [
               // Map
               GoogleMap(
                 initialCameraPosition: CameraPosition(
-                  target:
-                      req?.customerLocation ?? const LatLng(24.7136, 46.6753),
+                  target: req?.customerLocation ??
+                      const LatLng(24.7136, 46.6753),
                   zoom: 14,
                 ),
                 onMapCreated: (ctrl) {
@@ -112,36 +105,30 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 zoomControlsEnabled: false,
                 myLocationButtonEnabled: false,
                 mapToolbarEnabled: false,
-                style: RoadsideVisuals.mapStyleFor(context),
+                style: _darkMapStyle,
               ),
 
-              // Status panel
-              PositionedDirectional(
+              // Status banner
+              Positioned(
                 top: 0,
-                start: 0,
-                end: 0,
+                left: 0,
+                right: 0,
                 child: SafeArea(
-                  bottom: false,
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppSizes.space16.w,
-                      AppSizes.space12.h,
-                      AppSizes.space16.w,
-                      0,
-                    ),
+                    padding: EdgeInsets.all(16.r),
                     child: _StatusBanner(
                       request: req,
+                      color: color,
                       cancelling: _cancelling,
-                      onCancel:
-                          req?.status == RequestStatus.driverEnRoute &&
+                      onCancel: req?.status == RequestStatus.driverEnRoute &&
                               !_cancelling
                           ? () {
                               // The idle listener pops once the backend
                               // confirms; a refusal shows an error instead.
                               setState(() => _cancelling = true);
-                              context.read<RoadsideBloc>().add(
-                                const CancelRequest(),
-                              );
+                              context
+                                  .read<RoadsideBloc>()
+                                  .add(const CancelRequest());
                             }
                           : null,
                     ),
@@ -149,16 +136,17 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 ),
               ),
 
-              // Driver panel
+              // Bottom driver card
               if (driver != null)
-                PositionedDirectional(
+                Positioned(
                   bottom: 0,
-                  start: 0,
-                  end: 0,
+                  left: 0,
+                  right: 0,
                   child: _DriverCard(
                     driver: driver,
                     request: req!,
                     etaMinutes: _etaMinutesFor(req),
+                    color: color,
                   ),
                 ),
             ],
@@ -169,7 +157,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Future<void> _updateMap(ServiceRequest req) async {
-    if (!mounted) return;
     final customer = req.customerLocation;
     final driverPos = req.driverLocation ?? customer;
 
@@ -177,15 +164,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
       Marker(
         markerId: const MarkerId('customer'),
         position: customer,
-        icon:
-            _customerPin ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        icon: _customerPin ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
         infoWindow: const InfoWindow(title: 'Your Location'),
       ),
       Marker(
         markerId: const MarkerId('driver'),
         position: driverPos,
-        icon: _driverPin ?? BitmapDescriptor.defaultMarker,
+        icon: _driverPin ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         infoWindow: InfoWindow(title: req.assignedDriver?.name ?? 'Driver'),
       ),
     };
@@ -194,7 +179,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       Polyline(
         polylineId: const PolylineId('route'),
         points: [driverPos, customer],
-        color: context.colors.primary,
+        color: AppColors.accentCyan,
         width: 3,
         patterns: [PatternItem.dash(20), PatternItem.gap(10)],
       ),
@@ -227,10 +212,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
     final customer = req.customerLocation;
     final driverPos = req.driverLocation ?? customer;
     final dist = _haversine(
-      driverPos.latitude,
-      driverPos.longitude,
-      customer.latitude,
-      customer.longitude,
+      driverPos.latitude, driverPos.longitude,
+      customer.latitude, customer.longitude,
     );
     return max(1, (dist / 0.5).ceil());
   }
@@ -239,8 +222,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     const r = 6371.0;
     final dLat = (lat2 - lat1) * pi / 180;
     final dLng = (lng2 - lng1) * pi / 180;
-    final a =
-        sin(dLat / 2) * sin(dLat / 2) +
+    final a = sin(dLat / 2) * sin(dLat / 2) +
         cos(lat1 * pi / 180) *
             cos(lat2 * pi / 180) *
             sin(dLng / 2) *
@@ -251,11 +233,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
 class _StatusBanner extends StatelessWidget {
   final ServiceRequest? request;
+  final Color color;
   final VoidCallback? onCancel;
   final bool cancelling;
 
   const _StatusBanner({
     required this.request,
+    required this.color,
     this.onCancel,
     this.cancelling = false,
   });
@@ -294,70 +278,38 @@ class _StatusBanner extends StatelessWidget {
     }
   }
 
-  /// Arrived / completed are the "good news" states; the rest are progress.
-  StatusLevel get _level {
-    switch (request?.status) {
-      case RequestStatus.arrived:
-      case RequestStatus.completed:
-        return StatusLevel.ok;
-      case RequestStatus.driverFound:
-      case RequestStatus.driverEnRoute:
-      case RequestStatus.inProgress:
-        return StatusLevel.info;
-      default:
-        return StatusLevel.neutral;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
-    // Solid surface (not glass) so it stays legible over map tiles.
-    return AppCard(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        AppSizes.space12.w,
-        AppSizes.space12.h,
-        AppSizes.space8.w,
-        AppSizes.space12.h,
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDarkElevated,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          IconBox(_statusIcon, color: _level.colorOf(context), size: 40),
-          SizedBox(width: AppSizes.space12.w),
+          Icon(_statusIcon, color: color, size: 20.r),
+          SizedBox(width: 10.w),
           Expanded(
-            child: Text(
-              _statusText,
-              style: AppTextStyles.body.copyWith(
-                fontWeight: FontWeight.w600,
-                color: p.text,
-              ),
-            ),
+            child: Text(_statusText,
+                style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600)),
           ),
           if (cancelling)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSizes.space16.w),
-              child: SizedBox.square(
-                dimension: 16.r,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: p.crit,
-                ),
-              ),
+            SizedBox(
+              width: 14.r,
+              height: 14.r,
+              child: const CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.error),
             )
           else if (onCancel != null)
-            TextButton(
-              onPressed: onCancel,
-              style: TextButton.styleFrom(
-                foregroundColor: p.crit,
-                minimumSize: Size(44.r, 44.r),
-              ),
-              child: Text(
-                context.tr('cancel'),
-                style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: p.crit,
-                ),
-              ),
+            GestureDetector(
+              onTap: onCancel,
+              child: Text(context.tr('cancel'),
+                  style: TextStyle(color: AppColors.error, fontSize: 13.sp)),
             ),
         ],
       ),
@@ -366,172 +318,178 @@ class _StatusBanner extends StatelessWidget {
 }
 
 class _DriverCard extends StatelessWidget {
-  final DriverModel driver;
+  final dynamic driver;
   final ServiceRequest request;
   final int etaMinutes;
+  final Color color;
 
   const _DriverCard({
     required this.driver,
     required this.request,
     required this.etaMinutes,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
-    return Material(
-      color: p.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.radiusXl.r),
-        ),
-        side: BorderSide(color: p.border),
+    return Container(
+      padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 36.h),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDarkElevated,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.space20.w,
-            AppSizes.space20.h,
-            AppSizes.space20.w,
-            AppSizes.space16.h,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            width: 40.w,
+            height: 4.h,
+            margin: EdgeInsets.only(bottom: 16.h),
+            decoration: BoxDecoration(
+              color: AppColors.outline,
+              borderRadius: BorderRadius.circular(2.r),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          Row(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26.r,
-                    backgroundColor: p.primarySoft,
-                    child: Text(
-                      driver.avatarInitials,
-                      style: AppTextStyles.title.copyWith(color: p.primary),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.space12.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // Avatar
+              CircleAvatar(
+                radius: 28.r,
+                backgroundColor: color.withValues(alpha: 0.2),
+                child: Text(driver.avatarInitials,
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold)),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(driver.name,
+                        style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4.h),
+                    Row(
                       children: [
-                        Text(
-                          driver.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.title.copyWith(color: p.text),
-                        ),
-                        SizedBox(height: 2.h),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.star_rounded,
-                              color: RoadsideVisuals.ratingStar,
-                              size: 16.r,
-                            ),
-                            SizedBox(width: 2.w),
-                            Text(
-                              '${driver.rating}',
-                              style: AppTextStyles.label.copyWith(
-                                color: p.text,
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.space8.w),
-                            Flexible(
-                              child: Text(
-                                '(${driver.totalJobs} jobs)',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.label.copyWith(
-                                  color: p.text2,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          '${driver.vehicleType}  ·  ${driver.vehiclePlate}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.label.copyWith(
-                            color: p.text2,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
+                        Icon(Icons.star_rounded,
+                            color: const Color(0xFFFFD700), size: 14.r),
+                        SizedBox(width: 3.w),
+                        Text('${driver.rating}',
+                            style: TextStyle(
+                                color: AppColors.textLight, fontSize: 12.sp)),
+                        SizedBox(width: 8.w),
+                        Text('(${driver.totalJobs} jobs)',
+                            style: TextStyle(
+                                color: AppColors.textLight.withValues(alpha: 0.5),
+                                fontSize: 12.sp)),
                       ],
                     ),
-                  ),
-                  SizedBox(width: AppSizes.space8.w),
-                  HeaderAction(
-                    icon: Icons.phone_rounded,
-                    tooltip: context.tr('call_driver'),
-                    color: p.primary,
-                    onPressed: () =>
-                        launchUrl(Uri(scheme: 'tel', path: driver.phone)),
-                  ),
-                ],
+                    SizedBox(height: 4.h),
+                    Text(
+                      '${driver.vehicleType}  ·  ${driver.vehiclePlate}',
+                      style: TextStyle(
+                          color: AppColors.textLight.withValues(alpha: 0.6),
+                          fontSize: 11.sp),
+                    ),
+                  ],
+                ),
               ),
-              Divider(color: p.border, height: AppSizes.space32.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: _InfoItem(
-                      icon: Icons.schedule_rounded,
-                      value: request.status == RequestStatus.inProgress
-                          ? 'Servicing'
-                          : '$etaMinutes min away',
-                    ),
+              // Call button
+              GestureDetector(
+                onTap: () => launchUrl(Uri(scheme: 'tel', path: driver.phone as String)),
+                child: Container(
+                  width: 44.r,
+                  height: 44.r,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentCyan.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                        color: AppColors.accentCyan.withValues(alpha: 0.4)),
                   ),
-                  Expanded(
-                    child: _InfoItem(
-                      icon: Icons.payments_outlined,
-                      value:
-                          '\$${(request.estimatedPrice + 5).toStringAsFixed(0)} cash',
-                    ),
-                  ),
-                  Expanded(
-                    child: _InfoItem(
-                      icon: request.serviceType.icon,
-                      value: request.serviceType.label,
-                    ),
-                  ),
-                ],
+                  child: Icon(Icons.phone_rounded,
+                      color: AppColors.accentCyan, size: 20.r),
+                ),
               ),
             ],
           ),
-        ),
+
+          SizedBox(height: 16.h),
+          Divider(
+              color: AppColors.outline.withValues(alpha: 0.3), height: 1.h),
+          SizedBox(height: 16.h),
+
+          // ETA + price row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _InfoChip(
+                icon: Icons.access_time_rounded,
+                value: request.status == RequestStatus.inProgress
+                    ? 'Servicing'
+                    : '$etaMinutes min away',
+                color: AppColors.accentCyan,
+              ),
+              _InfoChip(
+                icon: Icons.payments_rounded,
+                value: '\$${(request.estimatedPrice + 5).toStringAsFixed(0)} cash',
+                color: AppColors.accentOrange,
+              ),
+              _InfoChip(
+                icon: Icons.local_shipping_rounded,
+                value: request.serviceType.label,
+                color: color,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _InfoItem extends StatelessWidget {
+class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String value;
+  final Color color;
 
-  const _InfoItem({required this.icon, required this.value});
+  const _InfoChip({
+    required this.icon,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
     return Column(
       children: [
-        Icon(icon, color: p.text2, size: 20.r),
-        SizedBox(height: AppSizes.space4.h),
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.numeric(
-            AppTextStyles.label.copyWith(
-              fontWeight: FontWeight.w600,
-              color: p.text,
-            ),
-          ),
-        ),
+        Icon(icon, color: color, size: 18.r),
+        SizedBox(height: 4.h),
+        Text(value,
+            style: TextStyle(
+                color: AppColors.white,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center),
       ],
     );
   }
 }
+
+const _darkMapStyle = '''
+[
+  {"elementType":"geometry","stylers":[{"color":"#0d0d0d"}]},
+  {"elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},
+  {"elementType":"labels.text.stroke","stylers":[{"color":"#242f3e"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#1a1a1a"}]},
+  {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#212121"}]},
+  {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},
+  {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#2d2d2d"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#0a1929"}]},
+  {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]}
+]
+''';

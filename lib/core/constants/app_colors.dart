@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Legacy fixed (dark-only) color constants.
-///
-/// The redesign is light + dark: read colors from the theme with
-/// `context.colors` (see `AppPalette`). Members below are kept only so code
-/// compiles during migration; [white] and [transparent] stay valid.
-///
 /// Application color tokens.
 ///
 /// The app is dark-only. Prefer the tokens in the first sections (brand,
@@ -17,66 +11,50 @@ abstract final class AppColors {
 
   // ── Brand ────────────────────────────────────────────────────────────────
   /// Primary accent: actions, links, active states, live data.
-  @Deprecated('Theme-aware: use context.colors.primary (accent) / primaryButton (filled)')
   static const Color accentCyan = Color(0xFF00D9FF);
 
   /// Secondary accent: highlights, badges, secondary CTAs.
-  @Deprecated('Theme-aware: use context.colors.warn for warnings; no orange accent in the redesign')
   static const Color accentOrange = Color(0xFFFF6B35);
 
   // ── Backgrounds & surfaces (darkest → lightest) ─────────────────────────
   /// Default scaffold background.
-  @Deprecated('Theme-aware: use context.colors.bg')
   static const Color backgroundDark = Color(0xFF0D0D0D);
 
   /// Alternate deep-navy background (splash, connection, gradients).
-  @Deprecated('Theme-aware: use context.colors.bg')
   static const Color backgroundDarkBlue = Color(0xFF0A1929);
 
   /// Cards, sheets, dialogs.
-  @Deprecated('Theme-aware: use context.colors.surface')
   static const Color surfaceDark = Color(0xFF1C1B1F);
 
   /// Raised elements on top of a surface (menus, snackbars, selected rows).
-  @Deprecated('Theme-aware: use context.colors.surface2')
   static const Color surfaceDarkElevated = Color(0xFF2D2D30);
 
   /// Translucent fill for glass-style cards on any background.
-  @Deprecated('Theme-aware: use context.colors.surface')
   static const Color surfaceGlass = Color(0x0DFFFFFF); // white @ 5%
 
   // ── Text ─────────────────────────────────────────────────────────────────
   /// Primary text and icons.
-  @Deprecated('Theme-aware: use context.colors.text')
   static const Color textLight = Color(0xFFE8EAED);
 
   /// Secondary text: labels, captions, metadata.
-  @Deprecated('Theme-aware: use context.colors.text2')
   static const Color textSecondary = Color(0xFF9AA0A6);
 
   /// Disabled text and placeholders.
-  @Deprecated('Theme-aware: use context.colors.muted')
   static const Color textMuted = Color(0xFF5F6368);
 
   /// Text/icons placed on a cyan or orange fill.
-  @Deprecated('Theme-aware: use context.colors.onPrimary')
   static const Color onAccent = Color(0xFF0D0D0D);
 
   // ── Borders & dividers ───────────────────────────────────────────────────
   /// Card outlines, input borders, dividers.
-  @Deprecated('Theme-aware: use context.colors.border')
   static const Color border = Color(0x1AFFFFFF); // white @ 10%
 
   /// Very subtle separators inside cards.
-  @Deprecated('Theme-aware: use context.colors.border')
   static const Color borderSubtle = Color(0x0DFFFFFF); // white @ 5%
 
   // ── Status (vehicle health, alerts, DTC severity) ───────────────────────
-  @Deprecated('Theme-aware: use context.colors.ok (fill: okSoft)')
   static const Color statusOk = Color(0xFF00E676);
-  @Deprecated('Theme-aware: use context.colors.warn (fill: warnSoft)')
   static const Color statusWarning = Color(0xFFFFD600);
-  @Deprecated('Theme-aware: use context.colors.crit (fill: critSoft)')
   static const Color statusCritical = Color(0xFFFF1744);
 
   // ── Utility ──────────────────────────────────────────────────────────────

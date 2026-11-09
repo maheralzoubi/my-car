@@ -12,7 +12,6 @@ import 'package:mycar/core/constants/app_routes.dart';
 import 'package:mycar/core/localization/app_localizations.dart';
 import 'package:mycar/core/network/api_config.dart';
 import 'package:mycar/core/theme/app_theme.dart';
-import 'package:mycar/core/widgets/widgets.dart';
 import 'package:mycar/modules/home/presentation/pages/settingsScreen/dash_cam_settings_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/settingsScreen/settings_screen.dart';
 
@@ -92,8 +91,7 @@ Future<void> _pump(
   await tester.pump(const Duration(milliseconds: 600));
 }
 
-/// The custom toggles, in order: notifications, auto scan, sound. (Theme is
-/// the Appearance segmented control, not a toggle.)
+/// The custom toggles, in order: notifications, auto scan, dark mode, sound.
 Finder get _toggles => find.byType(AnimatedAlign);
 
 bool _isOn(WidgetTester tester, int i) {
@@ -101,13 +99,6 @@ bool _isOn(WidgetTester tester, int i) {
   final dir = directionAt(tester, find.byType(SettingsScreen));
   return a.resolve(dir) == AlignmentDirectional.centerEnd.resolve(dir);
 }
-
-/// The theme mode the Appearance control currently shows as selected.
-ThemeMode _selectedSegment(WidgetTester tester) => tester
-    .widget<AppSegmentedControl<ThemeMode>>(
-      find.byKey(const Key('appearance_control')),
-    )
-    .value;
 
 void main() {
   setUpAll(loadAppFonts);
@@ -156,13 +147,11 @@ void main() {
           'general',
           'preferences',
           'about',
+          'danger_zone',
           'notifications',
           'auto_scan',
+          'dark_mode',
           'sound_effects',
-          'appearance',
-          'theme_light',
-          'theme_dark',
-          'theme_system',
           'dash_cam',
           'dtc_lookup',
           'language',
@@ -268,17 +257,17 @@ void main() {
 
     testWidgets('toggles flip on tap', (tester) async {
       await _pump(tester);
-      expect(_toggles, findsNWidgets(3));
-      final before = [for (var i = 0; i < 3; i++) _isOn(tester, i)];
-      expect(before, [true, false, true]);
+      expect(_toggles, findsNWidgets(4));
+      final before = [for (var i = 0; i < 4; i++) _isOn(tester, i)];
+      expect(before, [true, false, true, true]);
 
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 4; i++) {
         await tapVisible(tester, _toggles.at(i));
         await tester.pumpAndSettle();
       }
       expect(
-        [for (var i = 0; i < 3; i++) _isOn(tester, i)],
-        [false, true, false],
+        [for (var i = 0; i < 4; i++) _isOn(tester, i)],
+        [false, true, false, false],
       );
     });
 
@@ -308,7 +297,7 @@ void main() {
       await tapVisible(tester, _toggles.at(1)); // auto scan → on
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
       final nav = tester.state<NavigatorState>(find.byType(Navigator));
       nav.push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
@@ -318,93 +307,10 @@ void main() {
     });
   });
 
-  group('appearance', () {
-    tearDown(() => AppServices.instance.theme.value = ThemeMode.system);
-
-    Finder segment(String key, [Locale l = en]) => find.descendant(
-      of: find.byKey(const Key('appearance_control')),
-      matching: find.text(tr(key, l)),
-    );
-
-    testWidgets('replaces the old dark-mode toggle', (tester) async {
-      await _pump(tester);
-      expect(find.text(tr('dark_mode')), findsNothing);
-      expect(segment('theme_light'), findsOneWidget);
-      expect(segment('theme_dark'), findsOneWidget);
-      expect(segment('theme_system'), findsOneWidget);
-    });
-
-    testWidgets('choosing Dark sets the app theme and persists it', (
-      tester,
-    ) async {
-      AppServices.instance.theme.value = ThemeMode.system;
-      await _pump(tester);
-      expect(_selectedSegment(tester), ThemeMode.system);
-
-      await tapVisible(tester, segment('theme_dark'));
-      await tester.pumpAndSettle();
-
-      expect(AppServices.instance.theme.value, ThemeMode.dark);
-      expect(_stored['pref_theme_mode'], 'dark');
-      expect(_selectedSegment(tester), ThemeMode.dark);
-
-      await tapVisible(tester, segment('theme_light'));
-      await tester.pumpAndSettle();
-      expect(AppServices.instance.theme.value, ThemeMode.light);
-      expect(_stored['pref_theme_mode'], 'light');
-    });
-
-    testWidgets('reflects a theme changed elsewhere and works in Arabic', (
-      tester,
-    ) async {
-      await _pump(tester, locale: ar);
-      AppServices.instance.theme.value = ThemeMode.light;
-      await tester.pump();
-      expect(_selectedSegment(tester), ThemeMode.light);
-
-      await tapVisible(tester, segment('theme_system', ar));
-      await tester.pumpAndSettle();
-      expect(AppServices.instance.theme.value, ThemeMode.system);
-      expect(_stored['pref_theme_mode'], 'system');
-      expectNoException(tester);
-    });
-  });
-
-  group('themes', () {
-    for (final theme in [AppTheme.light, AppTheme.dark]) {
-      for (final locale in [en, ar]) {
-        testWidgets('settings + Data & Privacy render in '
-            '${theme.brightness.name} (${locale.languageCode})', (
-          tester,
-        ) async {
-          await pumpScreen(
-            tester,
-            const SettingsScreen(),
-            locale: locale,
-            theme: theme,
-            size: smallPhone,
-          );
-          await tester.pump(const Duration(milliseconds: 100));
-          expectNoException(tester);
-          await tester.drag(
-            find.byType(SingleChildScrollView),
-            const Offset(0, -3000),
-          );
-          await tester.pumpAndSettle();
-          expectNoException(tester);
-          await tapVisible(tester, find.text(tr('data_privacy', locale)));
-          await tester.pumpAndSettle();
-          expect(find.text(tr('dp_secure_title', locale)), findsOneWidget);
-          expectNoException(tester);
-        });
-      }
-    }
-  });
-
   group('navigation', () {
     testWidgets('profile card opens /profile', (tester) async {
       await _pump(tester);
-      await tester.tap(find.text(tr('profile_guest')));
+      await tester.tap(find.byIcon(Icons.edit));
       await tester.pumpAndSettle();
       expect(_observer.pushedNames.last, AppRoutes.profile);
     });
@@ -425,7 +331,7 @@ void main() {
 
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester);
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });
@@ -433,7 +339,7 @@ void main() {
 
   group('logout', () {
     Future<void> openDialog(WidgetTester tester) async {
-      await tapVisible(tester, find.byIcon(Icons.logout_rounded));
+      await tapVisible(tester, find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
       expect(find.text(tr('logout_confirm')), findsOneWidget);
       expect(find.text(tr('logout_confirm_msg')), findsOneWidget);
@@ -511,7 +417,7 @@ void main() {
     }
 
     Future<void> confirmLogout(WidgetTester tester, [Locale l = en]) async {
-      await tapVisible(tester, find.byIcon(Icons.logout_rounded));
+      await tapVisible(tester, find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
       await tester.tap(
         find.descendant(
@@ -523,7 +429,7 @@ void main() {
     }
 
     List<bool> toggleStates(WidgetTester tester) => [
-      for (var i = 0; i < 3; i++) _isOn(tester, i),
+      for (var i = 0; i < 4; i++) _isOn(tester, i),
     ];
 
     Future<void> reopenSettings(WidgetTester tester) async {
@@ -611,7 +517,7 @@ void main() {
       await seedAccount();
       final before = Map.of(_stored);
       await _pump(tester);
-      await tapVisible(tester, find.byIcon(Icons.logout_rounded));
+      await tapVisible(tester, find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
       await tester.tap(find.text(tr('cancel')));
       await tester.pumpAndSettle();
@@ -624,10 +530,10 @@ void main() {
       await seedAccount();
       await _pump(tester);
       // Seeded: notifications off, auto-scan on, units imperial.
-      expect(toggleStates(tester), [false, true, true]);
+      expect(toggleStates(tester), [false, true, true, true]);
       expect(find.text(tr('units_imperial')), findsOneWidget);
 
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 4; i++) {
         await tapVisible(tester, _toggles.at(i));
         await tester.pumpAndSettle();
       }
@@ -638,24 +544,25 @@ void main() {
 
       expect(_stored['pref_notifications'], 'true');
       expect(_stored['pref_auto_scan'], 'false');
+      expect(_stored['pref_dark_mode'], 'false');
       expect(_stored['pref_sound_effects'], 'false');
       expect(_stored['pref_units'], 'Metric');
 
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
       await reopenSettings(tester);
-      expect(toggleStates(tester), [true, false, false]);
+      expect(toggleStates(tester), [true, false, false, false]);
       expect(find.text(tr('units_metric')), findsOneWidget);
     });
 
     testWidgets('preferences reset to defaults after logout', (tester) async {
       await seedAccount();
       await _pump(tester);
-      expect(toggleStates(tester), [false, true, true]);
+      expect(toggleStates(tester), [false, true, true, true]);
       await confirmLogout(tester);
 
       await reopenSettings(tester);
-      expect(toggleStates(tester), [true, false, true]);
+      expect(toggleStates(tester), [true, false, true, true]);
       expect(find.text(tr('units_metric')), findsOneWidget);
       expect(find.text(tr('profile_guest')), findsOneWidget);
       expect(find.text('Jane Tester'), findsNothing);
@@ -725,36 +632,37 @@ void main() {
       }
     }
 
-    testWidgets('items with nothing behind them say so instead of a dead tap', (
-      tester,
-    ) async {
-      await _pump(tester);
-      for (final key in [
-        'vehicle_profile',
-        'data_privacy',
-        'terms_of_service',
-        'privacy_policy',
-        'support',
-      ]) {
-        final pushedBefore = _observer.pushed.length;
-        await tapVisible(tester, find.text(tr(key)));
-        await tester.pumpAndSettle();
-        final responded =
-            _observer.pushed.length > pushedBefore ||
-            find.byType(SnackBar).evaluate().isNotEmpty;
-        expect(responded, isTrue, reason: key);
-        // Close whatever opened before the next row.
-        if (find.byType(SettingsScreen).evaluate().isEmpty ||
-            find.byType(AlertDialog).evaluate().isNotEmpty) {
-          await tester.pageBack();
+    testWidgets(
+      'items with nothing behind them say so instead of a dead tap',
+      (tester) async {
+        await _pump(tester);
+        for (final key in [
+          'vehicle_profile',
+          'data_privacy',
+          'terms_of_service',
+          'privacy_policy',
+          'support',
+        ]) {
+          final pushedBefore = _observer.pushed.length;
+          await tapVisible(tester, find.text(tr(key)));
+          await tester.pumpAndSettle();
+          final responded =
+              _observer.pushed.length > pushedBefore ||
+              find.byType(SnackBar).evaluate().isNotEmpty;
+          expect(responded, isTrue, reason: key);
+          // Close whatever opened before the next row.
+          if (find.byType(SettingsScreen).evaluate().isEmpty ||
+              find.byType(AlertDialog).evaluate().isNotEmpty) {
+            await tester.pageBack();
+            await tester.pumpAndSettle();
+          }
+          ScaffoldMessenger.of(
+            tester.element(find.byType(SettingsScreen)),
+          ).removeCurrentSnackBar();
           await tester.pumpAndSettle();
         }
-        ScaffoldMessenger.of(
-          tester.element(find.byType(SettingsScreen)),
-        ).removeCurrentSnackBar();
-        await tester.pumpAndSettle();
-      }
-    });
+      },
+    );
 
     testWidgets('Data & Privacy opens a summary of what the app stores and '
         'sends; the info-only rows explain they are not available', (

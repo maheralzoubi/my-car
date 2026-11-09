@@ -20,11 +20,7 @@ abstract final class Validators {
     return null;
   }
 
-  static String? minLength(
-    String? value,
-    int min, [
-    String fieldName = 'Value',
-  ]) {
+  static String? minLength(String? value, int min, [String fieldName = 'Value']) {
     if (value == null) return null;
     if (value.length < min) {
       return '$fieldName must be at least $min characters';
@@ -32,11 +28,7 @@ abstract final class Validators {
     return null;
   }
 
-  static String? maxLength(
-    String? value,
-    int max, [
-    String fieldName = 'Value',
-  ]) {
+  static String? maxLength(String? value, int max, [String fieldName = 'Value']) {
     if (value == null) return null;
     if (value.length > max) {
       return '$fieldName must be at most $max characters';
@@ -44,10 +36,7 @@ abstract final class Validators {
     return null;
   }
 
-  static String? combine(
-    String? value,
-    List<String? Function(String?)> validators,
-  ) {
+  static String? combine(String? value, List<String? Function(String?)> validators) {
     for (final validator in validators) {
       final result = validator(value);
       if (result != null) return result;

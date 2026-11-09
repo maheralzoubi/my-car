@@ -1,82 +1,111 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/core.dart';
+import '../../../../core/constants/constants.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../widgets/counter_card.dart';
 import '../widgets/welcome_header.dart';
 
-/// Tappable card that opens roadside assistance.
 class _RoadsideBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
-    return AppCard(
+    return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(AppRoutes.roadside),
-      child: Row(
-        children: [
-          const IconBox(Icons.car_repair_rounded, size: 48),
-          SizedBox(width: AppSizes.space12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.tr('roadside_assistance'),
-                  style: AppTextStyles.title.copyWith(color: p.text),
-                ),
-                SizedBox(height: AppSizes.space4.h),
-                Text(
-                  context.tr('roadside_banner_sub'),
-                  style: AppTextStyles.label.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: p.text2,
-                  ),
-                ),
-              ],
-            ),
+      child: Container(
+        padding: EdgeInsets.all(16.r),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A0A00), Color(0xFF2D1500)],
           ),
-          SizedBox(width: AppSizes.space8.w),
-          Icon(Icons.chevron_right_rounded, color: p.muted, size: 22.r),
-        ],
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.accentOrange.withValues(alpha: 0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentOrange.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56.r,
+              height: 56.r,
+              decoration: BoxDecoration(
+                color: AppColors.accentOrange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                    color: AppColors.accentOrange.withValues(alpha: 0.4)),
+              ),
+              child: Icon(Icons.car_repair,
+                  color: AppColors.accentOrange, size: 28.r),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('roadside_assistance'),
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 3.h),
+                  Text(
+                    context.tr('roadside_banner_sub'),
+                    style: TextStyle(
+                      color: AppColors.textLight.withValues(alpha: 0.6),
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded,
+                color: AppColors.accentOrange, size: 16.r),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Legacy template home page: welcome header, counter card and a roadside
-/// shortcut. The signed-in app's real home is the Home tab of AppShell.
+/// Home screen: welcome header and counter card.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(context.tr('home')),
+      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            ScreenHeader(title: context.tr('home')),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  AppSizes.space20.w,
-                  AppSizes.space8.h,
-                  AppSizes.space20.w,
-                  AppSizes.space24.h,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const WelcomeHeader(),
-                    SizedBox(height: AppSizes.space24.h),
-                    const CounterCard(),
-                    SizedBox(height: AppSizes.space16.h),
-                    _RoadsideBanner(),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        child: SingleChildScrollView(
+          padding: EdgeInsetsDirectional.only(
+            top: AppSizes.space8.h,
+            start: AppSizes.space16.w,
+            end: AppSizes.space16.w,
+            bottom: AppSizes.space24.h,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const WelcomeHeader(),
+              SizedBox(height: AppSizes.space24.h),
+              const CounterCard(),
+              SizedBox(height: AppSizes.space16.h),
+              _RoadsideBanner(),
+            ],
+          ),
         ),
       ),
     );

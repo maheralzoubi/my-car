@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/core.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/dtc_repository.dart';
 
@@ -77,98 +76,65 @@ class _DtcLookupPageState extends State<DtcLookupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
     return Scaffold(
-      body: SafeArea(
+      appBar: AppBar(
+        title: Text(context.tr('dtc_lookup_title')),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.r),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ScreenHeader(title: context.tr('dtc_lookup_title')),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  AppSizes.space20.w,
-                  AppSizes.space8.h,
-                  AppSizes.space20.w,
-                  AppSizes.space24.h,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: _controller,
-                      textInputAction: TextInputAction.search,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: InputDecoration(
-                        labelText: context.tr('dtc_enter_code_hint'),
-                        prefixIcon: const Icon(Icons.search_rounded),
-                      ),
-                      onSubmitted: (_) => _lookup(),
-                    ),
-                    SizedBox(height: AppSizes.space16.h),
-                    AppButton(
-                      label: context.tr('dtc_get_description'),
-                      icon: Icons.manage_search_rounded,
-                      onPressed: _lookup,
-                      isLoading: _isLoading,
-                    ),
-                    SizedBox(height: AppSizes.space24.h),
-                    if (_result != null)
-                      AppCard(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const IconBox(Icons.description_outlined),
-                            SizedBox(width: AppSizes.space12.w),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    context.tr('dtc_description_label'),
-                                    style: AppTextStyles.label.copyWith(
-                                      color: p.text2,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppSizes.space4.h),
-                                  Text(
-                                    _result!,
-                                    style: AppTextStyles.body.copyWith(
-                                      color: p.text,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+            TextField(
+              controller: _controller,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                labelText: context.tr('dtc_enter_code_hint'),
+                border: const OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _lookup(),
+            ),
+            SizedBox(height: 12.h),
+            SizedBox(
+              height: 48.h,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _lookup,
+                child: _isLoading
+                    ? SizedBox(
+                        width: 20.w,
+                        height: 20.h,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    else if (_error != null)
-                      AppCard(
-                        accent: p.crit,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.error_outline_rounded,
-                              size: 20.r,
-                              color: p.crit,
-                            ),
-                            SizedBox(width: AppSizes.space12.w),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: AppTextStyles.body.copyWith(
-                                  color: p.text,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+                    : Text(context.tr('dtc_get_description')),
               ),
             ),
+            SizedBox(height: 24.h),
+            if (_result != null) ...[
+              Text(
+                context.tr('dtc_description_label'),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.sp,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                _result!,
+                style: TextStyle(fontSize: 15.sp),
+              ),
+            ] else if (_error != null) ...[
+              Text(
+                _error!,
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 14.sp,
+                ),
+              ),
+            ],
           ],
         ),
       ),

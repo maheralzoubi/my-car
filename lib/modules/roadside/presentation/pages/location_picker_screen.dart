@@ -6,12 +6,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../../../../core/core.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../bloc/roadside_bloc.dart';
 import '../bloc/roadside_event.dart';
 import '../bloc/roadside_state.dart';
-import '../widgets/roadside_visuals.dart';
 import 'price_estimate_screen.dart';
 import 'roadside_error_snackbar.dart';
 
@@ -53,9 +52,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         final pos = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-          ),
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.high),
         );
         final latLng = LatLng(pos.latitude, pos.longitude);
         if (!mounted) return;
@@ -81,10 +79,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (!mounted) return;
     setState(() => _resolvingAddress = true);
     try {
-      final address = await context
-          .read<RoadsideBloc>()
-          .repository
-          .reverseGeocode(pos);
+      final address = await context.read<RoadsideBloc>().repository.reverseGeocode(pos);
       if (mounted) {
         setState(() {
           _address = address;
@@ -106,15 +101,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   // a failed estimate keeps the user here with an error.
   void _confirm() {
     setState(() => _confirming = true);
-    context.read<RoadsideBloc>().add(ConfirmLocation(_center, _address));
+    context
+        .read<RoadsideBloc>()
+        .add(ConfirmLocation(_center, _address));
   }
 
   @override
   Widget build(BuildContext context) {
-    final p = context.colors;
     return BlocListener<RoadsideBloc, RoadsideState>(
-      listenWhen: (prev, curr) =>
-          prev.phase != curr.phase || curr.error != null,
+      listenWhen: (prev, curr) => prev.phase != curr.phase || curr.error != null,
       listener: (context, state) {
         if (state.phase == RoadsidePhase.idle) {
           Navigator.of(context).popUntil((r) => r.isFirst);
@@ -128,186 +123,223 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         }
       },
       child: Scaffold(
-        body: Column(
+        backgroundColor: AppColors.backgroundDark,
+        body: Stack(
           children: [
-            // Header on a solid panel so it never sits on raw map tiles.
-            _Panel(
-              top: true,
-              child: SafeArea(
-                bottom: false,
-                child: ScreenHeader(title: 'Set Your Location'),
+            // Map
+            GoogleMap(
+              initialCameraPosition:
+                  CameraPosition(target: _center, zoom: 15),
+              onMapCreated: _mapController.complete,
+              onCameraMove: _onCameraMove,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+              style: _darkMapStyle,
+            ),
+
+            // Fixed center pin
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_pin,
+                      color: AppColors.accentOrange, size: 48.r),
+                  SizedBox(height: 24.h),
+                ],
               ),
             ),
-            Expanded(
-              child: Stack(
-                children: [
-                  GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: _center,
-                      zoom: 15,
-                    ),
-                    onMapCreated: _mapController.complete,
-                    onCameraMove: _onCameraMove,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: false,
-                    style: RoadsideVisuals.mapStyleFor(context),
-                  ),
 
-                  // Fixed center pin; its tip marks the map center.
-                  IgnorePointer(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: 44.r),
-                        child: Icon(
-                          Icons.location_pin,
-                          color: p.primaryButton,
-                          size: 48.r,
+            // Top bar
+            SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(16.r),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 40.r,
+                        height: 40.r,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceDarkElevated,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.white, size: 18),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 12.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceDarkElevated,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          'Set Your Location',
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
+            ),
 
-                  // Current location
-                  PositionedDirectional(
-                    end: AppSizes.space16.w,
-                    bottom: AppSizes.space16.h,
-                    child: _MyLocationButton(
-                      loading: _loadingLocation,
-                      onPressed: _getCurrentLocation,
-                    ),
+            // Current location FAB
+            Positioned(
+              right: 16.w,
+              bottom: 160.h,
+              child: GestureDetector(
+                onTap: _getCurrentLocation,
+                child: Container(
+                  width: 48.r,
+                  height: 48.r,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDarkElevated,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                        color: AppColors.accentCyan.withValues(alpha: 0.4)),
                   ),
-                ],
+                  child: _loadingLocation
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.accentCyan),
+                        )
+                      : const Icon(Icons.my_location_rounded,
+                          color: AppColors.accentCyan),
+                ),
+              ),
+            ),
+
+            // Bottom address + confirm bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding:
+                    EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 32.h),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDarkElevated,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(24.r)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40.w,
+                      height: 4.h,
+                      margin: EdgeInsets.only(bottom: 16.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.outline,
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8.r),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.accentOrange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Icon(Icons.location_on_rounded,
+                              color: AppColors.accentOrange, size: 20.r),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: _resolvingAddress
+                              ? Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 14.r,
+                                      height: 14.r,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.accentCyan,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Text(context.tr('detecting_address'),
+                                        style: TextStyle(
+                                            color: AppColors.textLight
+                                                .withValues(alpha: 0.6),
+                                            fontSize: 13.sp)),
+                                  ],
+                                )
+                              : Text(
+                                  _address,
+                                  style: TextStyle(
+                                    color: AppColors.white,
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _confirming ? null : _confirm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentOrange,
+                          foregroundColor: AppColors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                        ),
+                        child: _confirming
+                            ? SizedBox(
+                                width: 18.r,
+                                height: 18.r,
+                                child: const CircularProgressIndicator(
+                                    strokeWidth: 2, color: AppColors.white),
+                              )
+                            : Text(
+                                'Confirm Location',
+                                style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
-        // Address + confirm. As the bottom bar, snackbars float above it
-        // instead of covering the button.
-        bottomNavigationBar: _Panel(
-          top: false,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSizes.space20.w,
-                AppSizes.space16.h,
-                AppSizes.space20.w,
-                AppSizes.space16.h,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const IconBox(Icons.location_on_outlined),
-                      SizedBox(width: AppSizes.space12.w),
-                      Expanded(
-                        child: _resolvingAddress
-                            ? Row(
-                                children: [
-                                  SizedBox.square(
-                                    dimension: 14.r,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: p.primary,
-                                    ),
-                                  ),
-                                  SizedBox(width: AppSizes.space8.w),
-                                  Flexible(
-                                    child: Text(
-                                      context.tr('detecting_address'),
-                                      style: AppTextStyles.body.copyWith(
-                                        color: p.text2,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Text(
-                                _address,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.body.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: p.text,
-                                ),
-                              ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSizes.space16.h),
-                  AppButton(
-                    label: 'Confirm Location',
-                    isLoading: _confirming,
-                    onPressed: _confirming ? null : _confirm,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
 }
 
-/// Solid surface strip above or below the map with a hairline edge.
-class _Panel extends StatelessWidget {
-  const _Panel({required this.top, required this.child});
-
-  /// True for the header strip (border below), false for the bottom sheet
-  /// (border above).
-  final bool top;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.colors;
-    final edge = BorderSide(color: p.border);
-    return Material(
-      color: p.surface,
-      shape: Border(
-        top: top ? BorderSide.none : edge,
-        bottom: top ? edge : BorderSide.none,
-      ),
-      child: child,
-    );
-  }
-}
-
-class _MyLocationButton extends StatelessWidget {
-  const _MyLocationButton({required this.loading, required this.onPressed});
-
-  final bool loading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.colors;
-    return SizedBox.square(
-      dimension: 48.r,
-      child: IconButton(
-        onPressed: onPressed,
-        tooltip: context.tr('use_my_location'),
-        style: IconButton.styleFrom(
-          backgroundColor: p.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd.r),
-            side: BorderSide(color: p.border),
-          ),
-        ),
-        icon: loading
-            ? SizedBox.square(
-                dimension: 20.r,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: p.primary,
-                ),
-              )
-            : Icon(Icons.my_location_rounded, size: 22.r, color: p.primary),
-      ),
-    );
-  }
-}
+const _darkMapStyle = '''
+[
+  {"elementType":"geometry","stylers":[{"color":"#0d0d0d"}]},
+  {"elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},
+  {"elementType":"labels.text.stroke","stylers":[{"color":"#242f3e"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#1a1a1a"}]},
+  {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#212121"}]},
+  {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},
+  {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#2d2d2d"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#0a1929"}]},
+  {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]}
+]
+''';

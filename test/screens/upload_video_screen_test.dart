@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mycar/core/theme/app_palette.dart';
-import 'package:mycar/core/theme/app_theme.dart';
-import 'package:mycar/core/widgets/widgets.dart';
 import 'package:mycar/modules/home/presentation/pages/videoTutorialsScreen/upload_video_screen.dart';
 
 import 'helpers/screen_harness.dart';
@@ -117,27 +114,6 @@ void main() {
       expectNoException(tester);
     });
 
-    for (final locale in [en, ar]) {
-      testWidgets('light theme renders (${locale.languageCode})', (
-        tester,
-      ) async {
-        await pumpScreen(
-          tester,
-          const UploadVideoScreen(),
-          locale: locale,
-          theme: AppTheme.light,
-        );
-        expectNoException(tester);
-        await tester.drag(
-          find.byType(SingleChildScrollView).first,
-          const Offset(0, -4000),
-        );
-        await tester.pumpAndSettle();
-        expectNoException(tester);
-        expect(_publish(locale), findsOneWidget);
-      });
-    }
-
     testWidgets('Arabic UI shows no untranslated English copy', (tester) async {
       await _pump(tester, locale: ar);
       // Container formats are proper names.
@@ -159,13 +135,11 @@ void main() {
       await _pump(tester);
       Color? colorOf(String key) =>
           tester.widget<Text>(find.text(tr(key))).style?.color;
-      // Selected segment = primary text color, others = secondary text.
-      final selected = AppPalette.dark.text;
       // Intermediate is the default.
-      expect(colorOf('difficulty_intermediate'), selected);
+      expect(colorOf('difficulty_intermediate'), Colors.white);
       await tapVisible(tester, find.text(tr('difficulty_beginner')));
-      expect(colorOf('difficulty_beginner'), selected);
-      expect(colorOf('difficulty_intermediate'), isNot(selected));
+      expect(colorOf('difficulty_beginner'), Colors.white);
+      expect(colorOf('difficulty_intermediate'), isNot(Colors.white));
     });
 
     testWidgets('selecting a cost range moves the radio mark', (tester) async {
@@ -176,11 +150,11 @@ void main() {
       expect(
         find.descendant(
           of: row,
-          matching: find.byIcon(Icons.radio_button_checked_rounded),
+          matching: find.byIcon(Icons.radio_button_checked),
         ),
         findsOneWidget,
       );
-      expect(find.byIcon(Icons.radio_button_checked_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
     });
 
     // Rewritten in the verifier pass. The old version expected a fake upload
@@ -247,8 +221,8 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(_publish(), findsOneWidget);
-      final button = tester.widget<AppButton>(
-        find.ancestor(of: _publish(), matching: find.byType(AppButton)),
+      final button = tester.widget<ElevatedButton>(
+        find.ancestor(of: _publish(), matching: find.byType(ElevatedButton)),
       );
       expect(button.onPressed, isNotNull);
 
@@ -271,7 +245,7 @@ void main() {
       await _pump(tester, pushed: true);
       await tester.tap(find.text(tr('tap_select_video')));
       await tester.pump();
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
       pending.complete(_videoPath);
       await tester.pumpAndSettle();
@@ -415,7 +389,7 @@ void main() {
   group('navigation', () {
     testWidgets('close button pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });

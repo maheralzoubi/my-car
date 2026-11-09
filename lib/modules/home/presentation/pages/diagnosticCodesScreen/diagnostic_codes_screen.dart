@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../../core/core.dart';
+import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/services/dtc_history_service.dart';
 import '../../../../../core/services/dtc_repository.dart';
@@ -51,13 +52,11 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   String _selectedFilter = 'All';
   ReadinessResult? _readiness;
 
-  /// When the last successful scan finished (header subtitle).
-  DateTime? _lastScan;
-
-  /// Readiness card: per-monitor list expanded.
-  bool _showMonitors = false;
-
   static const _filters = ['All', 'Engine', 'Chassis', 'Body', 'Network'];
+
+  static const Color _colCritical = Color(0xFFFF1744);
+  static const Color _colWarning = Color(0xFFFF6B35);
+  static const Color _colInfo = Color(0xFFFFD600);
 
   @override
   void initState() {
@@ -81,10 +80,9 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     final device =
         OBDService.instance.connectedDeviceName ?? t('report_default_adapter');
     final now = DateTime.now();
-    final dateStr =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')} '
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final dateStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-'
+        '${now.day.toString().padLeft(2,'0')} '
+        '${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
 
     final buf = StringBuffer();
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -96,35 +94,26 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
 
     // ── Fault codes ──────────────────────────────────────────────────────
     final confirmed = _dtcItems.where((i) => !i.isPending).toList();
-    final pending = _dtcItems.where((i) => i.isPending).toList();
+    final pending   = _dtcItems.where((i) =>  i.isPending).toList();
 
-    buf.writeln(
-      '── ${t('report_fault_codes').replaceAll('{n}', '${_dtcItems.length}')} ──────────────',
-    );
+    buf.writeln('── ${t('report_fault_codes').replaceAll('{n}', '${_dtcItems.length}')} ──────────────');
     if (_dtcItems.isEmpty) {
       buf.writeln('  ${t('report_no_codes')}');
     } else {
       for (final item in confirmed) {
-        buf.writeln(
-          '  [${t('severity_${item.severity}').toUpperCase()}] ${item.code}',
-        );
+        buf.writeln('  [${t('severity_${item.severity}').toUpperCase()}] ${item.code}');
         buf.writeln('    ${item.description}');
         if (item.freezeFrame.isNotEmpty) {
           buf.writeln('    ${t('report_freeze_frame')}');
-          item.freezeFrame.forEach(
-            (k, v) => buf.writeln(
-              '      ${_freezeFrameLabel(k)}: ${_freezeFrameValue(v)}',
-            ),
-          );
+          item.freezeFrame.forEach((k, v) => buf.writeln(
+              '      ${_freezeFrameLabel(k)}: ${_freezeFrameValue(v)}'));
         }
       }
       if (pending.isNotEmpty) {
         buf.writeln();
         buf.writeln('  ${t('report_pending_codes')}');
         for (final item in pending) {
-          buf.writeln(
-            '  [${t('report_pending_tag')}] ${item.code}  ${item.description}',
-          );
+          buf.writeln('  [${t('report_pending_tag')}] ${item.code}  ${item.description}');
         }
       }
     }
@@ -133,14 +122,14 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     if (_readiness != null && _readiness!.monitors.isNotEmpty) {
       buf.writeln();
       buf.writeln('── ${t('report_emissions')} ─────────────────────────');
-      buf.writeln(
-        '  ${t('report_mil_line').replaceAll('{state}', t(_readiness!.milOn ? 'report_on' : 'report_off')).replaceAll('{n}', '${_readiness!.dtcCount}')}',
-      );
+      buf.writeln('  ${t('report_mil_line')
+          .replaceAll('{state}', t(_readiness!.milOn ? 'report_on' : 'report_off'))
+          .replaceAll('{n}', '${_readiness!.dtcCount}')}');
       for (final m in _readiness!.monitors) {
         final status = switch (m.status) {
-          MonitorStatus.ready => '✓ ${t('monitor_ready')}',
-          MonitorStatus.notReady => '✗ ${t('monitor_not_ready')}',
-          MonitorStatus.notApplicable => '⬜ ${t('monitor_na')}',
+          MonitorStatus.ready          => '✓ ${t('monitor_ready')}',
+          MonitorStatus.notReady       => '✗ ${t('monitor_not_ready')}',
+          MonitorStatus.notApplicable  => '⬜ ${t('monitor_na')}',
         };
         buf.writeln('  $status  ${_monitorLabel(m.name)}');
       }
@@ -153,30 +142,26 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       final val = v != null ? '${v.toStringAsFixed(1)} $unit' : t('monitor_na');
       buf.writeln('  $label: $val');
     }
-
     String bank(String key, int n) => t(key).replaceAll('{n}', '$n');
-    sensor(t('report_sensor_rpm'), d.rpm, t('report_unit_rpm'));
-    sensor(t('report_sensor_speed'), d.speedKmh, t('unit_kmh'));
-    sensor(t('report_sensor_coolant'), d.coolantTempC, '°C');
-    sensor(t('report_sensor_load'), d.engineLoad, '%');
-    sensor(t('report_sensor_throttle'), d.throttlePct, '%');
-    sensor(t('report_sensor_fuel'), d.fuelLevelPct, '%');
-    sensor(t('report_sensor_battery'), d.batteryVoltage, 'V');
-    sensor(t('report_sensor_oil'), d.oilTempC, '°C');
-    sensor(t('report_sensor_iat'), d.intakeAirTempC, '°C');
+    sensor(t('report_sensor_rpm'),      d.rpm,              t('report_unit_rpm'));
+    sensor(t('report_sensor_speed'),    d.speedKmh,         t('unit_kmh'));
+    sensor(t('report_sensor_coolant'),  d.coolantTempC,     '°C');
+    sensor(t('report_sensor_load'),     d.engineLoad,       '%');
+    sensor(t('report_sensor_throttle'), d.throttlePct,      '%');
+    sensor(t('report_sensor_fuel'),     d.fuelLevelPct,     '%');
+    sensor(t('report_sensor_battery'),  d.batteryVoltage,   'V');
+    sensor(t('report_sensor_oil'),      d.oilTempC,         '°C');
+    sensor(t('report_sensor_iat'),      d.intakeAirTempC,   '°C');
     sensor(bank('report_sensor_stft', 1), d.fuelTrimShortPct, '%');
-    sensor(bank('report_sensor_ltft', 1), d.fuelTrimLongPct, '%');
-    if (d.fuelTrimShortB2 != null) {
-      sensor(bank('report_sensor_stft', 2), d.fuelTrimShortB2, '%');
-    }
-    if (d.fuelTrimLongB2 != null) {
-      sensor(bank('report_sensor_ltft', 2), d.fuelTrimLongB2, '%');
-    }
-    String o2(int b, int s) =>
-        t('report_sensor_o2').replaceAll('{b}', '$b').replaceAll('{s}', '$s');
-    if (d.o2B1S1Voltage != null) sensor(o2(1, 1), d.o2B1S1Voltage, 'V');
-    if (d.o2B1S2Voltage != null) sensor(o2(1, 2), d.o2B1S2Voltage, 'V');
-    if (d.o2B2S1Voltage != null) sensor(o2(2, 1), d.o2B2S1Voltage, 'V');
+    sensor(bank('report_sensor_ltft', 1), d.fuelTrimLongPct,  '%');
+    if (d.fuelTrimShortB2 != null) sensor(bank('report_sensor_stft', 2), d.fuelTrimShortB2, '%');
+    if (d.fuelTrimLongB2  != null) sensor(bank('report_sensor_ltft', 2), d.fuelTrimLongB2,  '%');
+    String o2(int b, int s) => t('report_sensor_o2')
+        .replaceAll('{b}', '$b')
+        .replaceAll('{s}', '$s');
+    if (d.o2B1S1Voltage   != null) sensor(o2(1, 1),      d.o2B1S1Voltage,   'V');
+    if (d.o2B1S2Voltage   != null) sensor(o2(1, 2),      d.o2B1S2Voltage,   'V');
+    if (d.o2B2S1Voltage   != null) sensor(o2(2, 1),      d.o2B2S1Voltage,   'V');
 
     buf.writeln();
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -188,9 +173,8 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     await Share.share(
       buf.toString(),
       subject: subject,
-      sharePositionOrigin: box == null
-          ? null
-          : box.localToGlobal(Offset.zero) & box.size,
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
     );
   }
 
@@ -274,30 +258,25 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       final lang = isArabic ? 'ar' : 'en';
       final noDescription = context.tr('dtc_no_description');
 
-      final items = await Future.wait(
-        codes.map((raw) async {
-          // Codes prefixed with '~' are mode-07 pending codes.
-          final isPending = raw.startsWith('~');
-          final code = isPending ? raw.substring(1) : raw;
-          final desc = await _repo.getDtcDescription(code, languageCode: lang);
-          return _DtcItem(
-            code: code,
-            // Never repeat the bare code as its own description.
-            description: (desc == null || desc.trim().isEmpty)
-                ? noDescription
-                : desc,
-            system: _systemFromCode(code),
-            severity: _severityFromCode(code),
-            isPending: isPending,
-          );
-        }),
-      );
+      final items = await Future.wait(codes.map((raw) async {
+        // Codes prefixed with '~' are mode-07 pending codes.
+        final isPending = raw.startsWith('~');
+        final code = isPending ? raw.substring(1) : raw;
+        final desc = await _repo.getDtcDescription(code, languageCode: lang);
+        return _DtcItem(
+          code: code,
+          // Never repeat the bare code as its own description.
+          description: (desc == null || desc.trim().isEmpty)
+              ? noDescription
+              : desc,
+          system: _systemFromCode(code),
+          severity: _severityFromCode(code),
+          isPending: isPending,
+        );
+      }));
 
       if (!mounted) return;
-      setState(() {
-        _dtcItems = items;
-        _lastScan = DateTime.now();
-      });
+      setState(() => _dtcItems = items);
 
       // Record this scan in history and keep maintenance mileage in sync.
       final mileage = MaintenanceService.instance.currentMileageKm;
@@ -309,20 +288,17 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
         final ff = await OBDService.instance.getFreezeFrame();
         if (!mounted || ff.isEmpty) return;
         setState(() {
-          _dtcItems = _dtcItems
-              .map(
-                (item) => item.isPending
-                    ? item
-                    : _DtcItem(
-                        code: item.code,
-                        description: item.description,
-                        system: item.system,
-                        severity: item.severity,
-                        isPending: item.isPending,
-                        freezeFrame: ff,
-                      ),
-              )
-              .toList();
+          _dtcItems = _dtcItems.map((item) =>
+            item.isPending ? item :
+            _DtcItem(
+              code: item.code,
+              description: item.description,
+              system: item.system,
+              severity: item.severity,
+              isPending: item.isPending,
+              freezeFrame: ff,
+            ),
+          ).toList();
         });
       }
     } catch (e) {
@@ -348,6 +324,7 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.tr('failed_clear_codes_hint')),
+          backgroundColor: Colors.redAccent,
           duration: const Duration(seconds: 8),
         ),
       );
@@ -400,17 +377,25 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     }
   }
 
-  /// Maps a code onto the app-wide [StatusLevel] so DTC severity looks the
-  /// same on every screen. Pending (mode 07) codes read as info.
-  StatusLevel _levelOf(_DtcItem item) {
-    if (item.isPending) return StatusLevel.info;
-    switch (item.severity) {
+  Color _severityColor(String severity) {
+    switch (severity) {
       case 'critical':
-        return StatusLevel.critical;
+        return _colCritical;
       case 'info':
-        return StatusLevel.info;
+        return _colInfo;
       default:
-        return StatusLevel.warning;
+        return _colWarning;
+    }
+  }
+
+  IconData _severityIcon(String severity) {
+    switch (severity) {
+      case 'critical':
+        return Icons.error;
+      case 'info':
+        return Icons.info;
+      default:
+        return Icons.warning;
     }
   }
 
@@ -421,106 +406,330 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     return _dtcItems.where((d) => d.system == _selectedFilter).toList();
   }
 
-  int _countFor(String filter) => filter == 'All'
-      ? _dtcItems.length
-      : _dtcItems.where((d) => d.system == filter).length;
-
-  bool get _busy => _loading || _clearing;
-
-  // ── Navigation ────────────────────────────────────────────────────────────
-
-  void _openDetail(_DtcItem item) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.codeDetail,
-      arguments: {
-        'code': item.code,
-        'title': item.description,
-        'title_ar': item.description,
-        'severity': item.severity,
-        'system': item.system,
-        'system_ar': _systemLabel(item.system),
-        'description': item.description,
-        'description_ar': item.description,
-        'pending': item.isPending,
-        // Already localized: the detail screen shows it as-is.
-        if (item.freezeFrame.isNotEmpty)
-          'freeze_frame': <String, String>{
-            for (final e in item.freezeFrame.entries)
-              _freezeFrameLabel(e.key): _freezeFrameValue(e.value),
-          },
-      },
-    );
-  }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final showList = !_loading && _errorMessage == null;
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            if (showList) _buildFilters(),
-            Expanded(child: _buildBody()),
-            if (_errorMessage == null) _buildActions(),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.backgroundDark, AppColors.backgroundDarkBlue],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              if (!_loading && _errorMessage == null) _buildSummary(),
+              if (_readiness != null && _readiness!.monitors.isNotEmpty) _buildReadinessMonitors(),
+              _buildFilters(),
+              Expanded(child: _buildBody()),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    final last = _lastScan;
-    String? subtitle;
-    if (last != null) {
-      final time = MaterialLocalizations.of(context).formatTimeOfDay(
-        TimeOfDay.fromDateTime(last),
-        alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
-      );
-      subtitle = context.tr('dtc_last_scan').replaceAll('{time}', time);
-    }
-    return ScreenHeader(
-      title: context.tr('diagnostic_codes'),
-      subtitle: subtitle,
-      actions: [
-        if (_dtcItems.isNotEmpty)
-          Builder(
-            builder: (shareContext) => HeaderAction(
-              icon: Icons.share_outlined,
-              tooltip: context.tr('export_report'),
-              onPressed: () => _exportReport(shareContext),
+    return Padding(
+      padding: EdgeInsets.all(20.r),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan),
+            onPressed: () => Navigator.pop(context),
+          ),
+          Flexible(
+            child: Text(
+              context.tr('diagnostic_codes'),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
           ),
-        HeaderAction(
-          icon: Icons.refresh_rounded,
-          tooltip: context.tr('scan_again'),
-          onPressed: _busy ? null : _fetchDtcs,
+          const Spacer(),
+          if (_loading || _clearing)
+            Padding(
+              padding: EdgeInsetsDirectional.only(end: 8.w),
+              child: SizedBox(
+                width: 20.r,
+                height: 20.r,
+                child: CircularProgressIndicator(
+                  color: AppColors.accentCyan,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+          IconButton(
+            icon: Icon(Icons.refresh, color: AppColors.accentCyan),
+            onPressed: _loading ? null : _fetchDtcs,
+          ),
+          if (_dtcItems.isNotEmpty) ...[
+            Builder(
+              builder: (shareContext) => IconButton(
+                icon: Icon(Icons.share_outlined, color: AppColors.accentCyan),
+                onPressed: () => _exportReport(shareContext),
+                tooltip: context.tr('export_report'),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.clear_all, color: AppColors.accentCyan),
+              onPressed: _clearing ? null : _showClearDialog,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummary() {
+    final confirmed = _dtcItems.where((d) => !d.isPending).length;
+    final pending   = _dtcItems.where((d) =>  d.isPending).length;
+    final critical  = _dtcItems.where((d) => d.severity == 'critical').length;
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+      padding: EdgeInsets.all(20.r),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.white.withValues(alpha: 0.05),
+            AppColors.white.withValues(alpha: 0.02),
+          ],
+        ),
+        border: Border.all(
+            color: AppColors.accentCyan.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _summaryItem(context.tr('dtc_confirmed'), confirmed, _colCritical),
+          _summaryItem(context.tr('dtc_pending'), pending, const Color(0xFFFFD600)),
+          _summaryItem(context.tr('severity_critical'), critical, _colWarning),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryItem(String label, int count, Color color) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 32.sp,
+            fontWeight: FontWeight.w900,
+            color: color,
+          ),
+        ),
+        SizedBox(height: 5.h),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.sp,
+            color: AppColors.textLight.withValues(alpha: 0.7),
+          ),
         ),
       ],
     );
   }
 
+  Widget _buildReadinessMonitors() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 4.h),
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.03),
+        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.checklist_rtl, color: AppColors.accentCyan, size: 16.r),
+              SizedBox(width: 8.w),
+              Text(
+                context.tr('emissions_readiness'),
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentCyan,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          // MIL + DTC count row
+          Row(
+            children: [
+              _milBadge(_readiness!.milOn),
+              SizedBox(width: 10.w),
+              Text(
+                _readiness!.dtcCount == 1
+                    ? context.tr('dtc_stored_one')
+                    : context.tr('dtcs_stored')
+                        .replaceAll('{n}', '${_readiness!.dtcCount}'),
+                style: TextStyle(fontSize: 12.sp, color: AppColors.textLight.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          // Monitor rows — two per line
+          ...(() {
+            final monitors = _readiness!.monitors;
+            final rows = <Widget>[];
+            for (var i = 0; i < monitors.length; i += 2) {
+              rows.add(Row(
+                children: [
+                  Expanded(child: _monitorTile(monitors[i])),
+                  SizedBox(width: 8.w),
+                  if (i + 1 < monitors.length)
+                    Expanded(child: _monitorTile(monitors[i + 1]))
+                  else
+                    const Expanded(child: SizedBox()),
+                ],
+              ));
+              if (i + 2 < monitors.length) rows.add(SizedBox(height: 6.h));
+            }
+            return rows;
+          })(),
+        ],
+      ),
+    );
+  }
+
+  Widget _milBadge(bool on) {
+    final color = on ? const Color(0xFFFF1744) : const Color(0xFF00E676);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(on ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+              color: color, size: 13.r),
+          SizedBox(width: 4.w),
+          Text(
+            context.tr(on ? 'mil_on' : 'mil_off'),
+            style: TextStyle(fontSize: 11.sp, color: color, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _monitorTile(ReadinessMonitor m) {
+    final Color color;
+    final IconData icon;
+    final String label;
+    switch (m.status) {
+      case MonitorStatus.ready:
+        color = const Color(0xFF00E676);
+        icon  = Icons.check_circle;
+        label = context.tr('monitor_ready');
+        break;
+      case MonitorStatus.notReady:
+        color = const Color(0xFFFF6B35);
+        icon  = Icons.cancel;
+        label = context.tr('monitor_not_ready');
+        break;
+      case MonitorStatus.notApplicable:
+        color = Colors.white24;
+        icon  = Icons.remove_circle_outline;
+        label = context.tr('monitor_na');
+        break;
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 14.r),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _monitorLabel(m.name),
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: AppColors.textLight.withValues(alpha: m.isApplicable ? 0.9 : 0.4),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 9.sp, color: color),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilters() {
     return SizedBox(
-      height: 48.h,
-      child: ListView.separated(
+      height: 50.h,
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.space20.w,
-          vertical: 6.h,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
         itemCount: _filters.length,
-        separatorBuilder: (_, _) => SizedBox(width: AppSizes.space8.w),
         itemBuilder: (_, i) {
           final f = _filters[i];
-          return AppFilterChip(
-            label: _systemLabel(f),
-            count: _countFor(f),
-            selected: f == _selectedFilter,
+          final sel = f == _selectedFilter;
+          return GestureDetector(
             onTap: () => setState(() => _selectedFilter = f),
+            child: Container(
+              margin: EdgeInsetsDirectional.only(end: 10.w),
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              decoration: BoxDecoration(
+                gradient: sel
+                    ? const LinearGradient(
+                        colors: [AppColors.accentCyan, AppColors.accentOrange])
+                    : null,
+                color: sel ? null : AppColors.white.withValues(alpha: 0.05),
+                border: Border.all(
+                  color: sel
+                      ? AppColors.transparent
+                      : AppColors.accentCyan.withValues(alpha: 0.2),
+                ),
+                borderRadius: BorderRadius.circular(25.r),
+              ),
+              child: Center(
+                child: Text(
+                  _systemLabel(f),
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: sel ? AppColors.white : AppColors.textLight,
+                  ),
+                ),
+              ),
+            ),
           );
         },
       ),
@@ -531,142 +740,107 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     if (_loading) return _buildLoading();
     if (_errorMessage == 'not_connected') return _buildNotConnected();
     if (_errorMessage != null) return _buildError();
-    final readiness = _readiness;
-    return ListView(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        AppSizes.space20.w,
-        AppSizes.space8.h,
-        AppSizes.space20.w,
-        AppSizes.space24.h,
-      ),
-      children: [
-        if (_filtered.isEmpty) _buildEmpty() else _buildCodesCard(),
-        if (readiness != null && readiness.monitors.isNotEmpty) ...[
-          SizedBox(height: AppSizes.space16.h),
-          _buildReadiness(readiness),
-        ],
-      ],
-    );
+    if (_filtered.isEmpty) return _buildEmpty();
+    return _buildList();
   }
 
   Widget _buildLoading() {
-    return EmptyState(
-      icon: Icons.manage_search_rounded,
-      iconColor: context.colors.primary,
-      title: context.tr('reading_codes'),
-      action: SizedBox.square(
-        dimension: 24.r,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.4,
-          color: context.colors.primary,
-        ),
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: AppColors.accentCyan),
+          SizedBox(height: 20.h),
+          Text(
+            context.tr('reading_codes'),
+            style: TextStyle(fontSize: 14.sp, color: AppColors.textLight),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildNotConnected() {
-    return EmptyState(
-      icon: Icons.bluetooth_disabled_rounded,
-      title: context.tr('no_obd_connected'),
-      message: context.tr('connect_elm_first'),
-      action: AppButton(
-        label: context.tr('go_to_connection'),
-        icon: Icons.bluetooth_searching_rounded,
-        expand: false,
-        onPressed: () =>
-            Navigator.pushNamed(context, AppRoutes.connectionscreen),
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bluetooth_disabled,
+              size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
+          SizedBox(height: 20.h),
+          Text(
+            context.tr('no_obd_connected'),
+            style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            context.tr('connect_elm_first'),
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.textLight.withValues(alpha: 0.5),
+            ),
+          ),
+          SizedBox(height: 24.h),
+          ElevatedButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.connectionscreen),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: Text(context.tr('go_to_connection')),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildError() {
-    return EmptyState(
-      icon: Icons.error_outline_rounded,
-      iconColor: StatusLevel.critical.colorOf(context),
-      title: context.tr('failed_read_codes'),
-      action: AppButton(
-        label: context.tr('retry'),
-        icon: Icons.refresh_rounded,
-        expand: false,
-        onPressed: _fetchDtcs,
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline,
+              size: 80.r, color: Colors.redAccent.withValues(alpha: 0.5)),
+          SizedBox(height: 20.h),
+          Text(
+            context.tr('failed_read_codes'),
+            style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
+          ),
+          SizedBox(height: 24.h),
+          ElevatedButton(
+            onPressed: _fetchDtcs,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: Text(context.tr('retry')),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEmpty() {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSizes.space32.h),
-      child: EmptyState(
-        icon: Icons.check_circle_outline_rounded,
-        iconColor: StatusLevel.ok.colorOf(context),
-        title: context.tr('no_codes_found'),
-        message: context.tr('no_stored_codes'),
-      ),
-    );
-  }
-
-  // ── Code list ─────────────────────────────────────────────────────────────
-
-  /// One card: a summary strip, then one row per code split by hairlines.
-  Widget _buildCodesCard() {
-    final p = context.colors;
-    final items = _filtered;
-    final divider = Divider(height: 1, thickness: 1, color: p.border);
-    return AppCard(
-      padding: EdgeInsets.zero,
+    return Center(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _buildSummary(),
-          for (final item in items) ...[divider, _buildCodeRow(item)],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummary() {
-    final confirmed = _dtcItems.where((d) => !d.isPending).length;
-    final pending = _dtcItems.where((d) => d.isPending).length;
-    final critical = _dtcItems
-        .where((d) => !d.isPending && d.severity == 'critical')
-        .length;
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.space16.w,
-        vertical: AppSizes.space12.h,
-      ),
-      child: Row(
-        children: [
-          _summaryItem(context.tr('dtc_confirmed'), confirmed, null),
-          _summaryItem(context.tr('dtc_pending'), pending, null),
-          _summaryItem(
-            context.tr('severity_critical'),
-            critical,
-            critical > 0 ? StatusLevel.critical.colorOf(context) : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryItem(String label, int count, Color? color) {
-    final p = context.colors;
-    return Expanded(
-      child: Row(
-        children: [
+          Icon(Icons.check_circle_outline,
+              size: 80.r,
+              color: const Color(0xFF00E676).withValues(alpha: 0.5)),
+          SizedBox(height: 20.h),
           Text(
-            '$count',
-            style: AppTextStyles.numeric(
-              AppTextStyles.title,
-            ).copyWith(color: color ?? p.text),
+            context.tr('no_codes_found'),
+            style: TextStyle(fontSize: 18.sp, color: AppColors.textLight),
           ),
-          SizedBox(width: 6.w),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.label.copyWith(color: p.text2),
+          SizedBox(height: 8.h),
+          Text(
+            context.tr('no_stored_codes'),
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.textLight.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -674,77 +848,161 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     );
   }
 
-  Widget _buildCodeRow(_DtcItem item) {
-    final p = context.colors;
-    final level = _levelOf(item);
-    final color = level.colorOf(context);
-    return InkWell(
-      onTap: () => _openDetail(item),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 64.h),
-        child: Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(
-            AppSizes.space16.w,
-            14.h,
-            AppSizes.space8.w,
-            14.h,
+  Widget _buildList() {
+    return ListView.builder(
+      padding: EdgeInsets.all(20.r),
+      itemCount: _filtered.length,
+      itemBuilder: (_, i) => _buildCodeItem(_filtered[i], i),
+    );
+  }
+
+  Widget _buildCodeItem(_DtcItem item, int index) {
+    final color = _severityColor(item.severity);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + index * 80),
+      builder: (_, v, child) => Opacity(
+        opacity: v,
+        child: Transform.translate(offset: Offset(40 * (1 - v), 0), child: child),
+      ),
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(
+          context,
+          AppRoutes.codeDetail,
+          arguments: {
+            'code': item.code,
+            'title': item.description,
+            'title_ar': item.description,
+            'severity': item.severity,
+            'system': item.system,
+            'system_ar': _systemLabel(item.system),
+            'description': item.description,
+            'description_ar': item.description,
+            'pending': item.isPending,
+          },
+        ),
+        child: Container(
+          margin: EdgeInsets.only(bottom: 15.h),
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.03),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(20.r),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconBox(
-                item.isPending ? Icons.hourglass_empty_rounded : level.icon,
-                color: color,
-                size: 36,
-              ),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: AppSizes.space8.w,
-                      runSpacing: AppSizes.space4.h,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          item.code,
-                          style: AppTextStyles.numeric(
-                            AppTextStyles.title,
-                          ).copyWith(color: p.text),
+              Row(
+                children: [
+                  _codeChip(item.code, color),
+                  SizedBox(width: 10.w),
+                  _systemChip(item.system),
+                  if (item.isPending) ...[
+                    SizedBox(width: 8.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD600).withValues(alpha: 0.15),
+                        border: Border.all(color: const Color(0xFFFFD600)),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        context.tr('dtc_pending'),
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          color: const Color(0xFFFFD600),
+                          fontWeight: FontWeight.w700,
                         ),
-                        StatusBadge(
-                          label: item.isPending
-                              ? context.tr('dtc_pending')
-                              : context.tr('severity_${item.severity}'),
-                          level: level,
-                        ),
-                        Text(
-                          _systemLabel(item.system),
-                          style: AppTextStyles.caption.copyWith(color: p.muted),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSizes.space4.h),
-                    Text(
-                      item.description,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: p.text2,
                       ),
                     ),
                   ],
+                  const Spacer(),
+                  Icon(_severityIcon(item.severity), color: color, size: 24.r),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                item.description,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.textLight.withValues(alpha: 0.85),
+                  height: 1.4,
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.only(top: 6.h),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 22.r,
-                  color: p.muted,
+              // Freeze frame snapshot ────────────────────────────────────────
+              if (item.freezeFrame.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.all(12.r),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: AppColors.accentCyan.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.camera_alt_outlined,
+                              color: AppColors.accentCyan, size: 13.r),
+                          SizedBox(width: 5.w),
+                          Text(
+                            context.tr('freeze_frame_title'),
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: AppColors.accentCyan,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 6.h,
+                        children: item.freezeFrame.entries.map((e) =>
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentCyan.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              '${_freezeFrameLabel(e.key)}: '
+                              '${_freezeFrameValue(e.value)}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: AppColors.textLight.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ),
+                        ).toList(),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+              SizedBox(height: 12.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    context.tr('view_details'),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: AppColors.accentCyan,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 5.w),
+                  Icon(Icons.arrow_forward,
+                      color: AppColors.accentCyan, size: 16.r),
+                ],
               ),
             ],
           ),
@@ -753,169 +1011,39 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
     );
   }
 
-  // ── Readiness ─────────────────────────────────────────────────────────────
-
-  Widget _buildReadiness(ReadinessResult r) {
-    final p = context.colors;
-    final applicable = r.monitors.where((m) => m.isApplicable).toList();
-    final ready = applicable.where((m) => m.isReady).length;
-    final total = applicable.length;
-    final level = total > 0 && ready == total
-        ? StatusLevel.ok
-        : StatusLevel.warning;
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  context.tr('emissions_readiness'),
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: p.text,
-                  ),
-                ),
-              ),
-              SizedBox(width: AppSizes.space8.w),
-              Flexible(
-                child: StatusBadge(
-                  label: context
-                      .tr('dtc_monitors_ready')
-                      .replaceAll('{ready}', '$ready')
-                      .replaceAll('{total}', '$total'),
-                  level: level,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSizes.space12.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-            child: LinearProgressIndicator(
-              value: total == 0 ? 0 : ready / total,
-              minHeight: 6.h,
-              color: level.colorOf(context),
-              backgroundColor: p.track,
-            ),
-          ),
-          SizedBox(height: AppSizes.space12.h),
-          Row(
-            children: [
-              StatusBadge(
-                label: context.tr(r.milOn ? 'mil_on' : 'mil_off'),
-                level: r.milOn ? StatusLevel.critical : StatusLevel.ok,
-                showIcon: true,
-              ),
-              SizedBox(width: AppSizes.space12.w),
-              Expanded(
-                child: Text(
-                  r.dtcCount == 1
-                      ? context.tr('dtc_stored_one')
-                      : context
-                            .tr('dtcs_stored')
-                            .replaceAll('{n}', '${r.dtcCount}'),
-                  style: AppTextStyles.label.copyWith(color: p.text2),
-                ),
-              ),
-            ],
-          ),
-          if (_showMonitors) ...[
-            SizedBox(height: AppSizes.space12.h),
-            Divider(height: 1, thickness: 1, color: p.border),
-            SizedBox(height: AppSizes.space4.h),
-            for (final m in r.monitors) _monitorRow(m),
-          ],
-          SizedBox(height: AppSizes.space4.h),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: AppButton.ghost(
-              label: context.tr(
-                _showMonitors ? 'dtc_hide_monitors' : 'dtc_show_monitors',
-              ),
-              icon: _showMonitors
-                  ? Icons.expand_less_rounded
-                  : Icons.expand_more_rounded,
-              onPressed: () => setState(() => _showMonitors = !_showMonitors),
-            ),
-          ),
-        ],
+  Widget _codeChip(String code, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        code,
+        style: TextStyle(
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
 
-  Widget _monitorRow(ReadinessMonitor m) {
-    final p = context.colors;
-    final (Color color, IconData icon, String label) = switch (m.status) {
-      MonitorStatus.ready => (
-        StatusLevel.ok.colorOf(context),
-        Icons.check_circle_outline_rounded,
-        context.tr('monitor_ready'),
+  Widget _systemChip(String system) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: AppColors.accentCyan.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8.r),
       ),
-      MonitorStatus.notReady => (
-        StatusLevel.warning.colorOf(context),
-        Icons.cancel_outlined,
-        context.tr('monitor_not_ready'),
-      ),
-      MonitorStatus.notApplicable => (
-        p.muted,
-        Icons.remove_circle_outline_rounded,
-        context.tr('monitor_na'),
-      ),
-    };
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6.h),
-      child: Row(
-        children: [
-          Icon(icon, size: 18.r, color: color),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              _monitorLabel(m.name),
-              style: AppTextStyles.label.copyWith(
-                color: m.isApplicable ? p.text : p.muted,
-              ),
-            ),
-          ),
-          SizedBox(width: AppSizes.space8.w),
-          Text(label, style: AppTextStyles.label.copyWith(color: color)),
-        ],
-      ),
-    );
-  }
-
-  // ── Bottom actions ────────────────────────────────────────────────────────
-
-  Widget _buildActions() {
-    return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        AppSizes.space20.w,
-        AppSizes.space8.h,
-        AppSizes.space20.w,
-        AppSizes.space12.h,
-      ),
-      child: Row(
-        children: [
-          if (_dtcItems.isNotEmpty) ...[
-            Expanded(
-              child: AppButton.secondary(
-                label: context.tr('dtc_clear_codes_action'),
-                icon: Icons.delete_outline_rounded,
-                isLoading: _clearing,
-                onPressed: _busy ? null : _showClearDialog,
-              ),
-            ),
-            SizedBox(width: AppSizes.space12.w),
-          ],
-          Expanded(
-            child: AppButton(
-              label: context.tr('scan_again'),
-              icon: Icons.refresh_rounded,
-              onPressed: _busy ? null : _fetchDtcs,
-            ),
-          ),
-        ],
+      child: Text(
+        _systemLabel(system),
+        style: TextStyle(
+          fontSize: 11.sp,
+          color: AppColors.accentCyan,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -925,22 +1053,30 @@ class _DiagnosticCodesScreenState extends State<DiagnosticCodesScreen> {
   void _showClearDialog() {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.tr('clear_codes')),
-        content: Text(context.tr('clear_codes_content')),
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Text(context.tr('clear_codes'),
+            style: const TextStyle(color: AppColors.textLight)),
+        content: Text(
+          context.tr('clear_codes_content'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.tr('cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: Text(context.tr('cancel'),
+                style: const TextStyle(color: AppColors.accentCyan)),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
-              Navigator.pop(dialogContext);
+              Navigator.pop(context);
               _clearCodes();
             },
-            // Destructive action.
-            style: TextButton.styleFrom(
-              foregroundColor: StatusLevel.critical.colorOf(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentOrange,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r)),
             ),
             child: Text(context.tr('clear')),
           ),

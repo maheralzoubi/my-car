@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mycar/core/constants/app_routes.dart';
-import 'package:mycar/core/theme/app_theme.dart';
 import 'package:mycar/modules/home/presentation/pages/videoTutorialsScreen/video_player_screen.dart';
 import 'package:mycar/modules/home/presentation/pages/videoTutorialsScreen/video_tutorials_screen.dart';
 
@@ -85,22 +84,6 @@ void main() {
       expectNoException(tester);
     });
 
-    for (final locale in [en, ar]) {
-      testWidgets('light theme renders (${locale.languageCode})', (
-        tester,
-      ) async {
-        await pumpScreen(
-          tester,
-          const VideoTutorialsScreen(),
-          locale: locale,
-          theme: AppTheme.light,
-        );
-        await tester.pump(const Duration(seconds: 1));
-        expectNoException(tester);
-        expect(_titles(tester), isNotEmpty);
-      });
-    }
-
     testWidgets('Arabic UI shows no untranslated English copy', (tester) async {
       await _pump(tester, locale: ar);
       expect(englishLeaks(tester), isEmpty);
@@ -173,10 +156,10 @@ void main() {
   group('cards', () {
     testWidgets('bookmark toggles on the card', (tester) async {
       await _pump(tester);
-      final before = find.byIcon(Icons.bookmark_rounded).evaluate().length;
-      await tester.tap(find.byIcon(Icons.bookmark_border_rounded).first);
+      final before = find.byIcon(Icons.bookmark).evaluate().length;
+      await tester.tap(find.byIcon(Icons.bookmark_border).first);
       await tester.pump();
-      expect(find.byIcon(Icons.bookmark_rounded).evaluate().length, before + 1);
+      expect(find.byIcon(Icons.bookmark).evaluate().length, before + 1);
     });
 
     testWidgets('tapping a card opens the player with that tutorial', (
@@ -204,7 +187,7 @@ void main() {
 
     testWidgets('back arrow pops', (tester) async {
       await _pump(tester, pushed: true);
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
       expect(find.text(launcherText), findsOneWidget);
     });
@@ -292,21 +275,22 @@ void main() {
       });
     }
 
-    testWidgets('Arabic: the player opened from the list has no English', (
-      tester,
-    ) async {
-      await pumpScreen(
-        tester,
-        const VideoTutorialsScreen(),
-        locale: ar,
-        routes: {AppRoutes.videoPlayer: VideoPlayerScreen.fromContext},
-      );
-      await tester.pump(const Duration(seconds: 1));
-      await tester.tap(find.text(tr('tut_title_o2_sensor', ar)));
-      await tester.pumpAndSettle();
-      expect(find.byType(VideoPlayerScreen), findsOneWidget);
-      expect(englishLeaks(tester, allow: {'CARDIAG'}), isEmpty);
-    });
+    testWidgets(
+      'Arabic: the player opened from the list has no English',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          const VideoTutorialsScreen(),
+          locale: ar,
+          routes: {AppRoutes.videoPlayer: VideoPlayerScreen.fromContext},
+        );
+        await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text(tr('tut_title_o2_sensor', ar)));
+        await tester.pumpAndSettle();
+        expect(find.byType(VideoPlayerScreen), findsOneWidget);
+        expect(englishLeaks(tester, allow: {'CARDIAG'}), isEmpty);
+      },
+    );
 
     for (final locale in [en, ar]) {
       for (final size in [phonePortrait, smallPhone]) {

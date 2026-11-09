@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../../core/core.dart';
+import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 /// Screen for playing a tutorial video. Receives [tutorial] from route arguments.
@@ -22,14 +22,7 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  // Video player chrome. A player keeps a true-black backdrop and white
-  // controls regardless of the app theme (video content is theme-independent),
-  // so these stay literal colors.
-  static const Color _playerBackdrop = Color(0xFF000000);
-  static const Color _controlsScrim = Color(0x8C000000); // black @ 55%
-  static const Color _playerControl = AppColors.white;
-  static const Color _playerControlMuted = Color(0x4DFFFFFF); // white @ 30%
-  static const Color _placeholderIcon = Color(0x40FFFFFF); // white @ 25%
+  static const Color _ratingYellow = Color(0xFFFFD600);
 
   bool isPlaying = false;
   bool isFullscreen = false;
@@ -45,160 +38,50 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            ScreenHeader(
-              title: context.tr('video_tutorials'),
-              actions: [
-                HeaderAction(
-                  icon: Icons.picture_in_picture_alt_rounded,
-                  tooltip: context.tr('pip_mode'),
-                  onPressed: _showPIPDialog,
-                ),
-                HeaderAction(
-                  icon: Icons.share_rounded,
-                  tooltip: context.tr('share_action'),
-                  onPressed: () => _showSnack('tutorial_action_unavailable'),
-                ),
-              ],
-            ),
-            _buildVideoPlayer(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  AppSizes.space20.w,
-                  AppSizes.space20.h,
-                  AppSizes.space20.w,
-                  AppSizes.space32.h,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildVideoInfo(),
-                    SizedBox(height: AppSizes.space16.h),
-                    _buildActions(),
-                    SizedBox(height: AppSizes.space16.h),
-                    _buildInstructorInfo(),
-                    SizedBox(height: AppSizes.space24.h),
-                    _buildDescription(),
-                    SizedBox(height: AppSizes.space24.h),
-                    _buildToolsAndParts(),
-                    SizedBox(height: AppSizes.space24.h),
-                    _buildRelatedVideos(),
-                  ],
-                ),
-              ),
-            ),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.backgroundDark,
+              AppColors.backgroundDarkBlue,
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildVideoPlayer() {
-    final duration = widget.tutorial['duration'] as String? ?? '0:00';
-    final icon =
-        widget.tutorial['icon'] as IconData? ?? Icons.ondemand_video_rounded;
-    final timeStyle = AppTextStyles.numeric(
-      AppTextStyles.label,
-    ).copyWith(color: _playerControl);
-    final position =
-        '${(currentPosition / 60).floor()}:'
-        '${(currentPosition % 60).floor().toString().padLeft(2, '0')}';
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.space20.w),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppSizes.radiusLg.r),
-        child: Container(
-          height: 200.h,
-          color: _playerBackdrop,
-          child: Stack(
+        child: SafeArea(
+          child: Column(
             children: [
-              // Placeholder artwork: there is no video frame to show.
-              PositionedDirectional(
-                top: AppSizes.space16.r,
-                start: AppSizes.space16.r,
-                child: ExcludeSemantics(
-                  child: Icon(icon, size: 28.r, color: _placeholderIcon),
-                ),
-              ),
-              Align(
-                alignment: const Alignment(0, -0.25),
-                child: Material(
-                  color: _playerControl,
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() => isPlaying = !isPlaying);
-                      // There is no video source behind the sample catalogue.
-                      if (isPlaying) _showSnack('video_playback_unavailable');
-                    },
-                    child: Tooltip(
-                      message: context.tr(
-                        isPlaying ? 'pause_video' : 'play_video',
-                      ),
-                      child: SizedBox.square(
-                        dimension: 60.r,
-                        child: Icon(
-                          isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          color: _playerBackdrop,
-                          size: 34.r,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              PositionedDirectional(
-                bottom: 0,
-                start: 0,
-                end: 0,
-                child: Container(
-                  color: _controlsScrim,
-                  padding: EdgeInsetsDirectional.fromSTEB(
-                    AppSizes.space12.w,
-                    0,
-                    AppSizes.space12.w,
-                    AppSizes.space8.h,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: _playerControl,
-                          inactiveTrackColor: _playerControlMuted,
-                          thumbColor: _playerControl,
-                          overlayColor: _playerControlMuted,
-                          trackHeight: 3,
-                        ),
-                        child: Slider(
-                          value: currentPosition,
-                          max: totalDuration,
-                          onChanged: (value) {
-                            setState(() => currentPosition = value);
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.space12.w,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              _buildHeader(),
+              _buildVideoPlayer(),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : MediaQuery.of(context).size.width;
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.all(20.r),
+                      child: SizedBox(
+                        width: width,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(position, style: timeStyle),
-                            Text(duration, style: timeStyle),
+                            _buildVideoInfo(),
+                            SizedBox(height: 20.h),
+                            _buildInstructorInfo(),
+                            SizedBox(height: 25.h),
+                            _buildDescription(),
+                            SizedBox(height: 25.h),
+                            _buildToolsAndParts(),
+                            SizedBox(height: 25.h),
+                            _buildRelatedVideos(),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -208,58 +91,258 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
+  Widget _buildHeader() {
+    return Padding(
+      padding: EdgeInsets.all(20.r),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.arrow_back, color: AppColors.accentCyan, size: 24.r),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: Icon(
+              Icons.picture_in_picture_alt,
+              color: AppColors.accentCyan,
+              size: 24.r,
+            ),
+            onPressed: _showPIPDialog,
+          ),
+          IconButton(
+            icon: Icon(Icons.share, color: AppColors.accentCyan, size: 24.r),
+            onPressed: () => _showSnack('tutorial_action_unavailable'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    final duration = widget.tutorial['duration'] as String? ?? '0:00';
+    final thumbnail = widget.tutorial['thumbnail'] as String? ?? '🎬';
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20.w),
+      height: 220.h,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 20,
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.accentCyan.withValues(alpha: 0.3),
+                  AppColors.accentOrange.withValues(alpha: 0.2),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Center(
+              child: Text(
+                thumbnail,
+                style: TextStyle(fontSize: 80.sp),
+              ),
+            ),
+          ),
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  isPlaying = !isPlaying;
+                });
+                // There is no video source behind the sample catalogue.
+                if (isPlaying) _showSnack('video_playback_unavailable');
+              },
+              child: Container(
+                width: 70.w,
+                height: 70.h,
+                decoration: BoxDecoration(
+                  color: AppColors.accentCyan.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentCyan.withValues(alpha: 0.5),
+                      blurRadius: 20,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: AppColors.white,
+                  size: 40.r,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.all(15.r),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.transparent,
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20.r),
+                  bottomRight: Radius.circular(20.r),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Slider(
+                    value: currentPosition,
+                    max: totalDuration,
+                    activeColor: AppColors.accentCyan,
+                    inactiveColor: AppColors.white.withValues(alpha: 0.3),
+                    onChanged: (value) {
+                      setState(() {
+                        currentPosition = value;
+                      });
+                    },
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${(currentPosition / 60).floor()}:${(currentPosition % 60).floor().toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                      Text(
+                        duration,
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVideoInfo() {
-    final p = context.colors;
     final code = widget.tutorial['code'] as String? ?? '—';
     final title = widget.tutorial['title'] as String? ?? '—';
     final views = widget.tutorial['views'] as String? ?? '—';
     final rating = widget.tutorial['rating']?.toString() ?? '—';
-    final metaStyle = AppTextStyles.label.copyWith(
-      fontWeight: FontWeight.w400,
-      color: p.text2,
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSizes.space8.w,
-            vertical: 2.h,
-          ),
-          decoration: BoxDecoration(
-            color: p.primarySoft,
-            borderRadius: BorderRadius.circular(6.r),
-          ),
-          child: Text(
-            code,
-            style: AppTextStyles.label.copyWith(
-              fontWeight: FontWeight.w600,
-              color: p.primary,
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 10.w,
+                vertical: 6.h,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.accentCyan.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Text(
+                code,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentCyan,
+                ),
+              ),
             ),
+          ],
+        ),
+        SizedBox(height: 15.h),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textLight,
+            height: 1.3,
           ),
         ),
-        SizedBox(height: AppSizes.space8.h),
-        Text(title, style: AppTextStyles.headline.copyWith(color: p.text)),
-        SizedBox(height: AppSizes.space8.h),
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: AppSizes.space4.w,
-          runSpacing: AppSizes.space4.h,
+        SizedBox(height: 15.h),
+        Row(
           children: [
-            Icon(Icons.visibility_outlined, color: p.muted, size: 16.r),
+            Icon(Icons.visibility, color: AppColors.accentCyan, size: 18.r),
+            SizedBox(width: 8.w),
             Text(
               context.tr('views_count').replaceAll('{n}', views),
-              style: metaStyle,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.textLight.withValues(alpha: 0.7),
+              ),
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSizes.space4.w),
-              child: Text('·', style: metaStyle.copyWith(color: p.muted)),
-            ),
-            Icon(Icons.star_rounded, color: p.muted, size: 16.r),
+            SizedBox(width: 20.w),
+            Icon(Icons.star, color: _ratingYellow, size: 18.r),
+            SizedBox(width: 8.w),
             Text(
               context.tr('rating_value').replaceAll('{n}', rating),
-              style: metaStyle,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.textLight.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 15.h),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _showSnack('tutorial_action_unavailable'),
+                icon: const Icon(Icons.thumb_up_outlined),
+                label: Text(context.tr('like')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.white.withValues(alpha: 0.1),
+                  foregroundColor: AppColors.accentCyan,
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _showSnack('tutorial_action_unavailable'),
+                icon: const Icon(Icons.bookmark_border),
+                label: Text(context.tr('save')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.white.withValues(alpha: 0.1),
+                  foregroundColor: _ratingYellow,
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -267,54 +350,39 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  Widget _buildActions() {
-    return Row(
-      children: [
-        Expanded(
-          child: AppButton.secondary(
-            label: context.tr('like'),
-            icon: Icons.thumb_up_outlined,
-            compact: true,
-            onPressed: () => _showSnack('tutorial_action_unavailable'),
-          ),
-        ),
-        SizedBox(width: AppSizes.space12.w),
-        Expanded(
-          child: AppButton.secondary(
-            label: context.tr('save'),
-            icon: Icons.bookmark_border_rounded,
-            compact: true,
-            onPressed: () => _showSnack('tutorial_action_unavailable'),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildInstructorInfo() {
-    final p = context.colors;
     final uploadedBy = widget.tutorial['uploadedBy'] as String? ?? '—';
 
-    return AppCard(
-      padding: EdgeInsets.all(AppSizes.space12.r),
+    return Container(
+      padding: EdgeInsets.all(18.r),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.05),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(15.r),
+      ),
       child: Row(
         children: [
-          ExcludeSemantics(
-            child: Container(
-              width: 44.r,
-              height: 44.r,
-              decoration: BoxDecoration(
-                color: p.primarySoft,
-                shape: BoxShape.circle,
+          Container(
+            width: 50.w,
+            height: 50.h,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accentCyan, AppColors.accentOrange],
               ),
-              alignment: Alignment.center,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
               child: Text(
                 _instructorLetter,
-                style: AppTextStyles.title.copyWith(color: p.primary),
+                style: TextStyle(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.white,
+                ),
               ),
             ),
           ),
-          SizedBox(width: AppSizes.space12.w),
+          SizedBox(width: 15.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,31 +390,39 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               children: [
                 Text(
                   _instructor,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: p.text,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textLight,
                   ),
                 ),
+                SizedBox(height: 4.h),
                 Text(
                   uploadedBy,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: p.text2,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: AppColors.textLight.withValues(alpha: 0.6),
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(width: AppSizes.space8.w),
-          AppButton.secondary(
-            label: context.tr('subscribe'),
-            compact: true,
-            expand: false,
-            onPressed: () => _showSnack('tutorial_action_unavailable'),
+          Flexible(
+            fit: FlexFit.loose,
+            child: ElevatedButton(
+              onPressed: () => _showSnack('tutorial_action_unavailable'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentCyan,
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+              ),
+              child: Text(
+                context.tr('subscribe'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
         ],
       ),
@@ -359,10 +435,37 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(context.tr('description_label')),
+        Row(
+          children: [
+            Container(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accentCyan, AppColors.accentOrange],
+                ),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              context.tr('description_label'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 15.h),
         Text(
           context.tr('tutorial_description_body').replaceAll('{code}', code),
-          style: AppTextStyles.body.copyWith(color: context.colors.text2),
+          style: TextStyle(
+            fontSize: 15.sp,
+            color: AppColors.textLight.withValues(alpha: 0.8),
+            height: 1.6,
+          ),
         ),
       ],
     );
@@ -372,125 +475,166 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(context.tr('tools_parts_needed')),
-        Wrap(
-          spacing: AppSizes.space8.w,
-          runSpacing: AppSizes.space8.h,
+        Row(
           children: [
-            _buildToolChip(
-              Icons.handyman_outlined,
-              context.tr('tool_socket_set'),
+            Container(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accentCyan, AppColors.accentOrange],
+                ),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
+              ),
             ),
-            _buildToolChip(Icons.sensors_rounded, context.tr('tool_o2_sensor')),
-            _buildToolChip(
-              Icons.water_drop_outlined,
-              context.tr('tool_anti_seize'),
+            SizedBox(width: 10.w),
+            Text(
+              context.tr('tools_parts_needed'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
             ),
-            _buildToolChip(
-              Icons.back_hand_outlined,
-              context.tr('tool_safety_gloves'),
-            ),
+          ],
+        ),
+        SizedBox(height: 15.h),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _buildToolChip(context.tr('tool_socket_set')),
+            _buildToolChip(context.tr('tool_o2_sensor')),
+            _buildToolChip(context.tr('tool_anti_seize')),
+            _buildToolChip(context.tr('tool_safety_gloves')),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildToolChip(IconData icon, String tool) {
-    final p = context.colors;
+  Widget _buildToolChip(String tool) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.space12.w,
-        vertical: AppSizes.space8.h,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: p.surface,
-        border: Border.all(color: p.border),
-        borderRadius: BorderRadius.circular(AppSizes.radiusSm.r),
+        color: AppColors.accentCyan.withValues(alpha: 0.1),
+        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(12.r),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16.r, color: p.text2),
-          SizedBox(width: 6.w),
-          Text(tool, style: AppTextStyles.label.copyWith(color: p.text)),
-        ],
+      child: Text(
+        tool,
+        style: TextStyle(
+          fontSize: 13.sp,
+          color: AppColors.accentCyan,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
   Widget _buildRelatedVideos() {
-    final p = context.colors;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(context.tr('related_videos')),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (var i = 0; i < 3; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: AppSizes.space16.w,
-                    color: p.border,
+        Row(
+          children: [
+            Container(
+              width: 4.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accentCyan, AppColors.accentOrange],
+                ),
+                borderRadius: BorderRadius.all(Radius.circular(10.r)),
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              context.tr('related_videos'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textLight,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 15.h),
+        SizedBox(
+          height: 160.h,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: 3,
+            itemBuilder: (context, index) {
+              return Container(
+                width: 200.w,
+                margin: EdgeInsetsDirectional.only(end: 15.w),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.05),
+                  border: Border.all(
+                    color: AppColors.accentCyan.withValues(alpha: 0.2),
                   ),
-                Padding(
-                  padding: EdgeInsets.all(AppSizes.space12.r),
-                  child: Row(
-                    children: [
-                      ExcludeSemantics(
-                        child: Container(
-                          width: 64.r,
-                          height: 44.r,
-                          decoration: BoxDecoration(
-                            color: p.surface2,
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusSm.r,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.play_circle_outline_rounded,
-                            size: 22.r,
-                            color: p.text2,
-                          ),
+                  borderRadius: BorderRadius.circular(15.r),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 82.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.accentCyan.withValues(alpha: 0.2),
+                            AppColors.accentOrange.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(15.r),
+                          topRight: Radius.circular(15.r),
                         ),
                       ),
-                      SizedBox(width: AppSizes.space12.w),
-                      Expanded(
+                      child: Center(
+                        child: Text('🔧', style: TextStyle(fontSize: 40.sp)),
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 6.h,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              context
-                                  .tr('related_tutorial_n')
-                                  .replaceAll('{n}', '${i + 1}'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.body.copyWith(
-                                fontWeight: FontWeight.w500,
-                                color: p.text,
+                              context.tr('related_tutorial_n')
+                                  .replaceAll('{n}', '${index + 1}'),
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textLight,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
+                            SizedBox(height: 4.h),
                             Text(
                               context.tr('minutes_n').replaceAll('{n}', '12'),
-                              style: AppTextStyles.label.copyWith(
-                                fontWeight: FontWeight.w400,
-                                color: p.text2,
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: AppColors.textLight.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ],
+              );
+            },
           ),
         ),
       ],
@@ -510,18 +654,37 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(context.tr('pip_mode')),
-        content: Text(context.tr('pip_prompt')),
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: Text(
+          context.tr('pip_mode'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
+        content: Text(
+          context.tr('pip_prompt'),
+          style: const TextStyle(color: AppColors.textLight),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(context.tr('cancel')),
+            child: Text(
+              context.tr('cancel'),
+              style: const TextStyle(color: AppColors.accentCyan),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               _showSnack('pip_unavailable');
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCyan,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
             child: Text(context.tr('enable_pip')),
           ),
         ],

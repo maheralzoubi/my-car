@@ -177,9 +177,9 @@ void main() {
       await tester.pumpWidget(_wrap(_screen()));
       await tester.pumpAndSettle();
 
-      // P codes → Engine, C codes → Chassis (filter chip + the row label).
+      // P codes → Engine, C codes → Chassis
       expect(find.text('Engine'), findsWidgets);
-      expect(find.text('Chassis'), findsNWidgets(2));
+      expect(find.text('Chassis'), findsOneWidget);
     });
 
     testWidgets('summary counts are non-zero', (tester) async {
@@ -198,8 +198,8 @@ void main() {
       final callsBefore = fake.getDtcsCalled;
       expect(callsBefore, isTrue);
 
-      // Tap the header refresh action.
-      await tester.tap(find.byTooltip('Scan Again'));
+      // Tap the refresh icon.
+      await tester.tap(find.byIcon(Icons.refresh));
       await tester.pumpAndSettle();
 
       // getDtcs was called at least once more (total ≥ 2 invocations).
@@ -211,7 +211,7 @@ void main() {
       await tester.pumpWidget(_wrap(_screen()));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.clear_all), findsOneWidget);
     });
   });
 
@@ -227,7 +227,7 @@ void main() {
       await tester.pumpWidget(_wrap(_screen()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+      await tester.tap(find.byIcon(Icons.clear_all));
       await tester.pump();
 
       expect(find.text('Clear Codes?'), findsOneWidget);
@@ -238,7 +238,7 @@ void main() {
       await tester.pumpWidget(_wrap(_screen()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+      await tester.tap(find.byIcon(Icons.clear_all));
       await tester.pump();
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
@@ -252,7 +252,7 @@ void main() {
       await tester.pumpWidget(_wrap(_screen()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+      await tester.tap(find.byIcon(Icons.clear_all));
       await tester.pump();
       await tester.tap(find.text('Clear'));
       await tester.pumpAndSettle();
@@ -270,7 +270,7 @@ void main() {
       await tester.pumpWidget(_wrap(_screen()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+      await tester.tap(find.byIcon(Icons.clear_all));
       await tester.pump();
       await tester.tap(find.text('Clear'));
       await tester.pumpAndSettle();

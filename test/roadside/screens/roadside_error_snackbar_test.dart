@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mycar/core/theme/app_palette.dart';
+import 'package:mycar/core/constants/app_colors.dart';
 import 'package:mycar/core/localization/app_localizations.dart';
 import 'package:mycar/modules/roadside/presentation/pages/roadside_error_snackbar.dart';
 
@@ -41,12 +41,8 @@ void main() {
     await tester.pump();
 
     expect(snackText(tester), 'Something went wrong. Please try again.');
-    // Marked as an error with the red error icon.
-    final icon = tester.widget<Icon>(find.descendant(
-        of: find.byType(SnackBar),
-        matching: find.byIcon(Icons.error_outline_rounded)));
-    expect(icon.color, AppPalette.dark.crit,
-        reason: 'red tuned for the dark inverse surface of a light theme');
+    final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(bar.backgroundColor, AppColors.error);
   });
 
   testWidgets('translates a localization key (Arabic, RTL)', (tester) async {

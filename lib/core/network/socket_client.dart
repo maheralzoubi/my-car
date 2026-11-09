@@ -6,11 +6,9 @@ import 'api_config.dart';
 
 /// Builds a (not yet connected) Socket.IO socket for [url] with [options].
 /// Defaults to `io.io`; tests inject a fake so nothing touches the network.
-typedef SocketFactory =
-    io.Socket Function(String url, Map<String, dynamic> options);
+typedef SocketFactory = io.Socket Function(String url, Map<String, dynamic> options);
 
-io.Socket _defaultSocketFactory(String url, Map<String, dynamic> options) =>
-    io.io(url, options);
+io.Socket _defaultSocketFactory(String url, Map<String, dynamic> options) => io.io(url, options);
 
 /// Long-lived Socket.IO connection, opened once after login and reused by
 /// every repository that needs realtime events (roadside tracking, driver
@@ -22,8 +20,8 @@ io.Socket _defaultSocketFactory(String url, Map<String, dynamic> options) =>
 /// carried over — callers must re-subscribe on [socket] after a reconnect.
 class SocketClient {
   SocketClient(this._session, {SocketFactory? socketFactory, String? baseUrl})
-    : _socketFactory = socketFactory ?? _defaultSocketFactory,
-      _baseUrl = baseUrl;
+      : _socketFactory = socketFactory ?? _defaultSocketFactory,
+        _baseUrl = baseUrl;
 
   final Session _session;
   final SocketFactory _socketFactory;
@@ -40,10 +38,7 @@ class SocketClient {
 
   io.Socket connect() {
     disconnect();
-    final socket = _socketFactory(
-      _baseUrl ?? ApiConfig.baseUrl,
-      buildOptions(_session.token),
-    );
+    final socket = _socketFactory(_baseUrl ?? ApiConfig.baseUrl, buildOptions(_session.token));
     socket.connect();
     _socket = socket;
     return socket;

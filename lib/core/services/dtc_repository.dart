@@ -15,9 +15,8 @@ class DtcRepository {
   // Without it the online lookup is skipped — the bundled ~6,250-code
   // database (and the manufacturer / generic SAE labels) still work.
   static const String _rapidApiHost = 'car-code.p.rapidapi.com';
-  static const String _rapidApiKeyFromEnv = String.fromEnvironment(
-    'RAPID_API_KEY',
-  );
+  static const String _rapidApiKeyFromEnv =
+      String.fromEnvironment('RAPID_API_KEY');
 
   static const String _arPrefixKey = 'dtc_ar_';
   static const String _enPrefixKey = 'dtc_en_';
@@ -121,7 +120,7 @@ class DtcRepository {
     if (text == null || text.isEmpty) return null;
     return arabic
         ? 'لدى بعض العلامات التجارية (غالباً فورد/جنرال موتورز) يعني هذا '
-              'الرمز: $text'
+            'الرمز: $text'
         : 'On some brands (often Ford/GM) this code means: $text';
   }
 
@@ -165,9 +164,8 @@ class DtcRepository {
 
   // SAE J2012 manufacturer-controlled blocks: P1xxx, P3000–P33FF,
   // B1xxx/B2xxx, C1xxx/C2xxx, U1xxx/U2xxx. Everything else is SAE-defined.
-  static final RegExp _manufacturerRanges = RegExp(
-    r'^(?:P1[0-9A-F]{3}|P3[0-3][0-9A-F]{2}|[BCU][12][0-9A-F]{3})$',
-  );
+  static final RegExp _manufacturerRanges =
+      RegExp(r'^(?:P1[0-9A-F]{3}|P3[0-3][0-9A-F]{2}|[BCU][12][0-9A-F]{3})$');
 
   bool _isManufacturerSpecific(String code) =>
       _manufacturerRanges.hasMatch(code);
@@ -176,10 +174,10 @@ class DtcRepository {
   /// [languageCode] is 'ar', English otherwise).
   static String manufacturerLabel(String code, {String languageCode = 'en'}) =>
       languageCode == 'ar'
-      ? 'رمز خاص بالشركة المصنعة ($code). يختلف معناه حسب العلامة '
-            'التجارية للمركبة. راجع دليل الخدمة الخاص بمركبتك أو الوكيل.'
-      : 'Manufacturer-specific code ($code). Meaning varies by vehicle '
-            'brand. Check your vehicle\'s service manual or dealer.';
+          ? 'رمز خاص بالشركة المصنعة ($code). يختلف معناه حسب العلامة '
+              'التجارية للمركبة. راجع دليل الخدمة الخاص بمركبتك أو الوكيل.'
+          : 'Manufacturer-specific code ($code). Meaning varies by vehicle '
+              'brand. Check your vehicle\'s service manual or dealer.';
 
   // SAE J2012 hybrid/EV propulsion block P0A00–P0DFF.
   static final RegExp _hybridBlock = RegExp(r'^P0[A-D]');
@@ -195,23 +193,21 @@ class DtcRepository {
           : 'Hybrid/EV propulsion system code';
     } else {
       category = switch (code[0]) {
-        'P' =>
-          arabic
-              ? 'رمز مجموعة الدفع (المحرك/ناقل الحركة)'
-              : 'Powertrain (engine/transmission) code',
+        'P' => arabic
+            ? 'رمز مجموعة الدفع (المحرك/ناقل الحركة)'
+            : 'Powertrain (engine/transmission) code',
         'C' => arabic ? 'رمز نظام الشاسيه' : 'Chassis system code',
         'B' => arabic ? 'رمز نظام الهيكل' : 'Body system code',
-        _ =>
-          arabic
-              ? 'رمز شبكة الاتصال بين الوحدات'
-              : 'Network communication code',
+        _ => arabic
+            ? 'رمز شبكة الاتصال بين الوحدات'
+            : 'Network communication code',
       };
     }
     return arabic
         ? '$category ($code). الوصف غير متوفر دون اتصال بالإنترنت — راجع '
-              'دليل الخدمة الخاص بمركبتك.'
+            'دليل الخدمة الخاص بمركبتك.'
         : '$category ($code). Description not available offline — check '
-              'your vehicle\'s service manual.';
+            'your vehicle\'s service manual.';
   }
 
   // ── Arabic translation ────────────────────────────────────────────────────
@@ -231,10 +227,7 @@ class DtcRepository {
   // At least one letter from the Arabic Unicode block.
   static final RegExp _arabicScript = RegExp(r'[؀-ۿ]');
 
-  Future<String> _getArabic(
-    String englishText, {
-    required String cacheKey,
-  }) async {
+  Future<String> _getArabic(String englishText, {required String cacheKey}) async {
     // 1. In-memory session cache.
     if (_arabicSessionCache.containsKey(cacheKey)) {
       return _arabicSessionCache[cacheKey]!;
@@ -310,16 +303,14 @@ class DtcRepository {
     if (apiKey.isEmpty) return null;
 
     final uri = Uri.https(_rapidApiHost, '/obd2/$code');
-    final response = await _httpClient
-        .get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'x-rapidapi-host': _rapidApiHost,
-            'x-rapidapi-key': apiKey,
-          },
-        )
-        .timeout(_requestTimeout);
+    final response = await _httpClient.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-rapidapi-host': _rapidApiHost,
+        'x-rapidapi-key': apiKey,
+      },
+    ).timeout(_requestTimeout);
 
     // 401/403 (bad key), 404, 429 (rate limit), 5xx → no description.
     if (response.statusCode != 200) return null;
